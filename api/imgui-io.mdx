@@ -1,0 +1,394 @@
+---
+title: 'ImGuiIO Structure'
+description: 'Main configuration and I/O structure for Dear ImGui'
+---
+
+## Overview
+
+The `ImGuiIO` structure is the main configuration and I/O interface between your application and Dear ImGui. It contains:
+- Configuration options and flags
+- Input state (mouse, keyboard, gamepad)
+- Output flags (WantCaptureMouse, WantCaptureKeyboard, etc.)
+- Time and framerate information
+
+## Getting ImGuiIO
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+```
+
+See [GetIO](/api/input#getio) for details.
+
+## Configuration Fields
+
+### Display Configuration
+
+<ResponseField name="DisplaySize" type="ImVec2">
+  Main display size in pixels. May change every frame.
+</ResponseField>
+
+<ResponseField name="DisplayFramebufferScale" type="ImVec2" default="(1, 1)">
+  For retina displays where window coordinates differ from framebuffer coordinates. Affects font density.
+</ResponseField>
+
+<ResponseField name="DeltaTime" type="float" default="1.0f/60.0f">
+  Time elapsed since last frame, in seconds. May change every frame.
+</ResponseField>
+
+**Example:**
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+io.DisplaySize = ImVec2(1920.0f, 1080.0f);
+io.DisplayFramebufferScale = ImVec2(2.0f, 2.0f); // Retina
+io.DeltaTime = 1.0f / 60.0f;
+```
+
+### Configuration Flags
+
+<ResponseField name="ConfigFlags" type="ImGuiConfigFlags" default="0">
+  See `ImGuiConfigFlags_` enum. Set by user/application.
+</ResponseField>
+
+<ResponseField name="BackendFlags" type="ImGuiBackendFlags" default="0">
+  See `ImGuiBackendFlags_` enum. Set by backend to communicate features supported.
+</ResponseField>
+
+```cpp
+enum ImGuiConfigFlags_
+{
+    ImGuiConfigFlags_None                   = 0,
+    ImGuiConfigFlags_NavEnableKeyboard      = 1 << 0,   // Enable keyboard navigation
+    ImGuiConfigFlags_NavEnableGamepad       = 1 << 1,   // Enable gamepad navigation
+    ImGuiConfigFlags_NoMouse                = 1 << 4,   // Disable mouse inputs
+    ImGuiConfigFlags_NoMouseCursorChange    = 1 << 5,   // Don't alter mouse cursor
+    ImGuiConfigFlags_NoKeyboard             = 1 << 6,   // Disable keyboard inputs
+    ImGuiConfigFlags_IsSRGB                 = 1 << 20,  // Application is SRGB-aware
+    ImGuiConfigFlags_IsTouchScreen          = 1 << 21,  // Using touch screen
+};
+```
+
+**Example:**
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+```
+
+### Font Configuration
+
+<ResponseField name="Fonts" type="ImFontAtlas*">
+  Font atlas: load, rasterize and pack fonts into a single texture.
+</ResponseField>
+
+<ResponseField name="FontDefault" type="ImFont*" default="NULL">
+  Font to use on NewFrame(). NULL uses Fonts->Fonts[0].
+</ResponseField>
+
+<ResponseField name="FontAllowUserScaling" type="bool" default="false">
+  Allow user scaling text with Ctrl+Wheel.
+</ResponseField>
+
+### File Paths
+
+<ResponseField name="IniFilename" type="const char*" default="imgui.ini">
+  Path to .ini file for saving/loading settings. Set NULL to disable.
+</ResponseField>
+
+<ResponseField name="LogFilename" type="const char*" default="imgui_log.txt">
+  Path to .log file (default for LogToFile when no file specified).
+</ResponseField>
+
+<Warning>
+Default "imgui.ini" is relative to current working directory! Most apps should lock this to an absolute path.
+</Warning>
+
+### Timing Configuration
+
+<ResponseField name="IniSavingRate" type="float" default="5.0f">
+  Minimum time between saving positions/sizes to .ini file, in seconds.
+</ResponseField>
+
+<ResponseField name="MouseDoubleClickTime" type="float" default="0.30f">
+  Time for a double-click, in seconds.
+</ResponseField>
+
+<ResponseField name="MouseDoubleClickMaxDist" type="float" default="6.0f">
+  Distance threshold to stay in to validate a double-click, in pixels.
+</ResponseField>
+
+<ResponseField name="MouseDragThreshold" type="float" default="6.0f">
+  Distance threshold before considering we are dragging.
+</ResponseField>
+
+<ResponseField name="KeyRepeatDelay" type="float" default="0.275f">
+  When holding a key/button, time before it starts repeating, in seconds.
+</ResponseField>
+
+<ResponseField name="KeyRepeatRate" type="float" default="0.050f">
+  When holding a key/button, rate at which it repeats, in seconds.
+</ResponseField>
+
+### Navigation Configuration
+
+<ResponseField name="ConfigNavSwapGamepadButtons" type="bool" default="false">
+  Swap Activate/Cancel (A/B) buttons, matching Nintendo/Japanese style.
+</ResponseField>
+
+<ResponseField name="ConfigNavMoveSetMousePos" type="bool" default="false">
+  Directional/tabbing navigation teleports the mouse cursor.
+</ResponseField>
+
+<ResponseField name="ConfigNavCaptureKeyboard" type="bool" default="true">
+  Sets io.WantCaptureKeyboard when io.NavActive is set.
+</ResponseField>
+
+<ResponseField name="ConfigNavEscapeClearFocusItem" type="bool" default="true">
+  Pressing Escape can clear focused item + navigation.
+</ResponseField>
+
+<ResponseField name="ConfigNavCursorVisibleAuto" type="bool" default="true">
+  Using directional navigation key makes the cursor visible.
+</ResponseField>
+
+### Miscellaneous Configuration
+
+<ResponseField name="MouseDrawCursor" type="bool" default="false">
+  Request ImGui to draw a mouse cursor for you (software cursor).
+</ResponseField>
+
+<ResponseField name="ConfigMacOSXBehaviors" type="bool" default="defined(__APPLE__)">
+  Swap Cmd/Ctrl keys + OS X style text editing, etc.
+</ResponseField>
+
+<ResponseField name="ConfigInputTextCursorBlink" type="bool" default="true">
+  Enable blinking cursor in InputText.
+</ResponseField>
+
+<ResponseField name="ConfigInputTextEnterKeepActive" type="bool" default="false">
+  [BETA] Pressing Enter keeps item active and selects contents.
+</ResponseField>
+
+<ResponseField name="ConfigDragClickToInputText" type="bool" default="false">
+  [BETA] Enable turning DragXXX widgets into text input with a simple click-release.
+</ResponseField>
+
+<ResponseField name="ConfigWindowsResizeFromEdges" type="bool" default="true">
+  Enable resizing windows from their edges and lower-left corner.
+</ResponseField>
+
+<ResponseField name="ConfigWindowsMoveFromTitleBarOnly" type="bool" default="false">
+  Only allow moving windows when clicking on their title bar.
+</ResponseField>
+
+<ResponseField name="ConfigMemoryCompactTimer" type="float" default="60.0f">
+  Timer (in seconds) to free transient windows/tables memory buffers when unused. Set to -1.0f to disable.
+</ResponseField>
+
+## Output Flags
+
+<Tip>
+When reading these flags to dispatch your inputs, it is generally easier to use their state **BEFORE** calling NewFrame().
+</Tip>
+
+<ResponseField name="WantCaptureMouse" type="bool">
+  Set when Dear ImGui will use mouse inputs. Don't dispatch mouse to your game when true.
+</ResponseField>
+
+<ResponseField name="WantCaptureKeyboard" type="bool">
+  Set when Dear ImGui will use keyboard inputs. Don't dispatch keyboard to your game when true.
+</ResponseField>
+
+<ResponseField name="WantTextInput" type="bool">
+  Mobile/console: when set, you may display an on-screen keyboard.
+</ResponseField>
+
+<ResponseField name="WantSetMousePos" type="bool">
+  MousePos has been altered, backend should reposition mouse. Rarely used!
+</ResponseField>
+
+<ResponseField name="WantSaveIniSettings" type="bool">
+  When manual .ini save is active (io.IniFilename == NULL), this notifies you to save. Clear this flag yourself after saving!
+</ResponseField>
+
+<ResponseField name="NavActive" type="bool">
+  Keyboard/Gamepad navigation is currently allowed.
+</ResponseField>
+
+<ResponseField name="NavVisible" type="bool">
+  Keyboard/Gamepad navigation highlight is visible and allowed.
+</ResponseField>
+
+<ResponseField name="Framerate" type="float">
+  Estimate of application framerate (rolling average), in frames per second.
+</ResponseField>
+
+**Example:**
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Before NewFrame()
+if (!io.WantCaptureMouse)
+    ProcessGameMouseInput();
+
+if (!io.WantCaptureKeyboard)
+    ProcessGameKeyboardInput();
+
+ImGui::NewFrame();
+// ... ImGui code ...
+```
+
+## Input State
+
+<Note>
+Backends should use `AddXXXEvent()` functions to submit input. These fields are maintained by ImGui.
+</Note>
+
+### Mouse State
+
+<ResponseField name="MousePos" type="ImVec2">
+  Mouse position in pixels. Set to `ImVec2(-FLT_MAX, -FLT_MAX)` if unavailable.
+</ResponseField>
+
+<ResponseField name="MouseDown" type="bool[5]">
+  Mouse buttons state (0=left, 1=right, 2=middle + extras).
+</ResponseField>
+
+<ResponseField name="MouseWheel" type="float">
+  Mouse wheel vertical: 1 unit scrolls about 5 lines.
+</ResponseField>
+
+<ResponseField name="MouseWheelH" type="float">
+  Mouse wheel horizontal.
+</ResponseField>
+
+<ResponseField name="MouseSource" type="ImGuiMouseSource">
+  Mouse actual input peripheral (Mouse/TouchScreen/Pen).
+</ResponseField>
+
+### Keyboard State
+
+<ResponseField name="KeyCtrl" type="bool">
+  Keyboard modifier down: Ctrl (non-macOS), Cmd (macOS).
+</ResponseField>
+
+<ResponseField name="KeyShift" type="bool">
+  Keyboard modifier down: Shift.
+</ResponseField>
+
+<ResponseField name="KeyAlt" type="bool">
+  Keyboard modifier down: Alt.
+</ResponseField>
+
+<ResponseField name="KeySuper" type="bool">
+  Keyboard modifier down: Windows/Super (non-macOS), Ctrl (macOS).
+</ResponseField>
+
+<ResponseField name="KeyMods" type="ImGuiKeyChord">
+  Combined key modifiers flags (updated by NewFrame()).
+</ResponseField>
+
+<ResponseField name="KeysData" type="ImGuiKeyData[ImGuiKey_NamedKey_COUNT]">
+  Key state for all known keys. Use `IsKeyXXX()` functions to access.
+</ResponseField>
+
+## Backend Information
+
+<ResponseField name="BackendPlatformName" type="const char*">
+  Platform backend name (informational only).
+</ResponseField>
+
+<ResponseField name="BackendRendererName" type="const char*">
+  Renderer backend name (informational only).
+</ResponseField>
+
+<ResponseField name="BackendPlatformUserData" type="void*">
+  User data for platform backend.
+</ResponseField>
+
+<ResponseField name="BackendRendererUserData" type="void*">
+  User data for renderer backend.
+</ResponseField>
+
+## User Data
+
+<ResponseField name="UserData" type="void*" default="NULL">
+  Store your own data.
+</ResponseField>
+
+**Example:**
+```cpp
+struct MyAppData {
+    int some_value;
+    float another_value;
+};
+
+MyAppData my_data;
+ImGuiIO& io = ImGui::GetIO();
+io.UserData = &my_data;
+
+// Later:
+MyAppData* data = (MyAppData*)io.UserData;
+```
+
+## Metrics
+
+<ResponseField name="MetricsRenderVertices" type="int">
+  Vertices output during last call to Render().
+</ResponseField>
+
+<ResponseField name="MetricsRenderIndices" type="int">
+  Indices output during last call to Render().
+</ResponseField>
+
+<ResponseField name="MetricsRenderWindows" type="int">
+  Number of visible windows.
+</ResponseField>
+
+<ResponseField name="MetricsActiveWindows" type="int">
+  Number of active windows.
+</ResponseField>
+
+<ResponseField name="MouseDelta" type="ImVec2">
+  Mouse delta. Zero if either current or previous position are invalid.
+</ResponseField>
+
+## Debug Options
+
+<ResponseField name="ConfigErrorRecovery" type="bool" default="true">
+  Enable error recovery support.
+</ResponseField>
+
+<ResponseField name="ConfigErrorRecoveryEnableAssert" type="bool" default="true">
+  Enable asserts on recoverable errors.
+</ResponseField>
+
+<ResponseField name="ConfigErrorRecoveryEnableDebugLog" type="bool" default="true">
+  Enable debug log output on recoverable errors.
+</ResponseField>
+
+<ResponseField name="ConfigErrorRecoveryEnableTooltip" type="bool" default="true">
+  Enable tooltip on recoverable errors.
+</ResponseField>
+
+<ResponseField name="ConfigDebugIsDebuggerPresent" type="bool" default="false">
+  Enable various tools calling IM_DEBUG_BREAK().
+</ResponseField>
+
+<ResponseField name="ConfigDebugHighlightIdConflicts" type="bool" default="true">
+  Highlight and show error when multiple items have conflicting identifiers.
+</ResponseField>
+
+<ResponseField name="ConfigDebugBeginReturnValueOnce" type="bool" default="false">
+  First-time calls to Begin()/BeginChild() will return false.
+</ResponseField>
+
+<ResponseField name="ConfigDebugBeginReturnValueLoop" type="bool" default="false">
+  Some calls to Begin()/BeginChild() will return false, cycling through window depths.
+</ResponseField>
+
+## See Also
+
+- [Input](/api/input) - Input event functions
+- [Keyboard](/api/keyboard) - Keyboard input
+- [Mouse](/api/mouse) - Mouse input
+- [ImGuiPlatformIO](/api/imgui-io#imguiplatformio) - Platform-specific functions

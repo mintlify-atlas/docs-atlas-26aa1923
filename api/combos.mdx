@@ -1,0 +1,291 @@
+---
+title: 'Combo Boxes'
+description: 'Combo box dropdown widgets for Dear ImGui'
+---
+
+## Combo Box Widgets
+
+Combo boxes allow selecting one item from a dropdown list.
+
+### BeginCombo
+
+```cpp
+bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboFlags flags = 0)
+```
+
+Begin a combo box. The `BeginCombo()/EndCombo()` API allows you to manage your contents and selection state however you want it, by creating e.g. `Selectable()` items.
+
+<ParamField path="label" type="const char*">
+  Combo box label
+</ParamField>
+
+<ParamField path="preview_value" type="const char*">
+  Preview text displayed when combo is closed
+</ParamField>
+
+<ParamField path="flags" type="ImGuiComboFlags" default="0">
+  Combo flags (see ImGuiComboFlags_)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when combo is open (you can output to it)
+</ResponseField>
+
+```cpp
+// Example
+const char* items[] = { "Apple", "Banana", "Cherry" };
+static int item_current = 0;
+
+if (ImGui::BeginCombo("Fruits", items[item_current])) {
+    for (int n = 0; n < IM_COUNTOF(items); n++) {
+        bool is_selected = (item_current == n);
+        if (ImGui::Selectable(items[n], is_selected)) {
+            item_current = n;
+        }
+        if (is_selected) {
+            ImGui::SetItemDefaultFocus();
+        }
+    }
+    ImGui::EndCombo();
+}
+```
+
+### EndCombo
+
+```cpp
+void ImGui::EndCombo()
+```
+
+End combo box. Only call `EndCombo()` if `BeginCombo()` returns true.
+
+### Combo (array)
+
+```cpp
+bool ImGui::Combo(const char* label, int* current_item, const char* const items[], int items_count, int popup_max_height_in_items = -1)
+```
+
+Simple combo box helper over `BeginCombo()/EndCombo()`.
+
+<ParamField path="label" type="const char*">
+  Combo box label
+</ParamField>
+
+<ParamField path="current_item" type="int*">
+  Pointer to current selected item index
+</ParamField>
+
+<ParamField path="items" type="const char* const[]">
+  Array of item strings
+</ParamField>
+
+<ParamField path="items_count" type="int">
+  Number of items in array
+</ParamField>
+
+<ParamField path="popup_max_height_in_items" type="int" default="-1">
+  Maximum height of popup in items (-1 = default)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when selection has been modified
+</ResponseField>
+
+```cpp
+// Example
+const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango" };
+static int item_current = 0;
+ImGui::Combo("Fruits", &item_current, items, IM_COUNTOF(items));
+```
+
+### Combo (separated string)
+
+```cpp
+bool ImGui::Combo(const char* label, int* current_item, const char* items_separated_by_zeros, int popup_max_height_in_items = -1)
+```
+
+Combo box with items separated by `\0` within a string. End item-list with `\0\0`. E.g. `"One\0Two\0Three\0"`
+
+<ParamField path="label" type="const char*">
+  Combo box label
+</ParamField>
+
+<ParamField path="current_item" type="int*">
+  Pointer to current selected item index
+</ParamField>
+
+<ParamField path="items_separated_by_zeros" type="const char*">
+  String with items separated by \0
+</ParamField>
+
+<ParamField path="popup_max_height_in_items" type="int" default="-1">
+  Maximum height of popup in items
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when selection has been modified
+</ResponseField>
+
+```cpp
+// Example
+static int item_current = 0;
+ImGui::Combo("Combo", &item_current, "Apple\0Banana\0Cherry\0");
+```
+
+### Combo (callback)
+
+```cpp
+bool ImGui::Combo(const char* label, int* current_item, const char* (*getter)(void* user_data, int idx), void* user_data, int items_count, int popup_max_height_in_items = -1)
+```
+
+Combo box with callback to get item strings.
+
+<ParamField path="label" type="const char*">
+  Combo box label
+</ParamField>
+
+<ParamField path="current_item" type="int*">
+  Pointer to current selected item index
+</ParamField>
+
+<ParamField path="getter" type="const char* (*)(void*, int)">
+  Callback function to get item string by index
+</ParamField>
+
+<ParamField path="user_data" type="void*">
+  User data passed to callback
+</ParamField>
+
+<ParamField path="items_count" type="int">
+  Number of items
+</ParamField>
+
+<ParamField path="popup_max_height_in_items" type="int" default="-1">
+  Maximum height of popup in items
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when selection has been modified
+</ResponseField>
+
+```cpp
+// Example
+struct MyData {
+    const char* items[3] = { "One", "Two", "Three" };
+};
+
+static const char* MyItemGetter(void* data, int idx) {
+    MyData* my_data = (MyData*)data;
+    return my_data->items[idx];
+}
+
+MyData my_data;
+static int item_current = 0;
+ImGui::Combo("Combo", &item_current, MyItemGetter, &my_data, 3);
+```
+
+## Combo Flags
+
+### ImGuiComboFlags_
+
+Flags for `BeginCombo()`.
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiComboFlags_None` | Default |
+| `ImGuiComboFlags_PopupAlignLeft` | Align the popup toward the left by default |
+| `ImGuiComboFlags_HeightSmall` | Max ~4 items visible |
+| `ImGuiComboFlags_HeightRegular` | Max ~8 items visible (default) |
+| `ImGuiComboFlags_HeightLarge` | Max ~20 items visible |
+| `ImGuiComboFlags_HeightLargest` | As many fitting items as possible |
+| `ImGuiComboFlags_NoArrowButton` | Display on the preview box without the square arrow button |
+| `ImGuiComboFlags_NoPreview` | Display only a square arrow button |
+| `ImGuiComboFlags_WidthFitPreview` | Width dynamically calculated from preview contents |
+
+```cpp
+// Examples
+
+// Left-aligned popup
+if (ImGui::BeginCombo("##combo", "Preview", ImGuiComboFlags_PopupAlignLeft)) {
+    ImGui::Selectable("Item 1");
+    ImGui::Selectable("Item 2");
+    ImGui::EndCombo();
+}
+
+// Small height
+if (ImGui::BeginCombo("Small", "Preview", ImGuiComboFlags_HeightSmall)) {
+    for (int i = 0; i < 10; i++) {
+        char buf[32];
+        sprintf(buf, "Item %d", i);
+        ImGui::Selectable(buf);
+    }
+    ImGui::EndCombo();
+}
+
+// No arrow button
+if (ImGui::BeginCombo("##combo2", "No Arrow", ImGuiComboFlags_NoArrowButton)) {
+    ImGui::Selectable("Item 1");
+    ImGui::EndCombo();
+}
+
+// No preview (only arrow)
+if (ImGui::BeginCombo("##combo3", NULL, ImGuiComboFlags_NoPreview)) {
+    ImGui::Selectable("Item 1");
+    ImGui::EndCombo();
+}
+
+// Width fits preview
+if (ImGui::BeginCombo("Auto Width", "This determines width", ImGuiComboFlags_WidthFitPreview)) {
+    ImGui::Selectable("Item 1");
+    ImGui::Selectable("Item 2");
+    ImGui::EndCombo();
+}
+```
+
+## Advanced Usage
+
+```cpp
+// Custom preview with multiple values
+static bool selected[3] = { false, true, false };
+char preview[64] = "";
+if (selected[0]) strcat(preview, "Apple ");
+if (selected[1]) strcat(preview, "Banana ");
+if (selected[2]) strcat(preview, "Cherry ");
+
+if (ImGui::BeginCombo("Multi-Select", preview)) {
+    ImGui::Selectable("Apple", &selected[0]);
+    ImGui::Selectable("Banana", &selected[1]);
+    ImGui::Selectable("Cherry", &selected[2]);
+    ImGui::EndCombo();
+}
+
+// With icons or custom rendering
+if (ImGui::BeginCombo("Custom", "Preview")) {
+    if (ImGui::Selectable("Item 1")) {
+        // Selected
+    }
+    ImGui::SameLine();
+    ImGui::TextDisabled("(hint)");
+    
+    if (ImGui::Selectable("Item 2")) {
+        // Selected
+    }
+    ImGui::EndCombo();
+}
+
+// Searchable combo
+static char search[128] = "";
+if (ImGui::BeginCombo("Search", "Type to search")) {
+    ImGui::SetKeyboardFocusHere();
+    ImGui::InputText("##search", search, IM_COUNTOF(search));
+    
+    const char* items[] = { "Apple", "Apricot", "Banana", "Cherry" };
+    for (int n = 0; n < IM_COUNTOF(items); n++) {
+        if (search[0] == '\0' || strstr(items[n], search) != NULL) {
+            if (ImGui::Selectable(items[n])) {
+                // Selected
+            }
+        }
+    }
+    ImGui::EndCombo();
+}
+```

@@ -1,0 +1,387 @@
+---
+title: Sliders and Drags
+description: Value adjustment widgets with visual feedback in Dear ImGui
+---
+
+Sliders and drag widgets provide visual feedback for adjusting numeric values. They're essential for parameters that need to be tweaked interactively.
+
+## Slider Widgets
+
+### SliderFloat()
+
+Adjust a float value within a range:
+
+```cpp
+IMGUI_API bool SliderFloat(const char* label, float* v, float v_min, float v_max,
+                           const char* format = "%.3f", ImGuiSliderFlags flags = 0);
+```
+
+<ParamField path="label" type="const char*" required>
+  Widget label
+</ParamField>
+
+<ParamField path="v" type="float*" required>
+  Pointer to the value to modify
+</ParamField>
+
+<ParamField path="v_min, v_max" type="float" required>
+  Minimum and maximum values
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%.3f">
+  Display format string (printf-style)
+</ParamField>
+
+```cpp
+static float value = 0.5f;
+ImGui::SliderFloat("Volume", &value, 0.0f, 1.0f);
+
+// Custom format
+static float percentage = 50.0f;
+ImGui::SliderFloat("Opacity", &percentage, 0.0f, 100.0f, "%.0f%%");
+```
+
+### SliderInt()
+
+Adjust an integer value:
+
+```cpp
+IMGUI_API bool SliderInt(const char* label, int* v, int v_min, int v_max,
+                         const char* format = "%d", ImGuiSliderFlags flags = 0);
+```
+
+```cpp
+static int quality = 50;
+ImGui::SliderInt("Quality", &quality, 0, 100);
+
+static int level = 1;
+ImGui::SliderInt("Level", &level, 1, 10, "Level %d");
+```
+
+### SliderAngle()
+
+Slider specialized for angles:
+
+```cpp
+IMGUI_API bool SliderAngle(const char* label, float* v_rad,
+                           float v_degrees_min = -360.0f, float v_degrees_max = +360.0f,
+                           const char* format = "%.0f deg", ImGuiSliderFlags flags = 0);
+```
+
+```cpp
+static float angle = 0.0f;  // Stored in radians
+ImGui::SliderAngle("Rotation", &angle);
+
+// Custom range
+ImGui::SliderAngle("Limited", &angle, -45.0f, 45.0f);
+```
+
+## Multi-Component Sliders
+
+### SliderFloat2/3/4()
+
+Slide multiple float values:
+
+```cpp
+IMGUI_API bool SliderFloat2(const char* label, float v[2], float v_min, float v_max,
+                            const char* format = "%.3f", ImGuiSliderFlags flags = 0);
+IMGUI_API bool SliderFloat3(const char* label, float v[3], float v_min, float v_max,
+                            const char* format = "%.3f", ImGuiSliderFlags flags = 0);
+IMGUI_API bool SliderFloat4(const char* label, float v[4], float v_min, float v_max,
+                            const char* format = "%.3f", ImGuiSliderFlags flags = 0);
+```
+
+```cpp
+static float vec2[2] = { 0.0f, 0.0f };
+static float vec3[3] = { 0.0f, 0.0f, 0.0f };
+static float vec4[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
+
+ImGui::SliderFloat2("Position", vec2, -10.0f, 10.0f);
+ImGui::SliderFloat3("Direction", vec3, -1.0f, 1.0f);
+ImGui::SliderFloat4("Color", vec4, 0.0f, 1.0f);
+```
+
+### SliderInt2/3/4()
+
+Slide multiple integer values:
+
+```cpp
+static int ivec3[3] = { 10, 20, 30 };
+ImGui::SliderInt3("Coordinates", ivec3, 0, 100);
+```
+
+## Vertical Sliders
+
+### VSliderFloat() / VSliderInt()
+
+Vertical slider widgets:
+
+```cpp
+IMGUI_API bool VSliderFloat(const char* label, const ImVec2& size, float* v,
+                            float v_min, float v_max, const char* format = "%.3f",
+                            ImGuiSliderFlags flags = 0);
+IMGUI_API bool VSliderInt(const char* label, const ImVec2& size, int* v,
+                          int v_min, int v_max, const char* format = "%d",
+                          ImGuiSliderFlags flags = 0);
+```
+
+```cpp
+static float values[7] = { 0.0f, 0.60f, 0.35f, 0.9f, 0.70f, 0.20f, 0.0f };
+
+for (int i = 0; i < 7; i++) {
+    if (i > 0) ImGui::SameLine();
+    ImGui::PushID(i);
+    ImGui::VSliderFloat("##v", ImVec2(18, 160), &values[i], 0.0f, 1.0f, "");
+    ImGui::PopID();
+}
+```
+
+## Drag Widgets
+
+### DragFloat()
+
+Drag to adjust a float value:
+
+```cpp
+IMGUI_API bool DragFloat(const char* label, float* v, float v_speed = 1.0f,
+                         float v_min = 0.0f, float v_max = 0.0f,
+                         const char* format = "%.3f", ImGuiSliderFlags flags = 0);
+```
+
+<ParamField path="v_speed" type="float" default="1.0f">
+  Speed of value change per pixel of mouse movement
+</ParamField>
+
+<ParamField path="v_min, v_max" type="float">
+  Optional range limits. Use `v_min >= v_max` for no bounds.
+</ParamField>
+
+```cpp
+static float f1 = 1.00f;
+ImGui::DragFloat("Drag float", &f1, 0.005f);
+
+// With range
+static int i2 = 42;
+ImGui::DragInt("Drag int 0..100", &i2, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+
+// Small values
+static float f2 = 0.0067f;
+ImGui::DragFloat("Drag small", &f2, 0.0001f, 0.0f, 0.0f, "%.06f ns");
+```
+
+<Note>
+  Drag widgets are useful when you need:
+  - Fine control over the value
+  - No strict visual bounds
+  - Keyboard/gamepad navigation with custom speed
+</Note>
+
+### DragInt()
+
+Drag to adjust an integer value:
+
+```cpp
+IMGUI_API bool DragInt(const char* label, int* v, float v_speed = 1.0f,
+                       int v_min = 0, int v_max = 0,
+                       const char* format = "%d", ImGuiSliderFlags flags = 0);
+```
+
+```cpp
+static int i1 = 50;
+ImGui::DragInt("Drag int", &i1, 1);
+
+// With clamping
+static int i2 = 42;
+ImGui::DragInt("Drag int 0..100", &i2, 1, 0, 100, "%d%%", ImGuiSliderFlags_AlwaysClamp);
+
+// With wrapping
+static int i3 = 128;
+ImGui::DragInt("Drag wrap 100..200", &i3, 1, 100, 200, "%d", ImGuiSliderFlags_WrapAround);
+```
+
+## Range Widgets
+
+### DragFloatRange2()
+
+Drag a range with min/max values:
+
+```cpp
+IMGUI_API bool DragFloatRange2(const char* label, float* v_current_min, float* v_current_max,
+                               float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f,
+                               const char* format = "%.3f", const char* format_max = NULL,
+                               ImGuiSliderFlags flags = 0);
+```
+
+```cpp
+static float begin = 10.0f;
+static float end = 90.0f;
+ImGui::DragFloatRange2("Range", &begin, &end, 0.25f, 0.0f, 100.0f,
+                       "Min: %.1f%%", "Max: %.1f%%", ImGuiSliderFlags_AlwaysClamp);
+```
+
+### DragIntRange2()
+
+```cpp
+static int begin_i = 100;
+static int end_i = 1000;
+ImGui::DragIntRange2("Range int", &begin_i, &end_i, 5, 0, 1000,
+                     "Min: %d units", "Max: %d units");
+```
+
+## Slider and Drag Flags
+
+Customize behavior with flags:
+
+<CodeGroup>
+```cpp Clamping Flags
+// Always clamp to min/max even with Ctrl+Click
+ImGui::SliderFloat("##s", &v, 0.0f, 1.0f, "%.3f", 
+                   ImGuiSliderFlags_AlwaysClamp);
+
+// Clamp when manually inputting
+ImGui::SliderFloat("##s", &v, 0.0f, 1.0f, "%.3f",
+                   ImGuiSliderFlags_ClampOnInput);
+
+// Clamp even when min==max==0
+ImGui::DragFloat("##d", &v, 0.005f, 0.0f, 0.0f, "%.3f",
+                 ImGuiSliderFlags_ClampZeroRange);
+```
+
+```cpp Display Flags
+// Logarithmic scale
+ImGui::SliderFloat("##log", &v, 0.01f, 100.0f, "%.2f",
+                   ImGuiSliderFlags_Logarithmic);
+
+// Don't round to format precision
+ImGui::SliderFloat("##noround", &v, 0.0f, 1.0f, "%.3f",
+                   ImGuiSliderFlags_NoRoundToFormat);
+
+// Show color markers for multi-component
+ImGui::SliderFloat4("##rgba", rgba, 0.0f, 1.0f, "%.3f",
+                    ImGuiSliderFlags_ColorMarkers);
+```
+
+```cpp Input Flags
+// Disable Ctrl+Click text input
+ImGui::SliderFloat("##noinput", &v, 0.0f, 1.0f, "%.3f",
+                   ImGuiSliderFlags_NoInput);
+
+// Disable keyboard speed modifiers (Shift/Alt)
+ImGui::DragFloat("##nospeed", &v, 0.005f, 0.0f, 0.0f, "%.3f",
+                 ImGuiSliderFlags_NoSpeedTweaks);
+
+// Wrap around from max to min (DragXXX only)
+ImGui::DragInt("##wrap", &i, 1, 0, 100, "%d",
+               ImGuiSliderFlags_WrapAround);
+```
+</CodeGroup>
+
+## Ctrl+Click to Input
+
+By default, users can Ctrl+Click on sliders/drags to input values directly:
+
+```cpp
+static float value = 0.5f;
+ImGui::SliderFloat("slider", &value, 0.0f, 1.0f);
+// User can Ctrl+Click to type a value directly
+```
+
+<Tip>
+  Hold Shift or Alt while dragging to adjust speed on the fly (slower or faster).
+</Tip>
+
+## Generic Scalar Widgets
+
+### DragScalar() / SliderScalar()
+
+Work with any data type:
+
+```cpp
+IMGUI_API bool DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
+                          float v_speed = 1.0f, const void* p_min = NULL, const void* p_max = NULL,
+                          const char* format = NULL, ImGuiSliderFlags flags = 0);
+
+IMGUI_API bool SliderScalar(const char* label, ImGuiDataType data_type, void* p_data,
+                            const void* p_min, const void* p_max, const char* format = NULL,
+                            ImGuiSliderFlags flags = 0);
+```
+
+```cpp
+static ImS64 s64_v = 0;
+static ImU64 u64_v = 0;
+ImS64 s64_min = -1000000000000000LL;
+ImS64 s64_max = 1000000000000000LL;
+
+ImGui::DragScalar("int64", ImGuiDataType_S64, &s64_v, 1.0f, &s64_min, &s64_max);
+ImGui::SliderScalar("uint64", ImGuiDataType_U64, &u64_v, &u64_min, &u64_max, "%llu");
+```
+
+## Complete Example
+
+```cpp
+void ShowSliderDragDemo() {
+    ImGui::Begin("Slider & Drag Demo");
+    
+    // Basic slider
+    static float slider_f = 0.5f;
+    ImGui::SliderFloat("Slider float", &slider_f, 0.0f, 1.0f, "%.3f");
+    
+    // Slider with custom format
+    static int slider_i = 50;
+    ImGui::SliderInt("Quality", &slider_i, 0, 100, "%d%%");
+    
+    ImGui::Spacing();
+    
+    // Angle slider
+    static float angle = 0.0f;
+    ImGui::SliderAngle("Angle", &angle);
+    
+    ImGui::Spacing();
+    
+    // Drag float
+    static float drag_f = 1.0f;
+    ImGui::DragFloat("Drag float", &drag_f, 0.005f);
+    
+    // Drag int with range
+    static int drag_i = 50;
+    ImGui::DragInt("Drag int 0..100", &drag_i, 1, 0, 100, "%d",
+                   ImGuiSliderFlags_AlwaysClamp);
+    
+    ImGui::Spacing();
+    
+    // Range drag
+    static float range_min = 10.0f;
+    static float range_max = 90.0f;
+    ImGui::DragFloatRange2("Range", &range_min, &range_max, 0.25f, 0.0f, 100.0f,
+                           "Min: %.1f", "Max: %.1f", ImGuiSliderFlags_AlwaysClamp);
+    
+    ImGui::Spacing();
+    
+    // Multi-component
+    static float vec3[3] = { 0.5f, 0.5f, 0.5f };
+    ImGui::SliderFloat3("RGB", vec3, 0.0f, 1.0f);
+    
+    ImGui::Spacing();
+    
+    // Logarithmic slider
+    static float log_val = 1.0f;
+    ImGui::SliderFloat("Log scale", &log_val, 0.01f, 100.0f, "%.2f",
+                       ImGuiSliderFlags_Logarithmic);
+    
+    ImGui::End();
+}
+```
+
+## Best Practices
+
+<Tip>
+  Use `ImGuiSliderFlags_AlwaysClamp` to prevent users from entering out-of-range values via Ctrl+Click.
+</Tip>
+
+<Note>
+  For DragXXX widgets, set `v_min >= v_max` to indicate no clamping bounds.
+</Note>
+
+<Warning>
+  The `v_speed` parameter in DragXXX is per-pixel of mouse movement. Start with small values like 0.005f for floats.
+</Warning>

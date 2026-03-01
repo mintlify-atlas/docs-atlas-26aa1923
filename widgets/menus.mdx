@@ -1,0 +1,447 @@
+---
+title: Menus
+description: Menu bars and context menus in Dear ImGui
+---
+
+Menus provide organized navigation and command access in your application. Dear ImGui supports menu bars, popup menus, and context menus.
+
+## Menu Bars
+
+### Window Menu Bar
+
+Add a menu bar to the current window:
+
+```cpp
+IMGUI_API bool BeginMenuBar();
+IMGUI_API void EndMenuBar();
+```
+
+<Note>
+  Requires `ImGuiWindowFlags_MenuBar` flag set on the parent window.
+</Note>
+
+```cpp
+ImGui::Begin("Window", NULL, ImGuiWindowFlags_MenuBar);
+
+if (ImGui::BeginMenuBar()) {
+    if (ImGui::BeginMenu("File")) {
+        if (ImGui::MenuItem("New")) { /* action */ }
+        if (ImGui::MenuItem("Open", "Ctrl+O")) { /* action */ }
+        ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Edit")) {
+        if (ImGui::MenuItem("Undo", "Ctrl+Z")) { /* action */ }
+        if (ImGui::MenuItem("Redo", "Ctrl+Y")) { /* action */ }
+        ImGui::EndMenu();
+    }
+    ImGui::EndMenuBar();
+}
+
+ImGui::End();
+```
+
+### Main Menu Bar
+
+Create a full-screen menu bar at the top:
+
+```cpp
+IMGUI_API bool BeginMainMenuBar();
+IMGUI_API void EndMainMenuBar();
+```
+
+```cpp
+if (ImGui::BeginMainMenuBar()) {
+    if (ImGui::BeginMenu("File")) {
+        if (ImGui::MenuItem("New")) { }
+        if (ImGui::MenuItem("Open", "Ctrl+O")) { }
+        if (ImGui::MenuItem("Save", "Ctrl+S")) { }
+        ImGui::Separator();
+        if (ImGui::MenuItem("Quit", "Alt+F4")) { }
+        ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Edit")) {
+        if (ImGui::MenuItem("Undo", "Ctrl+Z")) { }
+        if (ImGui::MenuItem("Redo", "Ctrl+Y", false, false)) { }  // Disabled
+        ImGui::EndMenu();
+    }
+    ImGui::EndMainMenuBar();
+}
+```
+
+## Menu Items
+
+### BeginMenu() / EndMenu()
+
+Create a sub-menu:
+
+```cpp
+IMGUI_API bool BeginMenu(const char* label, bool enabled = true);
+IMGUI_API void EndMenu();
+```
+
+<ParamField path="label" type="const char*" required>
+  Menu label
+</ParamField>
+
+<ParamField path="enabled" type="bool" default="true">
+  Whether the menu can be opened
+</ParamField>
+
+```cpp
+if (ImGui::BeginMenu("File")) {
+    if (ImGui::MenuItem("New")) { }
+    
+    if (ImGui::BeginMenu("Open Recent")) {
+        ImGui::MenuItem("file1.txt");
+        ImGui::MenuItem("file2.txt");
+        ImGui::MenuItem("file3.txt");
+        ImGui::EndMenu();
+    }
+    
+    ImGui::Separator();
+    
+    if (ImGui::MenuItem("Quit")) { }
+    
+    ImGui::EndMenu();
+}
+```
+
+### MenuItem()
+
+Create a clickable menu item:
+
+```cpp
+IMGUI_API bool MenuItem(const char* label, const char* shortcut = NULL,
+                        bool selected = false, bool enabled = true);
+IMGUI_API bool MenuItem(const char* label, const char* shortcut,
+                        bool* p_selected, bool enabled = true);
+```
+
+<ParamField path="label" type="const char*" required>
+  Menu item label
+</ParamField>
+
+<ParamField path="shortcut" type="const char*">
+  Keyboard shortcut text (for display only, not processed)
+</ParamField>
+
+<ParamField path="selected" type="bool">
+  Display a checkmark if true
+</ParamField>
+
+<ParamField path="enabled" type="bool" default="true">
+  Whether the item can be clicked
+</ParamField>
+
+<CodeGroup>
+```cpp Basic Menu Items
+if (ImGui::MenuItem("New")) {
+    CreateNewFile();
+}
+
+if (ImGui::MenuItem("Open", "Ctrl+O")) {
+    OpenFileDialog();
+}
+
+if (ImGui::MenuItem("Save", "Ctrl+S")) {
+    SaveFile();
+}
+```
+
+```cpp Checkable Menu Items
+static bool show_grid = true;
+static bool show_axis = false;
+
+ImGui::MenuItem("Show Grid", NULL, &show_grid);
+ImGui::MenuItem("Show Axis", NULL, &show_axis);
+```
+
+```cpp Disabled Menu Items
+// Disabled menu item
+ImGui::MenuItem("Redo", "Ctrl+Y", false, false);
+
+// Conditionally disabled
+bool can_save = HasUnsavedChanges();
+if (ImGui::MenuItem("Save", "Ctrl+S", false, can_save)) {
+    SaveFile();
+}
+```
+</CodeGroup>
+
+## Nested Menus
+
+Create hierarchical menu structures:
+
+```cpp
+if (ImGui::BeginMenu("File")) {
+    if (ImGui::MenuItem("New")) { }
+    if (ImGui::MenuItem("Open", "Ctrl+O")) { }
+    
+    if (ImGui::BeginMenu("Open Recent")) {
+        ImGui::MenuItem("project1.dat");
+        ImGui::MenuItem("project2.dat");
+        
+        if (ImGui::BeginMenu("More..")) {
+            ImGui::MenuItem("project3.dat");
+            ImGui::MenuItem("project4.dat");
+            ImGui::EndMenu();
+        }
+        ImGui::EndMenu();
+    }
+    
+    ImGui::Separator();
+    
+    if (ImGui::MenuItem("Quit", "Alt+F4")) { }
+    
+    ImGui::EndMenu();
+}
+```
+
+## Menu Separators
+
+Add visual separators between menu items:
+
+```cpp
+if (ImGui::BeginMenu("File")) {
+    if (ImGui::MenuItem("New")) { }
+    if (ImGui::MenuItem("Open")) { }
+    
+    ImGui::Separator();
+    
+    if (ImGui::MenuItem("Save")) { }
+    if (ImGui::MenuItem("Save As")) { }
+    
+    ImGui::Separator();
+    
+    if (ImGui::MenuItem("Quit")) { }
+    
+    ImGui::EndMenu();
+}
+```
+
+## Context Menus
+
+### BeginPopupContextItem()
+
+Context menu for the last item:
+
+```cpp
+IMGUI_API bool BeginPopupContextItem(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 0);
+```
+
+```cpp
+ImGui::Text("Right-click me");
+if (ImGui::BeginPopupContextItem()) {
+    if (ImGui::MenuItem("Copy")) { }
+    if (ImGui::MenuItem("Paste")) { }
+    ImGui::EndPopup();
+}
+```
+
+### BeginPopupContextWindow()
+
+Context menu for the current window:
+
+```cpp
+IMGUI_API bool BeginPopupContextWindow(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 0);
+```
+
+```cpp
+if (ImGui::BeginPopupContextWindow()) {
+    if (ImGui::MenuItem("Close")) { }
+    if (ImGui::MenuItem("Minimize")) { }
+    ImGui::EndPopup();
+}
+```
+
+### BeginPopupContextVoid()
+
+Context menu when clicking in empty space:
+
+```cpp
+IMGUI_API bool BeginPopupContextVoid(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 0);
+```
+
+```cpp
+if (ImGui::BeginPopupContextVoid()) {
+    if (ImGui::MenuItem("New Window")) { }
+    if (ImGui::MenuItem("Settings")) { }
+    ImGui::EndPopup();
+}
+```
+
+## Complex Menu Contents
+
+Menus can contain any widgets:
+
+```cpp
+if (ImGui::BeginMenu("Options")) {
+    static bool enabled = true;
+    ImGui::MenuItem("Enabled", "", &enabled);
+    
+    // Child window for scrollable content
+    ImGui::BeginChild("child", ImVec2(0, 60), ImGuiChildFlags_Borders);
+    for (int i = 0; i < 10; i++)
+        ImGui::Text("Scrolling Text %d", i);
+    ImGui::EndChild();
+    
+    static float f = 0.5f;
+    ImGui::SliderFloat("Value", &f, 0.0f, 1.0f);
+    
+    static int n = 0;
+    ImGui::Combo("Combo", &n, "Yes\0No\0Maybe\0\0");
+    
+    ImGui::EndMenu();
+}
+```
+
+## Menu with Colors
+
+Display color swatches in menus:
+
+```cpp
+if (ImGui::BeginMenu("Colors")) {
+    float sz = ImGui::GetTextLineHeight();
+    
+    for (int i = 0; i < ImGuiCol_COUNT; i++) {
+        const char* name = ImGui::GetStyleColorName((ImGuiCol)i);
+        ImVec2 p = ImGui::GetCursorScreenPos();
+        
+        // Draw color swatch
+        ImGui::GetWindowDrawList()->AddRectFilled(p, 
+            ImVec2(p.x + sz, p.y + sz), 
+            ImGui::GetColorU32((ImGuiCol)i));
+        
+        ImGui::Dummy(ImVec2(sz, sz));
+        ImGui::SameLine();
+        ImGui::MenuItem(name);
+    }
+    ImGui::EndMenu();
+}
+```
+
+## Appending to Existing Menus
+
+You can append to menus multiple times:
+
+```cpp
+// First definition
+if (ImGui::BeginMenu("Options")) {
+    ImGui::MenuItem("Option A");
+    ImGui::MenuItem("Option B");
+    ImGui::EndMenu();
+}
+
+// Later in code - append more items
+if (ImGui::BeginMenu("Options")) {
+    ImGui::MenuItem("Option C");
+    ImGui::MenuItem("Option D");
+    ImGui::EndMenu();
+}
+```
+
+## Complete Example
+
+```cpp
+void ShowMenuDemo() {
+    // Main menu bar
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("New", "Ctrl+N")) {
+                // Create new file
+            }
+            if (ImGui::MenuItem("Open", "Ctrl+O")) {
+                // Open file dialog
+            }
+            
+            if (ImGui::BeginMenu("Open Recent")) {
+                ImGui::MenuItem("document1.txt");
+                ImGui::MenuItem("document2.txt");
+                ImGui::MenuItem("document3.txt");
+                ImGui::EndMenu();
+            }
+            
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Save", "Ctrl+S")) {
+                // Save file
+            }
+            if (ImGui::MenuItem("Save As..")) {
+                // Save as dialog
+            }
+            
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Quit", "Alt+F4")) {
+                // Quit application
+            }
+            
+            ImGui::EndMenu();
+        }
+        
+        if (ImGui::BeginMenu("Edit")) {
+            if (ImGui::MenuItem("Undo", "Ctrl+Z")) { }
+            if (ImGui::MenuItem("Redo", "Ctrl+Y")) { }
+            
+            ImGui::Separator();
+            
+            if (ImGui::MenuItem("Cut", "Ctrl+X")) { }
+            if (ImGui::MenuItem("Copy", "Ctrl+C")) { }
+            if (ImGui::MenuItem("Paste", "Ctrl+V")) { }
+            
+            ImGui::EndMenu();
+        }
+        
+        if (ImGui::BeginMenu("View")) {
+            static bool show_grid = true;
+            static bool show_ruler = false;
+            
+            ImGui::MenuItem("Show Grid", NULL, &show_grid);
+            ImGui::MenuItem("Show Ruler", NULL, &show_ruler);
+            
+            ImGui::EndMenu();
+        }
+        
+        ImGui::EndMainMenuBar();
+    }
+    
+    // Window with context menu
+    ImGui::Begin("Window with Context Menu");
+    
+    ImGui::Text("Right-click on me!");
+    if (ImGui::BeginPopupContextItem()) {
+        if (ImGui::MenuItem("Action 1")) { }
+        if (ImGui::MenuItem("Action 2")) { }
+        ImGui::Separator();
+        if (ImGui::MenuItem("Close")) { }
+        ImGui::EndPopup();
+    }
+    
+    // Context menu for empty space
+    if (ImGui::BeginPopupContextWindow()) {
+        if (ImGui::MenuItem("Clear")) { }
+        if (ImGui::MenuItem("Reset")) { }
+        ImGui::EndPopup();
+    }
+    
+    ImGui::End();
+}
+```
+
+## Best Practices
+
+<Note>
+  Keyboard shortcuts in `MenuItem()` are displayed but not automatically processed. You need to implement the actual keyboard handling separately.
+</Note>
+
+<Tip>
+  Use `Separator()` to group related menu items visually.
+</Tip>
+
+<Warning>
+  Always call `EndMenu()` only if `BeginMenu()` returns true. Always call `EndMenuBar()` only if `BeginMenuBar()` returns true.
+</Warning>
+
+<Tip>
+  Context menus default to right-click. Use `ImGuiPopupFlags_MouseButtonLeft` or `ImGuiPopupFlags_MouseButtonMiddle` for different buttons.
+</Tip>

@@ -1,0 +1,382 @@
+---
+title: 'Colors & Style Colors'
+description: 'Color configuration, style color stack, and color utilities'
+---
+
+## Style Color Stack
+
+### PushStyleColor
+
+```cpp
+void PushStyleColor(ImGuiCol idx, ImU32 col);
+void PushStyleColor(ImGuiCol idx, const ImVec4& col);
+```
+
+Modify a style color. Always use this if you modify the style after `NewFrame()`.
+
+<ParamField path="idx" type="ImGuiCol">
+  Color identifier (e.g., `ImGuiCol_WindowBg`, `ImGuiCol_Button`)
+</ParamField>
+
+<ParamField path="col" type="ImU32 or ImVec4">
+  Color value
+</ParamField>
+
+**Example:**
+```cpp
+ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+ImGui::Button("Red Button");
+ImGui::PopStyleColor();
+
+// Using IM_COL32 macro
+ImGui::PushStyleColor(ImGuiCol_Button, IM_COL32(255, 0, 0, 255));
+ImGui::Button("Red Button");
+ImGui::PopStyleColor();
+```
+
+### PopStyleColor
+
+```cpp
+void PopStyleColor(int count = 1);
+```
+
+Restore previous style color(s).
+
+<ParamField path="count" type="int" default="1">
+  Number of colors to pop
+</ParamField>
+
+<Warning>
+Always match `PushStyleColor()` with `PopStyleColor()`. Mismatched push/pop will cause issues.
+</Warning>
+
+**Example:**
+```cpp
+// Push multiple colors
+ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 1));
+ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.8f, 0, 0, 1));
+ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0, 0, 1));
+ImGui::Button("Red Button");
+ImGui::PopStyleColor(3); // Pop all 3 at once
+```
+
+## Color Retrieval
+
+### GetColorU32
+
+```cpp
+ImU32 GetColorU32(ImGuiCol idx, float alpha_mul = 1.0f);
+ImU32 GetColorU32(const ImVec4& col);
+ImU32 GetColorU32(ImU32 col, float alpha_mul = 1.0f);
+```
+
+Retrieve color with style alpha applied, packed as a 32-bit value suitable for `ImDrawList`.
+
+<ParamField path="idx" type="ImGuiCol">
+  Style color identifier
+</ParamField>
+
+<ParamField path="col" type="ImVec4 or ImU32">
+  Color value
+</ParamField>
+
+<ParamField path="alpha_mul" type="float" default="1.0f">
+  Optional extra alpha multiplier
+</ParamField>
+
+<ParamField path="Returns" type="ImU32">
+  32-bit color value with alpha applied
+</ParamField>
+
+**Example:**
+```cpp
+ImU32 color = ImGui::GetColorU32(ImGuiCol_Text);
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+draw_list->AddCircleFilled(pos, radius, color);
+
+// With alpha
+ImU32 transparent_color = ImGui::GetColorU32(ImGuiCol_WindowBg, 0.5f);
+```
+
+### GetStyleColorVec4
+
+```cpp
+const ImVec4& GetStyleColorVec4(ImGuiCol idx);
+```
+
+Retrieve style color as stored in `ImGuiStyle` structure. Use to feed back into `PushStyleColor()`.
+
+<ParamField path="idx" type="ImGuiCol">
+  Color identifier
+</ParamField>
+
+<ParamField path="Returns" type="const ImVec4&">
+  Color as ImVec4
+</ParamField>
+
+<Note>
+Use `GetColorU32()` instead if you need the color for drawing, as it applies style alpha.
+</Note>
+
+## ImGuiCol Enum
+
+Color identifiers for styling:
+
+```cpp
+enum ImGuiCol_
+{
+    ImGuiCol_Text,
+    ImGuiCol_TextDisabled,
+    ImGuiCol_WindowBg,              // Background of normal windows
+    ImGuiCol_ChildBg,               // Background of child windows
+    ImGuiCol_PopupBg,               // Background of popups, menus, tooltips
+    ImGuiCol_Border,
+    ImGuiCol_BorderShadow,
+    ImGuiCol_FrameBg,               // Background of checkbox, radio, plot, slider, text input
+    ImGuiCol_FrameBgHovered,
+    ImGuiCol_FrameBgActive,
+    ImGuiCol_TitleBg,               // Title bar
+    ImGuiCol_TitleBgActive,         // Title bar when focused
+    ImGuiCol_TitleBgCollapsed,      // Title bar when collapsed
+    ImGuiCol_MenuBarBg,
+    ImGuiCol_ScrollbarBg,
+    ImGuiCol_ScrollbarGrab,
+    ImGuiCol_ScrollbarGrabHovered,
+    ImGuiCol_ScrollbarGrabActive,
+    ImGuiCol_CheckMark,             // Checkbox tick and RadioButton circle
+    ImGuiCol_SliderGrab,
+    ImGuiCol_SliderGrabActive,
+    ImGuiCol_Button,
+    ImGuiCol_ButtonHovered,
+    ImGuiCol_ButtonActive,
+    ImGuiCol_Header,                // CollapsingHeader, TreeNode, Selectable, MenuItem
+    ImGuiCol_HeaderHovered,
+    ImGuiCol_HeaderActive,
+    ImGuiCol_Separator,
+    ImGuiCol_SeparatorHovered,
+    ImGuiCol_SeparatorActive,
+    ImGuiCol_ResizeGrip,
+    ImGuiCol_ResizeGripHovered,
+    ImGuiCol_ResizeGripActive,
+    ImGuiCol_Tab,
+    ImGuiCol_TabSelected,
+    ImGuiCol_TabSelectedOverline,
+    ImGuiCol_TabDimmed,
+    ImGuiCol_TabDimmedSelected,
+    ImGuiCol_PlotLines,
+    ImGuiCol_PlotLinesHovered,
+    ImGuiCol_PlotHistogram,
+    ImGuiCol_PlotHistogramHovered,
+    ImGuiCol_TableHeaderBg,
+    ImGuiCol_TableBorderStrong,
+    ImGuiCol_TableBorderLight,
+    ImGuiCol_TableRowBg,
+    ImGuiCol_TableRowBgAlt,
+    ImGuiCol_TextLink,              // Hyperlink color
+    ImGuiCol_TextSelectedBg,
+    ImGuiCol_DragDropTarget,
+    ImGuiCol_NavCursor,             // Gamepad/keyboard navigation cursor
+    ImGuiCol_ModalWindowDimBg,      // Darken entire screen when modal is active
+    ImGuiCol_COUNT
+};
+```
+
+## Color Utilities
+
+### ColorConvertU32ToFloat4
+
+```cpp
+ImVec4 ColorConvertU32ToFloat4(ImU32 in);
+```
+
+Convert 32-bit packed color to ImVec4.
+
+<ParamField path="in" type="ImU32">
+  32-bit packed color (RGBA)
+</ParamField>
+
+<ParamField path="Returns" type="ImVec4">
+  Color as ImVec4 with components in range [0.0f, 1.0f]
+</ParamField>
+
+### ColorConvertFloat4ToU32
+
+```cpp
+ImU32 ColorConvertFloat4ToU32(const ImVec4& in);
+```
+
+Convert ImVec4 color to 32-bit packed color.
+
+<ParamField path="in" type="const ImVec4&">
+  Color as ImVec4
+</ParamField>
+
+<ParamField path="Returns" type="ImU32">
+  32-bit packed color (RGBA)
+</ParamField>
+
+**Example:**
+```cpp
+// Convert between formats
+ImVec4 float_color = ImVec4(1.0f, 0.5f, 0.25f, 1.0f);
+ImU32 packed_color = ImGui::ColorConvertFloat4ToU32(float_color);
+ImVec4 back_to_float = ImGui::ColorConvertU32ToFloat4(packed_color);
+```
+
+### ColorConvertRGBtoHSV
+
+```cpp
+void ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v);
+```
+
+Convert RGB color to HSV.
+
+<ParamField path="r, g, b" type="float">
+  RGB components in range [0.0f, 1.0f]
+</ParamField>
+
+<ParamField path="out_h, out_s, out_v" type="float&">
+  Output HSV components. H in range [0.0f, 1.0f], S and V in range [0.0f, 1.0f]
+</ParamField>
+
+### ColorConvertHSVtoRGB
+
+```cpp
+void ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
+```
+
+Convert HSV color to RGB.
+
+<ParamField path="h, s, v" type="float">
+  HSV components. H in range [0.0f, 1.0f], S and V in range [0.0f, 1.0f]
+</ParamField>
+
+<ParamField path="out_r, out_g, out_b" type="float&">
+  Output RGB components in range [0.0f, 1.0f]
+</ParamField>
+
+**Example:**
+```cpp
+float h, s, v;
+ImGui::ColorConvertRGBtoHSV(1.0f, 0.5f, 0.25f, h, s, v);
+// Adjust values...
+s *= 1.5f; // Increase saturation
+float r, g, b;
+ImGui::ColorConvertHSVtoRGB(h, s, v, r, g, b);
+```
+
+## Color Macros
+
+### IM_COL32
+
+```cpp
+#define IM_COL32(R,G,B,A) \
+    (((ImU32)(A)<<24) | ((ImU32)(B)<<16) | ((ImU32)(G)<<8) | ((ImU32)(R)))
+```
+
+Create a 32-bit packed color from RGBA components (0-255).
+
+**Example:**
+```cpp
+ImU32 red = IM_COL32(255, 0, 0, 255);
+ImU32 semi_transparent_blue = IM_COL32(0, 0, 255, 128);
+ImU32 white = IM_COL32_WHITE;
+ImU32 black = IM_COL32_BLACK;
+```
+
+### IM_COL32_WHITE / IM_COL32_BLACK
+
+```cpp
+#define IM_COL32_WHITE       IM_COL32(255, 255, 255, 255)
+#define IM_COL32_BLACK       IM_COL32(0, 0, 0, 255)
+#define IM_COL32_BLACK_TRANS IM_COL32(0, 0, 0, 0)
+```
+
+Pre-defined color constants.
+
+## ImColor Helper
+
+```cpp
+struct ImColor
+{
+    ImVec4 Value;
+    
+    ImColor();
+    ImColor(float r, float g, float b, float a = 1.0f);
+    ImColor(const ImVec4& col);
+    ImColor(ImU32 rgba);
+    
+    inline operator ImU32() const;
+    inline operator ImVec4() const;
+};
+```
+
+<Warning>
+ImColor is obsolete. Please avoid using it. Just use `ImVec4` or `ImU32` directly.
+</Warning>
+
+## Common Color Patterns
+
+### Themed Button
+
+```cpp
+ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.26f, 0.59f, 0.98f, 0.40f));
+ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.26f, 0.59f, 0.98f, 1.00f));
+ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.06f, 0.53f, 0.98f, 1.00f));
+if (ImGui::Button("Themed Button"))
+{
+    // Handle click
+}
+ImGui::PopStyleColor(3);
+```
+
+### Danger Button
+
+```cpp
+ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.1f, 0.1f, 1.0f));
+ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.6f, 0.0f, 0.0f, 1.0f));
+if (ImGui::Button("Delete"))
+{
+    ConfirmDelete();
+}
+ImGui::PopStyleColor(3);
+```
+
+### Transparent Window
+
+```cpp
+ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.5f));
+ImGui::Begin("Transparent Window");
+// Window content
+ImGui::End();
+ImGui::PopStyleColor();
+```
+
+### Highlighted Section
+
+```cpp
+ImGui::PushStyleColor(ImGuiCol_ChildBg, ImVec4(0.2f, 0.2f, 0.3f, 1.0f));
+ImGui::BeginChild("Highlight", ImVec2(0, 100));
+ImGui::Text("This section is highlighted");
+ImGui::EndChild();
+ImGui::PopStyleColor();
+```
+
+## Modifying Default Colors
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+
+// Modify colors permanently
+style.Colors[ImGuiCol_WindowBg] = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
+style.Colors[ImGuiCol_Button] = ImVec4(0.2f, 0.3f, 0.8f, 1.0f);
+style.Colors[ImGuiCol_ButtonHovered] = ImVec4(0.3f, 0.4f, 0.9f, 1.0f);
+style.Colors[ImGuiCol_ButtonActive] = ImVec4(0.1f, 0.2f, 0.7f, 1.0f);
+```
+
+## See Also
+
+- [Style](/api/style) - Style configuration
+- [ImGuiStyle](/api/imgui-style) - Complete style structure
+- [Draw List](/api/draw-list) - Using colors with drawing commands

@@ -1,0 +1,470 @@
+---
+title: Fonts
+description: Loading, customizing, and using fonts in Dear ImGui including TTF/OTF files, icon fonts, and multilingual text support
+---
+
+## Overview
+
+Dear ImGui embeds default fonts for convenience, but you can load custom TTF/OTF fonts to match your application's design and support various languages.
+
+<Note>
+  **Since v1.92 (June 2025):** Font system has been significantly improved with dynamic font sizing and automatic glyph loading.
+</Note>
+
+## Default Fonts
+
+Dear ImGui embeds two default fonts:
+
+- **ProggyClean.ttf** - 13px pixel-perfect monospace font (doesn't scale well)
+- **ProggyForever.ttf** - New scalable font mimicking ProggyClean
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Load scalable default font (recommended)
+io.Fonts->AddFontDefaultVector();
+
+// Load bitmap default font (legacy)
+io.Fonts->AddFontDefaultBitmap();
+
+// Auto-select based on size (uses ProggyForever if size >= 15)
+io.Fonts->AddFontDefault();
+```
+
+<Note>
+  Define `IMGUI_DISABLE_DEFAULT_FONT` in `imconfig.h` to disable embedded fonts and save ~26 KB.
+</Note>
+
+## Loading Custom Fonts
+
+### Basic Font Loading
+
+**Since v1.92 (with updated backend):**
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Size parameter is optional
+io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf");
+```
+
+**Before v1.92 or without updated backend:**
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Size parameter required
+io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 18.0f);
+```
+
+### Setting Base Font Size
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+style.FontSizeBase = 20.0f;
+```
+
+### Loading Multiple Fonts
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+ImFont* font_default = io.Fonts->AddFontDefaultVector();
+ImFont* font_large = io.Fonts->AddFontFromFileTTF("Roboto-Bold.ttf");
+ImFont* font_small = io.Fonts->AddFontFromFileTTF("Roboto-Regular.ttf");
+
+// Use fonts in your UI
+ImGui::Text("Default font");
+
+ImGui::PushFont(font_large, 0.0f);
+ImGui::Text("Large bold font");
+ImGui::PopFont();
+
+ImGui::PushFont(font_small, 0.0f);
+ImGui::Text("Small regular font");
+ImGui::PopFont();
+```
+
+### Dynamic Font Sizing (v1.92+)
+
+```cpp
+// Change size without changing font
+ImGui::PushFont(NULL, 42.0f);
+ImGui::Text("Large text");
+ImGui::PopFont();
+
+// Change font and size
+ImGui::PushFont(custom_font, 24.0f);
+ImGui::Text("Custom font at 24px");
+ImGui::PopFont();
+```
+
+## Font Configuration
+
+### Advanced Options
+
+```cpp
+ImFontConfig config;
+config.OversampleH = 3;              // Horizontal oversampling (improves quality)
+config.OversampleV = 1;              // Vertical oversampling
+config.GlyphExtraSpacing.x = 1.0f;   // Extra horizontal spacing between glyphs
+config.GlyphOffset.y = 0.0f;         // Vertical offset for glyphs
+config.PixelSnapH = true;            // Snap to pixel (for pixel fonts)
+
+ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", 0.0f, &config);
+```
+
+### Monospace Icons
+
+Make icons monospace for better alignment:
+
+```cpp
+ImFontConfig config;
+config.GlyphMinAdvanceX = 13.0f;  // Make glyphs at least 13px wide
+
+io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 13.0f, &config);
+```
+
+## Merging Fonts
+
+Combine multiple fonts into one for seamless multi-language or icon support.
+
+**Since v1.92 (with updated backend):**
+
+```cpp
+// Load base font
+ImFont* font = io.Fonts->AddFontDefaultVector();
+
+// Merge additional fonts
+ImFontConfig config;
+config.MergeMode = true;
+
+// Add Asian characters
+io.Fonts->AddFontFromFileTTF("DroidSans.ttf", 0.0f, &config);
+
+// Add icons
+io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 0.0f, &config);
+```
+
+**Before v1.92:**
+
+```cpp
+ImFont* font = io.Fonts->AddFontDefault();
+
+static const ImWchar icons_ranges[] = { 0xf000, 0xf3ff, 0 };
+ImFontConfig config;
+config.MergeMode = true;
+
+io.Fonts->AddFontFromFileTTF("DroidSans.ttf", 18.0f, &config, 
+                              io.Fonts->GetGlyphRangesJapanese());
+io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 18.0f, &config, 
+                              icons_ranges);
+io.Fonts->Build();
+```
+
+### Excluding Overlapping Ranges (v1.92+)
+
+Prevent conflicts when merging fonts:
+
+```cpp
+#include "IconsFontAwesome.h"
+
+// Exclude icon range from first font
+static ImWchar exclude_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
+ImFontConfig cfg1;
+cfg1.GlyphExcludeRanges = exclude_ranges;
+io.Fonts->AddFontFromFileTTF("segoeui.ttf", 0.0f, &cfg1);
+
+// Add icon font to fill the gap
+ImFontConfig cfg2;
+cfg2.MergeMode = true;
+io.Fonts->AddFontFromFileTTF("FontAwesome5.ttf", 0.0f, &cfg2);
+```
+
+## Icon Fonts
+
+Use icon fonts like FontAwesome for scalable icons in your UI.
+
+### Setup with IconFontCppHeaders
+
+**Since v1.92:**
+
+```cpp
+#include "IconsFontAwesome.h"
+
+ImGuiIO& io = ImGui::GetIO();
+io.Fonts->AddFontDefaultVector();
+
+ImFontConfig config;
+config.MergeMode = true;
+config.GlyphMinAdvanceX = 13.0f;  // Monospace icons
+io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config);
+```
+
+### Using Icons
+
+```cpp
+#include "IconsFontAwesome.h"
+
+// In UI code
+ImGui::Text("%s Search", ICON_FA_SEARCH);
+ImGui::Button(ICON_FA_SAVE " Save");
+ImGui::Button(ICON_FA_FOLDER_OPEN " Open");
+
+// ICON_FA_SEARCH is a string literal that can be concatenated
+if (ImGui::Button(ICON_FA_TRASH " Delete")) {
+    // Handle delete
+}
+```
+
+## Multilingual Text Support
+
+### Loading Non-Latin Fonts
+
+**Since v1.92:** Glyph ranges are unnecessary!
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+io.Fonts->AddFontFromFileTTF("NotoSansCJKjp-Medium.otf");
+```
+
+**Before v1.92:**
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Japanese
+io.Fonts->AddFontFromFileTTF("NotoSansCJKjp-Medium.otf", 20.0f, nullptr,
+                              io.Fonts->GetGlyphRangesJapanese());
+
+// Chinese (Simplified)
+io.Fonts->AddFontFromFileTTF("NotoSansSC.otf", 20.0f, nullptr,
+                              io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
+
+// Cyrillic
+io.Fonts->AddFontFromFileTTF("NotoSans.ttf", 20.0f, nullptr,
+                              io.Fonts->GetGlyphRangesCyrillic());
+```
+
+### UTF-8 Encoding
+
+All Dear ImGui strings must be UTF-8 encoded.
+
+**Verify encoding:**
+
+```cpp
+ImGui::DebugTextEncoding(u8"こんにちは");  // Correct
+ImGui::DebugTextEncoding("こんにちは");    // May be wrong depending on compiler
+```
+
+**Use u8 prefix:**
+
+```cpp
+ImGui::Text(u8"こんにちは");        // Japanese
+ImGui::Text(u8"你好");            // Chinese
+ImGui::Text(u8"Привет");        // Russian
+ImGui::Button(u8"保存");          // Save (Japanese)
+```
+
+**Compiler settings:**
+- Visual Studio: Add `/utf-8` flag or `#pragma execution_character_set("utf-8")`
+- Ensure source files are saved as UTF-8
+
+**C++20 note:**
+
+```cpp
+// C++20 changed u8"" to return const char8_t*
+ImGui::Text((const char*)u8"こんにちは");
+
+// Or disable with compiler flag: /Zc:char8_t- (MSVC) or -fno-char8_t (GCC/Clang)
+```
+
+### Example Japanese UI
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+io.Fonts->AddFontFromFileTTF("NotoSansCJKjp-Medium.otf");
+
+// In UI code
+ImGui::Text(u8"こんにちは！テスト %d", 123);
+
+if (ImGui::Button(u8"ロード")) {
+    // Load
+}
+
+static char buf[256] = u8"こんにちは";
+ImGui::InputText(u8"文字列", buf, IM_COUNTOF(buf));
+```
+
+## FreeType Rasterizer
+
+For better quality at small sizes, use FreeType instead of stb_truetype:
+
+```cpp
+// In imconfig.h or build system
+#define IMGUI_ENABLE_FREETYPE
+
+// Compile with misc/freetype/imgui_freetype.cpp
+```
+
+### FreeType Options
+
+```cpp
+#include "misc/freetype/imgui_freetype.h"
+
+ImFontConfig config;
+config.FontLoaderFlags |= ImGuiFreeTypeLoaderFlags_LoadColor;  // For emoji
+config.FontLoaderFlags |= ImGuiFreeTypeLoaderFlags_Bold;        // Synthesize bold
+config.FontLoaderFlags |= ImGuiFreeTypeLoaderFlags_Oblique;     // Synthesize italic
+
+io.Fonts->AddFontFromFileTTF("font.ttf", 16.0f, &config);
+```
+
+### Colored Glyphs/Emoji
+
+```cpp
+#define IMGUI_ENABLE_FREETYPE
+#define IMGUI_USE_WCHAR32  // Support characters beyond U+FFFF
+
+ImFontConfig config;
+config.FontLoaderFlags |= ImGuiFreeTypeLoaderFlags_LoadColor;
+
+io.Fonts->AddFontFromFileTTF("NotoSans-Regular.ttf", 16.0f);
+
+config.MergeMode = true;
+io.Fonts->AddFontFromFileTTF("seguiemj.ttf", 16.0f, &config);  // Windows emoji font
+```
+
+## Loading from Memory
+
+```cpp
+// Load font data into memory
+void* font_data = LoadFontDataFromFile("font.ttf", &font_size);
+
+// Option 1: Transfer ownership to ImGui (default)
+ImFont* font = io.Fonts->AddFontFromMemoryTTF(font_data, font_size, size_pixels);
+// ImGui will free font_data
+
+// Option 2: Keep ownership
+ImFontConfig config;
+config.FontDataOwnedByAtlas = false;
+ImFont* font = io.Fonts->AddFontFromMemoryTTF(font_data, font_size, size_pixels, &config);
+// You must free font_data yourself after ImGui::DestroyContext()
+```
+
+### Embedding Fonts in Source Code
+
+```bash
+# Convert TTF to compressed C array
+./binary_to_compressed_c font.ttf FontName > font_data.cpp
+```
+
+```cpp
+// In your code
+extern const unsigned int FontName_compressed_size;
+extern const unsigned int FontName_compressed_data[];
+
+ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(
+    FontName_compressed_data,
+    FontName_compressed_size,
+    18.0f
+);
+```
+
+## DPI Handling
+
+### Scaling Fonts
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+
+// Set base size
+style.FontSizeBase = 16.0f;
+
+// Apply DPI scaling
+style.FontScaleDpi = 2.0f;  // 2x for high-DPI displays
+
+// Fonts will automatically scale
+```
+
+### In Docking Branch
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Automatically scale fonts when moving between monitors with different DPI
+io.ConfigDpiScaleFonts = true;
+
+// Also scale UI elements
+io.ConfigDpiScaleViewports = true;
+```
+
+## Debugging Fonts
+
+### Metrics Window
+
+```cpp
+ImGui::ShowMetricsWindow();
+// Navigate to: Fonts section
+// Shows: Atlas texture, loaded fonts, glyph information
+```
+
+### UTF-8 Encoding Viewer
+
+```cpp
+ImGui::ShowMetricsWindow();
+// Navigate to: Tools > UTF-8 Encoding viewer
+// Or call directly:
+ImGui::DebugTextEncoding("Test string");
+```
+
+### Check Glyph Coverage
+
+In Metrics window:
+1. Expand "Fonts" section
+2. Select your font
+3. View loaded glyphs and coverage
+
+## Common Font Resources
+
+### Monospace Fonts
+
+- **Proggy Fonts** - https://github.com/bluescan/proggyfonts
+- **JetBrains Mono** - https://www.jetbrains.com/lp/mono/
+- **Fira Code** - https://github.com/tonsky/FiraCode
+- **Source Code Pro** - https://github.com/adobe-fonts/source-code-pro
+- **Inconsolata** - http://www.levien.com/type/myfonts/inconsolata.html
+
+### Icon Fonts
+
+- **Font Awesome** - https://fontawesome.com
+- **IconFontCppHeaders** - https://github.com/juliettef/IconFontCppHeaders
+- **Material Design Icons** - https://material.io/icons/
+- **IcoMoon** - https://icomoon.io/app (custom icon builder)
+
+### Multilingual Fonts
+
+- **Google Noto Fonts** - https://www.google.com/get/noto/ (all languages)
+- **M+ Fonts** - http://mplus-fonts.sourceforge.jp/ (Japanese)
+- **Droid Sans** - https://www.fontsquirrel.com/fonts/droid-sans
+
+## Best Practices
+
+<Steps>
+  1. **Load fonts at initialization** - Font atlas building can be slow
+  2. **Use merged fonts** - For multi-language and icon support
+  3. **Test with real content** - Ensure all needed glyphs are available
+  4. **Consider file size** - Loading many fonts increases memory usage
+  5. **Use UTF-8 everywhere** - Ensure source files and strings are UTF-8
+  6. **Test on target hardware** - Font rendering quality varies by platform
+</Steps>
+
+<Note>
+  The `misc/fonts/` folder contains example fonts for reference. See [FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) for credits and licenses.
+</Note>
+
+## See Also
+
+- [Troubleshooting](/guides/troubleshooting) - Font-related issues
+- [Performance](/guides/performance) - Font atlas optimization
+- [FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md) - Complete font documentation

@@ -1,0 +1,309 @@
+---
+title: 'ImGuiStyle Complete Reference'
+description: 'Complete reference for all ImGuiStyle structure fields'
+---
+
+## Overview
+
+This page documents all fields in the `ImGuiStyle` structure. For usage patterns and common customizations, see [Style](/api/style).
+
+## ImGuiStyle Structure
+
+```cpp
+struct ImGuiStyle
+{
+    // Font scaling
+    float       FontSizeBase;
+    float       FontScaleMain;
+    float       FontScaleDpi;
+    
+    // Global alpha
+    float       Alpha;
+    float       DisabledAlpha;
+    
+    // Windows
+    ImVec2      WindowPadding;
+    float       WindowRounding;
+    float       WindowBorderSize;
+    float       WindowBorderHoverPadding;
+    ImVec2      WindowMinSize;
+    ImVec2      WindowTitleAlign;
+    ImGuiDir    WindowMenuButtonPosition;
+    
+    // Child windows
+    float       ChildRounding;
+    float       ChildBorderSize;
+    
+    // Popups
+    float       PopupRounding;
+    float       PopupBorderSize;
+    
+    // Frames
+    ImVec2      FramePadding;
+    float       FrameRounding;
+    float       FrameBorderSize;
+    
+    // Spacing
+    ImVec2      ItemSpacing;
+    ImVec2      ItemInnerSpacing;
+    ImVec2      CellPadding;
+    ImVec2      TouchExtraPadding;
+    float       IndentSpacing;
+    float       ColumnsMinSpacing;
+    
+    // Scrollbars
+    float       ScrollbarSize;
+    float       ScrollbarRounding;
+    float       ScrollbarPadding;
+    
+    // Sliders & Grabs
+    float       GrabMinSize;
+    float       GrabRounding;
+    float       LogSliderDeadzone;
+    
+    // Images
+    float       ImageRounding;
+    float       ImageBorderSize;
+    
+    // Tabs
+    float       TabRounding;
+    float       TabBorderSize;
+    float       TabMinWidthBase;
+    float       TabMinWidthShrink;
+    float       TabCloseButtonMinWidthSelected;
+    float       TabCloseButtonMinWidthUnselected;
+    float       TabBarBorderSize;
+    float       TabBarOverlineSize;
+    
+    // Tables
+    float       TableAngledHeadersAngle;
+    ImVec2      TableAngledHeadersTextAlign;
+    
+    // Trees
+    ImGuiTreeNodeFlags TreeLinesFlags;
+    float       TreeLinesSize;
+    float       TreeLinesRounding;
+    
+    // Drag & Drop
+    float       DragDropTargetRounding;
+    float       DragDropTargetBorderSize;
+    float       DragDropTargetPadding;
+    
+    // Color
+    float       ColorMarkerSize;
+    ImGuiDir    ColorButtonPosition;
+    
+    // Alignment
+    ImVec2      ButtonTextAlign;
+    ImVec2      SelectableTextAlign;
+    
+    // Separator
+    float       SeparatorSize;
+    float       SeparatorTextBorderSize;
+    ImVec2      SeparatorTextAlign;
+    ImVec2      SeparatorTextPadding;
+    
+    // Display
+    ImVec2      DisplayWindowPadding;
+    ImVec2      DisplaySafeAreaPadding;
+    float       MouseCursorScale;
+    
+    // Anti-aliasing
+    bool        AntiAliasedLines;
+    bool        AntiAliasedLinesUseTex;
+    bool        AntiAliasedFill;
+    
+    // Tessellation
+    float       CurveTessellationTol;
+    float       CircleTessellationMaxError;
+    
+    // Colors
+    ImVec4      Colors[ImGuiCol_COUNT];
+    
+    // Behaviors
+    float             HoverStationaryDelay;
+    float             HoverDelayShort;
+    float             HoverDelayNormal;
+    ImGuiHoveredFlags HoverFlagsForTooltipMouse;
+    ImGuiHoveredFlags HoverFlagsForTooltipNav;
+    
+    // [Internal]
+    float       _MainScale;
+    float       _NextFrameFontSizeBase;
+};
+```
+
+## Font Fields
+
+<ResponseField name="FontSizeBase" type="float" default="13.0f">
+  Current base font size before external global factors are applied. Use `PushFont(NULL, size)` to modify.
+</ResponseField>
+
+<ResponseField name="FontScaleMain" type="float" default="1.0f">
+  Main global scale factor. May be set by application once, or exposed to end-user.
+</ResponseField>
+
+<ResponseField name="FontScaleDpi" type="float" default="1.0f">
+  Additional global scale factor from viewport/monitor DPI. In docking branch: automatically overwritten when changing monitor DPI if `io.ConfigDpiScaleFonts` is enabled.
+</ResponseField>
+
+## Alpha Fields
+
+<ResponseField name="Alpha" type="float" default="1.0f">
+  Global alpha applies to everything in Dear ImGui. Range: 0.0f to 1.0f.
+</ResponseField>
+
+<ResponseField name="DisabledAlpha" type="float" default="0.6f">
+  Additional alpha multiplier applied by `BeginDisabled()`. Multiply over current value of Alpha.
+</ResponseField>
+
+## Window Fields
+
+<ResponseField name="WindowPadding" type="ImVec2" default="(8, 8)">
+  Padding within a window.
+</ResponseField>
+
+<ResponseField name="WindowRounding" type="float" default="0.0f">
+  Radius of window corners rounding. Set to 0.0f to have rectangular windows. Large values tend to lead to artifacts.
+</ResponseField>
+
+<ResponseField name="WindowBorderSize" type="float" default="1.0f">
+  Thickness of border around windows. Generally set to 0.0f or 1.0f.
+</ResponseField>
+
+<ResponseField name="WindowBorderHoverPadding" type="float" default="3.0f">
+  Hit-testing extent outside/inside resizing border. Extend determination of hovered window.
+</ResponseField>
+
+<ResponseField name="WindowMinSize" type="ImVec2" default="(32, 32)">
+  Minimum window size. This is a global setting. Use `SetNextWindowSizeConstraints()` for per-window constraints.
+</ResponseField>
+
+<ResponseField name="WindowTitleAlign" type="ImVec2" default="(0.0, 0.5)">
+  Alignment for title bar text. Defaults to left-aligned, vertically centered.
+</ResponseField>
+
+<ResponseField name="WindowMenuButtonPosition" type="ImGuiDir" default="ImGuiDir_Left">
+  Side of the collapsing/docking button in the title bar (None/Left/Right).
+</ResponseField>
+
+## Frame Fields
+
+<ResponseField name="FramePadding" type="ImVec2" default="(4, 3)">
+  Padding within a framed rectangle (used by most widgets).
+</ResponseField>
+
+<ResponseField name="FrameRounding" type="float" default="0.0f">
+  Radius of frame corners rounding. Set to 0.0f to have rectangular frames.
+</ResponseField>
+
+<ResponseField name="FrameBorderSize" type="float" default="0.0f">
+  Thickness of border around frames. Generally set to 0.0f or 1.0f.
+</ResponseField>
+
+## Spacing Fields
+
+<ResponseField name="ItemSpacing" type="ImVec2" default="(8, 4)">
+  Horizontal and vertical spacing between widgets/lines.
+</ResponseField>
+
+<ResponseField name="ItemInnerSpacing" type="ImVec2" default="(4, 4)">
+  Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label).
+</ResponseField>
+
+<ResponseField name="CellPadding" type="ImVec2" default="(4, 2)">
+  Padding within a table cell. CellPadding.x is locked for entire table. CellPadding.y may be altered between rows.
+</ResponseField>
+
+<ResponseField name="TouchExtraPadding" type="ImVec2" default="(0, 0)">
+  Expand reactive bounding box for touch-based systems where touch position is not accurate enough.
+</ResponseField>
+
+<ResponseField name="IndentSpacing" type="float" default="21.0f">
+  Horizontal indentation when entering a tree node. Generally equals `(FontSize + FramePadding.x*2)`.
+</ResponseField>
+
+<ResponseField name="ColumnsMinSpacing" type="float" default="6.0f">
+  Minimum horizontal spacing between two columns. Preferably > `(FramePadding.x + 1)`.
+</ResponseField>
+
+## Scrollbar Fields
+
+<ResponseField name="ScrollbarSize" type="float" default="14.0f">
+  Width of the vertical scrollbar, Height of the horizontal scrollbar.
+</ResponseField>
+
+<ResponseField name="ScrollbarRounding" type="float" default="9.0f">
+  Radius of grab corners for scrollbar.
+</ResponseField>
+
+<ResponseField name="ScrollbarPadding" type="float" default="2.0f">
+  Padding of scrollbar grab within its frame (same for both axes).
+</ResponseField>
+
+## Grab & Slider Fields
+
+<ResponseField name="GrabMinSize" type="float" default="12.0f">
+  Minimum width/height of a grab box for slider/scrollbar.
+</ResponseField>
+
+<ResponseField name="GrabRounding" type="float" default="0.0f">
+  Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
+</ResponseField>
+
+<ResponseField name="LogSliderDeadzone" type="float" default="4.0f">
+  The size in pixels of the dead-zone around zero on logarithmic sliders that cross zero.
+</ResponseField>
+
+## Tab Fields
+
+<ResponseField name="TabRounding" type="float" default="4.0f">
+  Radius of upper corners of a tab. Set to 0.0f to have rectangular tabs.
+</ResponseField>
+
+<ResponseField name="TabBorderSize" type="float" default="0.0f">
+  Thickness of border around tabs.
+</ResponseField>
+
+<ResponseField name="TabMinWidthBase" type="float" default="60.0f">
+  Minimum tab width, to make tabs larger than their contents. Tab bar buttons are not affected.
+</ResponseField>
+
+<ResponseField name="TabMinWidthShrink" type="float" default="40.0f">
+  Minimum tab width after shrinking, when using `ImGuiTabBarFlags_FittingPolicyMixed` policy.
+</ResponseField>
+
+<ResponseField name="TabBarBorderSize" type="float" default="1.0f">
+  Thickness of tab-bar separator, which takes on the tab active color to denote focus.
+</ResponseField>
+
+<ResponseField name="TabBarOverlineSize" type="float" default="2.0f">
+  Thickness of tab-bar overline, which highlights the selected tab.
+</ResponseField>
+
+## Behavior Fields
+
+<ResponseField name="HoverStationaryDelay" type="float" default="0.15f">
+  Delay for `IsItemHovered(ImGuiHoveredFlags_Stationary)`. Time required to consider mouse stationary.
+</ResponseField>
+
+<ResponseField name="HoverDelayShort" type="float" default="0.15f">
+  Delay for `IsItemHovered(ImGuiHoveredFlags_DelayShort)`.
+</ResponseField>
+
+<ResponseField name="HoverDelayNormal" type="float" default="0.40f">
+  Delay for `IsItemHovered(ImGuiHoveredFlags_DelayNormal)`.
+</ResponseField>
+
+<ResponseField name="HoverFlagsForTooltipMouse" type="ImGuiHoveredFlags" default="ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayShort">
+  Default flags when using `IsItemHovered(ImGuiHoveredFlags_ForTooltip)` or `BeginItemTooltip()` while using mouse.
+</ResponseField>
+
+<ResponseField name="HoverFlagsForTooltipNav" type="ImGuiHoveredFlags" default="ImGuiHoveredFlags_NoSharedDelay | ImGuiHoveredFlags_DelayNormal">
+  Default flags when using `IsItemHovered(ImGuiHoveredFlags_ForTooltip)` or `BeginItemTooltip()` while using keyboard/gamepad.
+</ResponseField>
+
+## See Also
+
+- [Style](/api/style) - Style functions and usage patterns
+- [Colors](/api/colors) - Color styling

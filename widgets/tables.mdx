@@ -1,0 +1,541 @@
+---
+title: Tables
+description: Advanced table layouts with sorting and resizing in Dear ImGui
+---
+
+Dear ImGui's table API provides powerful features for creating data grids with sorting, resizing, freezing, and more. Tables replaced the old Columns API starting from version 1.80.
+
+## Basic Tables
+
+### BeginTable() / EndTable()
+
+Create a table:
+
+```cpp
+IMGUI_API bool BeginTable(const char* str_id, int columns, ImGuiTableFlags flags = 0,
+                          const ImVec2& outer_size = ImVec2(0.0f, 0.0f), float inner_width = 0.0f);
+IMGUI_API void EndTable();
+```
+
+<ParamField path="str_id" type="const char*" required>
+  Unique identifier for the table
+</ParamField>
+
+<ParamField path="columns" type="int" required>
+  Number of columns
+</ParamField>
+
+<ParamField path="flags" type="ImGuiTableFlags">
+  Table behavior flags (see below)
+</ParamField>
+
+<ParamField path="outer_size" type="ImVec2">
+  Outer size of the table container
+</ParamField>
+
+<Note>
+  Only call `EndTable()` if `BeginTable()` returns true!
+</Note>
+
+### Three Ways to Populate Tables
+
+<Tabs>
+  <Tab title="Method 1: TableSetColumnIndex()">
+    Most flexible - use in loops:
+    ```cpp
+    if (ImGui::BeginTable("table1", 3)) {
+        for (int row = 0; row < 4; row++) {
+            ImGui::TableNextRow();
+            for (int column = 0; column < 3; column++) {
+                ImGui::TableSetColumnIndex(column);
+                ImGui::Text("Row %d Column %d", row, column);
+            }
+        }
+        ImGui::EndTable();
+    }
+    ```
+  </Tab>
+  <Tab title="Method 2: TableNextColumn()">
+    More convenient for manual submission:
+    ```cpp
+    if (ImGui::BeginTable("table2", 3)) {
+        for (int row = 0; row < 4; row++) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::Text("Row %d", row);
+            ImGui::TableNextColumn();
+            ImGui::Text("Content");
+            ImGui::TableNextColumn();
+            ImGui::Text("123.456");
+        }
+        ImGui::EndTable();
+    }
+    ```
+  </Tab>
+  <Tab title="Method 3: Auto-wrap">
+    TableNextColumn() automatically wraps:
+    ```cpp
+    if (ImGui::BeginTable("table3", 3)) {
+        for (int item = 0; item < 14; item++) {
+            ImGui::TableNextColumn();
+            ImGui::Text("Item %d", item);
+        }
+        ImGui::EndTable();
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Table Rows
+
+### TableNextRow()
+
+Advance to the next row:
+
+```cpp
+IMGUI_API void TableNextRow(ImGuiTableRowFlags row_flags = 0, float min_row_height = 0.0f);
+```
+
+<ParamField path="row_flags" type="ImGuiTableRowFlags">
+  Optional row flags (e.g., `ImGuiTableRowFlags_Headers`)
+</ParamField>
+
+<ParamField path="min_row_height" type="float">
+  Minimum row height (includes CellPadding.y * 2)
+</ParamField>
+
+```cpp
+if (ImGui::BeginTable("table", 2)) {
+    // Regular row
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn(); ImGui::Text("Normal");
+    ImGui::TableNextColumn(); ImGui::Text("Row");
+    
+    // Tall row
+    ImGui::TableNextRow(0, 50.0f);
+    ImGui::TableNextColumn(); ImGui::Text("Tall");
+    ImGui::TableNextColumn(); ImGui::Text("Row");
+    
+    ImGui::EndTable();
+}
+```
+
+## Table Columns
+
+### TableSetupColumn()
+
+Define column properties:
+
+```cpp
+IMGUI_API void TableSetupColumn(const char* label, ImGuiTableColumnFlags flags = 0,
+                                float init_width_or_weight = 0.0f, ImGuiID user_id = 0);
+```
+
+<ParamField path="label" type="const char*" required>
+  Column label (used for headers)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiTableColumnFlags">
+  Column behavior flags
+</ParamField>
+
+<ParamField path="init_width_or_weight" type="float">
+  Initial width (pixels) or weight (ratio)
+</ParamField>
+
+```cpp
+if (ImGui::BeginTable("table", 3, ImGuiTableFlags_Resizable)) {
+    ImGui::TableSetupColumn("Name");
+    ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+    ImGui::TableSetupColumn("Type");
+    ImGui::TableHeadersRow();
+    
+    for (int row = 0; row < 5; row++) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::Text("File%d", row);
+        ImGui::TableNextColumn(); ImGui::Text("%d KB", row * 10);
+        ImGui::TableNextColumn(); ImGui::Text("Document");
+    }
+    ImGui::EndTable();
+}
+```
+
+### TableHeadersRow()
+
+Submit a row with header cells:
+
+```cpp
+IMGUI_API void TableHeadersRow();
+```
+
+```cpp
+if (ImGui::BeginTable("table", 3)) {
+    ImGui::TableSetupColumn("ID");
+    ImGui::TableSetupColumn("Name");
+    ImGui::TableSetupColumn("Value");
+    ImGui::TableHeadersRow();
+    
+    // ... table contents ...
+    ImGui::EndTable();
+}
+```
+
+## Table Flags
+
+### Sizing Flags
+
+```cpp
+// Default: columns are resizable
+ImGuiTableFlags_Resizable
+
+// Fit all columns within available width
+ImGuiTableFlags_SizingFixedFit
+
+// Columns stretch to fit available width
+ImGuiTableFlags_SizingFixedSame
+
+// Each column takes an equal portion
+ImGuiTableFlags_SizingStretchProp
+
+// All columns same width, stretch to fit
+ImGuiTableFlags_SizingStretchSame
+```
+
+### Border Flags
+
+<CodeGroup>
+```cpp All Borders
+// All borders
+ImGuiTableFlags_Borders
+
+// Equivalent to:
+ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersOuterV |
+ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_BordersOuterH
+```
+
+```cpp Selective Borders
+// Horizontal borders
+ImGuiTableFlags_BordersH
+ImGuiTableFlags_BordersInnerH
+ImGuiTableFlags_BordersOuterH
+
+// Vertical borders
+ImGuiTableFlags_BordersV
+ImGuiTableFlags_BordersInnerV
+ImGuiTableFlags_BordersOuterV
+
+// No borders in body (only in headers)
+ImGuiTableFlags_NoBordersInBody
+```
+</CodeGroup>
+
+### Scrolling Flags
+
+```cpp
+// Enable horizontal scrolling
+ImGuiTableFlags_ScrollX
+
+// Enable vertical scrolling
+ImGuiTableFlags_ScrollY
+```
+
+### Row Flags
+
+```cpp
+// Alternating row background colors
+ImGuiTableFlags_RowBg
+
+// Make rows selectable
+ImGuiTableFlags_RowClickable
+```
+
+### Sorting Flags
+
+```cpp
+// Enable sorting (single column)
+ImGuiTableFlags_Sortable
+
+// Allow sorting by multiple columns (Shift+Click)
+ImGuiTableFlags_SortMulti
+
+// Allow removing sort by Ctrl+clicking headers
+ImGuiTableFlags_SortTristate
+```
+
+## Scrolling Tables
+
+Create tables with frozen headers and scrolling:
+
+```cpp
+if (ImGui::BeginTable("table", 3, 
+                      ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders,
+                      ImVec2(0, 300))) {
+    ImGui::TableSetupColumn("ID");
+    ImGui::TableSetupColumn("Name");
+    ImGui::TableSetupColumn("Value");
+    ImGui::TableHeadersRow();
+    
+    for (int row = 0; row < 100; row++) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::Text("%04d", row);
+        ImGui::TableNextColumn(); ImGui::Text("Item %d", row);
+        ImGui::TableNextColumn(); ImGui::Text("%d", row * 100);
+    }
+    ImGui::EndTable();
+}
+```
+
+### TableSetupScrollFreeze()
+
+Freeze columns and rows:
+
+```cpp
+IMGUI_API void TableSetupScrollFreeze(int cols, int rows);
+```
+
+```cpp
+if (ImGui::BeginTable("table", 4, ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) {
+    ImGui::TableSetupScrollFreeze(1, 1);  // Freeze first column and first row
+    ImGui::TableSetupColumn("ID");
+    ImGui::TableSetupColumn("Name");
+    ImGui::TableSetupColumn("Age");
+    ImGui::TableSetupColumn("City");
+    ImGui::TableHeadersRow();
+    
+    // ... table contents ...
+    ImGui::EndTable();
+}
+```
+
+## Sorting
+
+### TableGetSortSpecs()
+
+Get sorting specifications:
+
+```cpp
+IMGUI_API ImGuiTableSortSpecs* TableGetSortSpecs();
+```
+
+```cpp
+struct MyItem {
+    int id;
+    const char* name;
+    int value;
+};
+
+static ImVector<MyItem> items;
+if (ImGui::BeginTable("table", 3, ImGuiTableFlags_Sortable | ImGuiTableFlags_RowBg)) {
+    ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_DefaultSort);
+    ImGui::TableSetupColumn("Name");
+    ImGui::TableSetupColumn("Value");
+    ImGui::TableHeadersRow();
+    
+    // Get sort specs
+    if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs()) {
+        if (sort_specs->SpecsDirty) {
+            // Sort your data
+            // sort_specs->Specs[0].ColumnUserID
+            // sort_specs->Specs[0].ColumnIndex
+            // sort_specs->Specs[0].SortDirection (ImGuiSortDirection_Ascending/Descending)
+            
+            // ... perform sort ...
+            
+            sort_specs->SpecsDirty = false;
+        }
+    }
+    
+    // Display items
+    for (const MyItem& item : items) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::Text("%d", item.id);
+        ImGui::TableNextColumn(); ImGui::Text("%s", item.name);
+        ImGui::TableNextColumn(); ImGui::Text("%d", item.value);
+    }
+    ImGui::EndTable();
+}
+```
+
+## Column Flags
+
+### Width
+
+```cpp
+// Auto-sizing width
+ImGuiTableColumnFlags_WidthStretch  // Default
+
+// Fixed width
+ImGuiTableColumnFlags_WidthFixed
+```
+
+### Resizing
+
+```cpp
+// User cannot resize this column
+ImGuiTableColumnFlags_NoResize
+
+// Double-click to auto-fit
+ImGuiTableColumnFlags_NoAutoResize
+```
+
+### Sorting
+
+```cpp
+// Default sort direction
+ImGuiTableColumnFlags_DefaultSort
+
+// User cannot sort this column
+ImGuiTableColumnFlags_NoSort
+
+// Prefer ascending sort
+ImGuiTableColumnFlags_PreferSortAscending
+
+// Prefer descending sort
+ImGuiTableColumnFlags_PreferSortDescending
+```
+
+### Visibility
+
+```cpp
+// Start hidden
+ImGuiTableColumnFlags_DefaultHide
+
+// Disable ability to hide column
+ImGuiTableColumnFlags_NoHide
+```
+
+## Advanced Features
+
+### Context Menu
+
+Enable right-click column menu:
+
+```cpp
+ImGui::BeginTable("table", 3, ImGuiTableFlags_ContextMenuInBody);
+```
+
+### Hideable Columns
+
+```cpp
+if (ImGui::BeginTable("table", 4, ImGuiTableFlags_Hideable)) {
+    ImGui::TableSetupColumn("Column 1");
+    ImGui::TableSetupColumn("Column 2", ImGuiTableColumnFlags_DefaultHide);
+    ImGui::TableSetupColumn("Column 3");
+    ImGui::TableSetupColumn("Column 4");
+    ImGui::TableHeadersRow();
+    
+    // Right-click on headers to show/hide columns
+    // ...
+    ImGui::EndTable();
+}
+```
+
+### Reorderable Columns
+
+```cpp
+ImGui::BeginTable("table", 3, ImGuiTableFlags_Reorderable);
+```
+
+## Complete Example
+
+```cpp
+void ShowTableDemo() {
+    ImGui::Begin("Table Demo");
+    
+    // Basic table with borders
+    if (ImGui::BeginTable("table1", 3, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg)) {
+        ImGui::TableSetupColumn("Name");
+        ImGui::TableSetupColumn("Age");
+        ImGui::TableSetupColumn("City");
+        ImGui::TableHeadersRow();
+        
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::Text("Alice");
+        ImGui::TableNextColumn(); ImGui::Text("25");
+        ImGui::TableNextColumn(); ImGui::Text("New York");
+        
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::Text("Bob");
+        ImGui::TableNextColumn(); ImGui::Text("30");
+        ImGui::TableNextColumn(); ImGui::Text("London");
+        
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::Text("Charlie");
+        ImGui::TableNextColumn(); ImGui::Text("35");
+        ImGui::TableNextColumn(); ImGui::Text("Tokyo");
+        
+        ImGui::EndTable();
+    }
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // Scrolling table with frozen header
+    if (ImGui::BeginTable("table2", 4,
+                          ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg |
+                          ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable,
+                          ImVec2(0, 200))) {
+        ImGui::TableSetupScrollFreeze(0, 1);  // Freeze header row
+        ImGui::TableSetupColumn("ID");
+        ImGui::TableSetupColumn("Name");
+        ImGui::TableSetupColumn("Value");
+        ImGui::TableSetupColumn("Status");
+        ImGui::TableHeadersRow();
+        
+        for (int row = 0; row < 50; row++) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::Text("%04d", row);
+            ImGui::TableNextColumn(); ImGui::Text("Item %d", row);
+            ImGui::TableNextColumn(); ImGui::Text("%d", row * 100);
+            ImGui::TableNextColumn(); ImGui::Text(row % 2 ? "Active" : "Inactive");
+        }
+        ImGui::EndTable();
+    }
+    
+    ImGui::End();
+}
+```
+
+## Performance Tips
+
+For very large tables, use `ImGuiListClipper`:
+
+```cpp
+if (ImGui::BeginTable("large_table", 3, ImGuiTableFlags_ScrollY)) {
+    ImGui::TableSetupColumn("ID");
+    ImGui::TableSetupColumn("Name");
+    ImGui::TableSetupColumn("Value");
+    ImGui::TableHeadersRow();
+    
+    ImGuiListClipper clipper;
+    clipper.Begin(10000);  // 10,000 items
+    while (clipper.Step()) {
+        for (int row = clipper.DisplayStart; row < clipper.DisplayEnd; row++) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::Text("%d", row);
+            ImGui::TableNextColumn(); ImGui::Text("Item %d", row);
+            ImGui::TableNextColumn(); ImGui::Text("%d", row * 10);
+        }
+    }
+    ImGui::EndTable();
+}
+```
+
+## Best Practices
+
+<Warning>
+  Always call `EndTable()` only if `BeginTable()` returns true.
+</Warning>
+
+<Tip>
+  Use `ImGuiTableFlags_SizingStretchProp` for responsive tables that adapt to window size.
+</Tip>
+
+<Note>
+  Call `TableSetupColumn()` before `TableHeadersRow()` to define column properties and labels.
+</Note>
+
+<Tip>
+  Combine `ImGuiTableFlags_ScrollY` with `TableSetupScrollFreeze(0, 1)` to keep headers visible while scrolling.
+</Tip>

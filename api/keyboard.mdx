@@ -1,0 +1,356 @@
+---
+title: 'Keyboard Input'
+description: 'Functions for checking keyboard state and key presses'
+---
+
+## Overview
+
+Dear ImGui uses the `ImGuiKey` enum which contains all possible keyboard, mouse, and gamepad inputs. The keyboard key enum values are named after the keys on a standard US keyboard.
+
+<Tip>
+Consider using the `Shortcut()` function instead of `IsKeyPressed()`/`IsKeyChordPressed()`! `Shortcut()` is easier to use and better featured (supports focus routing).
+</Tip>
+
+## Key State Functions
+
+### IsKeyDown
+
+```cpp
+bool IsKeyDown(ImGuiKey key);
+```
+
+Check if key is being held.
+
+<ParamField path="key" type="ImGuiKey">
+  Key to check (e.g., `ImGuiKey_A`, `ImGuiKey_Space`)
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if key is currently down
+</ParamField>
+
+**Example:**
+```cpp
+if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl))
+{
+    ImGui::Text("Ctrl is being held");
+}
+```
+
+### IsKeyPressed
+
+```cpp
+bool IsKeyPressed(ImGuiKey key, bool repeat = true);
+```
+
+Check if key was pressed (went from !Down to Down).
+
+<ParamField path="key" type="ImGuiKey">
+  Key to check
+</ParamField>
+
+<ParamField path="repeat" type="bool" default="true">
+  If true, returns true on key repeat. Repeat rate uses `io.KeyRepeatDelay` / `io.KeyRepeatRate`.
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if key was just pressed or repeating
+</ParamField>
+
+**Example:**
+```cpp
+if (ImGui::IsKeyPressed(ImGuiKey_Enter))
+{
+    SubmitForm();
+}
+
+// Without repeat
+if (ImGui::IsKeyPressed(ImGuiKey_Space, false))
+{
+    FireWeapon();
+}
+```
+
+### IsKeyReleased
+
+```cpp
+bool IsKeyReleased(ImGuiKey key);
+```
+
+Check if key was released (went from Down to !Down).
+
+<ParamField path="key" type="ImGuiKey">
+  Key to check
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if key was just released
+</ParamField>
+
+### GetKeyPressedAmount
+
+```cpp
+int GetKeyPressedAmount(ImGuiKey key, float repeat_delay, float rate);
+```
+
+Get a count of key presses using provided repeat rate/delay. Usually returns 0 or 1 but might be >1 if RepeatRate is small enough that DeltaTime > RepeatRate.
+
+<ParamField path="key" type="ImGuiKey">
+  Key to check
+</ParamField>
+
+<ParamField path="repeat_delay" type="float">
+  Time before repeat starts
+</ParamField>
+
+<ParamField path="rate" type="float">
+  Repeat rate
+</ParamField>
+
+<ParamField path="Returns" type="int">
+  Number of key presses this frame
+</ParamField>
+
+**Example:**
+```cpp
+int presses = ImGui::GetKeyPressedAmount(ImGuiKey_DownArrow, 0.02f, 0.02f);
+selection_index = (selection_index + presses) % item_count;
+```
+
+## Key Chords
+
+### IsKeyChordPressed
+
+```cpp
+bool IsKeyChordPressed(ImGuiKeyChord key_chord);
+```
+
+Check if a key chord (mods + key) was pressed. This doesn't do any routing or focus check.
+
+<ParamField path="key_chord" type="ImGuiKeyChord">
+  Key chord (e.g., `ImGuiMod_Ctrl | ImGuiKey_S`)
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if the key chord was pressed
+</ParamField>
+
+<Note>
+Consider using `Shortcut()` instead, which supports focus routing and is more feature-complete.
+</Note>
+
+**Example:**
+```cpp
+if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiKey_S))
+{
+    SaveDocument();
+}
+
+if (ImGui::IsKeyChordPressed(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Z))
+{
+    Redo();
+}
+```
+
+## Key Names
+
+### GetKeyName
+
+```cpp
+const char* GetKeyName(ImGuiKey key);
+```
+
+Get English name of the key for debugging purposes.
+
+<ParamField path="key" type="ImGuiKey">
+  Key to get name for
+</ParamField>
+
+<ParamField path="Returns" type="const char*">
+  Key name string
+</ParamField>
+
+<Warning>
+These names are provided for debugging purposes and are not meant to be saved persistently nor compared.
+</Warning>
+
+**Example:**
+```cpp
+ImGui::Text("Press %s to continue", ImGui::GetKeyName(ImGuiKey_Enter));
+```
+
+## Keyboard Capture
+
+### SetNextFrameWantCaptureKeyboard
+
+```cpp
+void SetNextFrameWantCaptureKeyboard(bool want_capture_keyboard);
+```
+
+Override `io.WantCaptureKeyboard` flag next frame. Equivalent to setting `io.WantCaptureKeyboard` after the next `NewFrame()` call.
+
+<ParamField path="want_capture_keyboard" type="bool">
+  Whether to capture keyboard
+</ParamField>
+
+**Example:**
+```cpp
+// Force capture keyboard when widget is hovered
+if (ImGui::IsItemHovered())
+{
+    ImGui::SetNextFrameWantCaptureKeyboard(true);
+}
+```
+
+## ImGuiKey Enum
+
+```cpp
+enum ImGuiKey : int
+{
+    // Keyboard
+    ImGuiKey_None = 0,
+    ImGuiKey_Tab = 512,
+    ImGuiKey_LeftArrow, ImGuiKey_RightArrow, ImGuiKey_UpArrow, ImGuiKey_DownArrow,
+    ImGuiKey_PageUp, ImGuiKey_PageDown,
+    ImGuiKey_Home, ImGuiKey_End,
+    ImGuiKey_Insert, ImGuiKey_Delete,
+    ImGuiKey_Backspace, ImGuiKey_Space, ImGuiKey_Enter, ImGuiKey_Escape,
+    
+    // Modifiers
+    ImGuiKey_LeftCtrl, ImGuiKey_LeftShift, ImGuiKey_LeftAlt, ImGuiKey_LeftSuper,
+    ImGuiKey_RightCtrl, ImGuiKey_RightShift, ImGuiKey_RightAlt, ImGuiKey_RightSuper,
+    ImGuiKey_Menu,
+    
+    // Numbers
+    ImGuiKey_0, ImGuiKey_1, ImGuiKey_2, ImGuiKey_3, ImGuiKey_4,
+    ImGuiKey_5, ImGuiKey_6, ImGuiKey_7, ImGuiKey_8, ImGuiKey_9,
+    
+    // Letters
+    ImGuiKey_A, ImGuiKey_B, ImGuiKey_C, ImGuiKey_D, ImGuiKey_E, ImGuiKey_F,
+    ImGuiKey_G, ImGuiKey_H, ImGuiKey_I, ImGuiKey_J, ImGuiKey_K, ImGuiKey_L,
+    ImGuiKey_M, ImGuiKey_N, ImGuiKey_O, ImGuiKey_P, ImGuiKey_Q, ImGuiKey_R,
+    ImGuiKey_S, ImGuiKey_T, ImGuiKey_U, ImGuiKey_V, ImGuiKey_W, ImGuiKey_X,
+    ImGuiKey_Y, ImGuiKey_Z,
+    
+    // Function keys
+    ImGuiKey_F1, ImGuiKey_F2, ImGuiKey_F3, ImGuiKey_F4,
+    ImGuiKey_F5, ImGuiKey_F6, ImGuiKey_F7, ImGuiKey_F8,
+    ImGuiKey_F9, ImGuiKey_F10, ImGuiKey_F11, ImGuiKey_F12,
+    
+    // Symbols
+    ImGuiKey_Apostrophe,    // '
+    ImGuiKey_Comma,         // ,
+    ImGuiKey_Minus,         // -
+    ImGuiKey_Period,        // .
+    ImGuiKey_Slash,         // /
+    ImGuiKey_Semicolon,     // ;
+    ImGuiKey_Equal,         // =
+    ImGuiKey_LeftBracket,   // [
+    ImGuiKey_Backslash,     // \
+    ImGuiKey_RightBracket,  // ]
+    ImGuiKey_GraveAccent,   // `
+    
+    // Lock keys
+    ImGuiKey_CapsLock, ImGuiKey_ScrollLock, ImGuiKey_NumLock,
+    ImGuiKey_PrintScreen, ImGuiKey_Pause,
+    
+    // Keypad
+    ImGuiKey_Keypad0, ImGuiKey_Keypad1, ImGuiKey_Keypad2,
+    ImGuiKey_Keypad3, ImGuiKey_Keypad4, ImGuiKey_Keypad5,
+    ImGuiKey_Keypad6, ImGuiKey_Keypad7, ImGuiKey_Keypad8, ImGuiKey_Keypad9,
+    ImGuiKey_KeypadDecimal, ImGuiKey_KeypadDivide,
+    ImGuiKey_KeypadMultiply, ImGuiKey_KeypadSubtract,
+    ImGuiKey_KeypadAdd, ImGuiKey_KeypadEnter, ImGuiKey_KeypadEqual,
+    
+    // Gamepad (see full list in imgui.h)
+    ImGuiKey_GamepadStart, ImGuiKey_GamepadBack,
+    ImGuiKey_GamepadFaceLeft, ImGuiKey_GamepadFaceRight,
+    ImGuiKey_GamepadFaceUp, ImGuiKey_GamepadFaceDown,
+    // ...
+    
+    // Mouse buttons (aliased for convenience)
+    ImGuiKey_MouseLeft, ImGuiKey_MouseRight, ImGuiKey_MouseMiddle,
+    ImGuiKey_MouseX1, ImGuiKey_MouseX2,
+    ImGuiKey_MouseWheelX, ImGuiKey_MouseWheelY,
+};
+```
+
+## Keyboard Modifiers
+
+```cpp
+enum
+{
+    ImGuiMod_None   = 0,
+    ImGuiMod_Ctrl   = 1 << 12,  // Ctrl (non-macOS), Cmd (macOS)
+    ImGuiMod_Shift  = 1 << 13,  // Shift
+    ImGuiMod_Alt    = 1 << 14,  // Alt/Option
+    ImGuiMod_Super  = 1 << 15,  // Windows/Super (non-macOS), Ctrl (macOS)
+};
+```
+
+<Note>
+On macOS, Dear ImGui swaps Cmd(Super) and Ctrl keys at the time of `io.AddKeyEvent()` call.
+</Note>
+
+## Key Data Structure
+
+```cpp
+struct ImGuiKeyData
+{
+    bool    Down;               // True if key is down
+    float   DownDuration;       // Duration key has been down (<0: not pressed, 0: just pressed, >0: time held)
+    float   DownDurationPrev;   // Last frame duration
+    float   AnalogValue;        // 0.0f..1.0f for gamepad values
+};
+```
+
+Access via:
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+ImGuiKeyData* key_data = &io.KeysData[key - ImGuiKey_NamedKey_BEGIN];
+if (key_data->Down) { /* ... */ }
+```
+
+<Warning>
+MUST use `key - ImGuiKey_NamedKey_BEGIN` as index when accessing `KeysData[]`.
+</Warning>
+
+## Common Patterns
+
+### Check Multiple Keys
+
+```cpp
+if (ImGui::IsKeyDown(ImGuiKey_LeftCtrl) && ImGui::IsKeyPressed(ImGuiKey_C))
+{
+    CopyToClipboard();
+}
+```
+
+### Smooth Movement with Keys
+
+```cpp
+float speed = 100.0f * ImGui::GetIO().DeltaTime;
+if (ImGui::IsKeyDown(ImGuiKey_W)) position.y -= speed;
+if (ImGui::IsKeyDown(ImGuiKey_S)) position.y += speed;
+if (ImGui::IsKeyDown(ImGuiKey_A)) position.x -= speed;
+if (ImGui::IsKeyDown(ImGuiKey_D)) position.x += speed;
+```
+
+### Key Repeat for UI Navigation
+
+```cpp
+if (ImGui::IsKeyPressed(ImGuiKey_UpArrow))
+{
+    selected_index = (selected_index - 1 + item_count) % item_count;
+}
+if (ImGui::IsKeyPressed(ImGuiKey_DownArrow))
+{
+    selected_index = (selected_index + 1) % item_count;
+}
+```
+
+## See Also
+
+- [Mouse](/api/mouse) - Mouse input functions
+- [Shortcuts](/api/shortcuts) - Keyboard shortcuts and input routing
+- [Input](/api/input) - General input and ImGuiIO functions

@@ -1,0 +1,355 @@
+---
+title: Colors and Styles
+description: Customize the visual appearance of Dear ImGui using colors, style variables, and theme functions
+---
+
+## Overview
+
+Dear ImGui provides comprehensive styling capabilities to customize the visual appearance of your UI. You can modify colors, spacing, rounding, and many other visual properties either globally or temporarily for specific UI elements.
+
+## Style Structure
+
+The `ImGuiStyle` structure contains all styling properties. Access it via:
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+```
+
+### Key Style Properties
+
+<Accordion title="Font Scaling">
+  - `FontSizeBase` - Current base font size before external global factors are applied
+  - `FontScaleMain` - Main global scale factor
+  - `FontScaleDpi` - Additional global scale factor from viewport/monitor contents scale
+  
+  ```cpp
+  ImGuiStyle& style = ImGui::GetStyle();
+  style.FontSizeBase = 20.0f;
+  style.FontScaleMain = 1.5f;
+  ```
+</Accordion>
+
+<Accordion title="Alpha and Transparency">
+  - `Alpha` - Global alpha applies to everything in Dear ImGui
+  - `DisabledAlpha` - Additional alpha multiplier applied by BeginDisabled()
+  
+  ```cpp
+  style.Alpha = 0.95f;          // Slightly transparent UI
+  style.DisabledAlpha = 0.6f;   // Disabled widgets are 60% of normal alpha
+  ```
+</Accordion>
+
+<Accordion title="Window Properties">
+  - `WindowPadding` - Padding within a window
+  - `WindowRounding` - Radius of window corners rounding
+  - `WindowBorderSize` - Thickness of border around windows (generally 0.0f or 1.0f)
+  - `WindowMinSize` - Minimum window size
+  - `WindowTitleAlign` - Alignment for title bar text
+  
+  ```cpp
+  style.WindowPadding = ImVec2(15, 15);
+  style.WindowRounding = 5.0f;
+  style.WindowBorderSize = 1.0f;
+  ```
+</Accordion>
+
+<Accordion title="Frame Properties">
+  - `FramePadding` - Padding within a framed rectangle (used by most widgets)
+  - `FrameRounding` - Radius of frame corners rounding
+  - `FrameBorderSize` - Thickness of border around frames
+  
+  ```cpp
+  style.FramePadding = ImVec2(8, 4);
+  style.FrameRounding = 4.0f;
+  style.FrameBorderSize = 1.0f;
+  ```
+</Accordion>
+
+<Accordion title="Spacing and Layout">
+  - `ItemSpacing` - Horizontal and vertical spacing between widgets/lines
+  - `ItemInnerSpacing` - Spacing within elements of a composed widget
+  - `IndentSpacing` - Horizontal indentation when entering a tree node
+  - `CellPadding` - Padding within a table cell
+  
+  ```cpp
+  style.ItemSpacing = ImVec2(8, 4);
+  style.ItemInnerSpacing = ImVec2(4, 4);
+  style.IndentSpacing = 21.0f;
+  ```
+</Accordion>
+
+<Accordion title="Scrollbar Properties">
+  - `ScrollbarSize` - Width of vertical scrollbar, height of horizontal scrollbar
+  - `ScrollbarRounding` - Radius of grab corners for scrollbar
+  - `ScrollbarPadding` - Padding of scrollbar grab within its frame
+  
+  ```cpp
+  style.ScrollbarSize = 16.0f;
+  style.ScrollbarRounding = 9.0f;
+  ```
+</Accordion>
+
+<Accordion title="Tab Properties">
+  - `TabRounding` - Radius of upper corners of a tab
+  - `TabBorderSize` - Thickness of border around tabs
+  - `TabBarBorderSize` - Thickness of tab-bar separator
+  - `TabBarOverlineSize` - Thickness of tab-bar overline
+  
+  ```cpp
+  style.TabRounding = 4.0f;
+  style.TabBarBorderSize = 1.0f;
+  style.TabBarOverlineSize = 2.0f;
+  ```
+</Accordion>
+
+## Color Scheme
+
+Dear ImGui uses an enum `ImGuiCol_` to identify 58 different color elements:
+
+### Text Colors
+
+```cpp
+ImGuiCol_Text               // Regular text
+ImGuiCol_TextDisabled       // Disabled/grayed out text
+ImGuiCol_TextLink           // Hyperlink color
+ImGuiCol_TextSelectedBg     // Selected text inside an InputText
+```
+
+### Window Colors
+
+```cpp
+ImGuiCol_WindowBg           // Background of normal windows
+ImGuiCol_ChildBg            // Background of child windows
+ImGuiCol_PopupBg            // Background of popups, menus, tooltips
+ImGuiCol_Border             // Border color
+ImGuiCol_BorderShadow       // Border shadow
+```
+
+### Frame Colors
+
+```cpp
+ImGuiCol_FrameBg            // Background of checkbox, radio button, plot, slider, text input
+ImGuiCol_FrameBgHovered     // Frame background when hovered
+ImGuiCol_FrameBgActive      // Frame background when active
+```
+
+### Title Bar Colors
+
+```cpp
+ImGuiCol_TitleBg            // Title bar
+ImGuiCol_TitleBgActive      // Title bar when focused
+ImGuiCol_TitleBgCollapsed   // Title bar when collapsed
+```
+
+### Button Colors
+
+```cpp
+ImGuiCol_Button             // Button background
+ImGuiCol_ButtonHovered      // Button background when hovered
+ImGuiCol_ButtonActive       // Button background when active/clicked
+```
+
+### Widget Colors
+
+```cpp
+ImGuiCol_CheckMark          // Checkbox tick and RadioButton circle
+ImGuiCol_SliderGrab         // Slider grab
+ImGuiCol_SliderGrabActive   // Slider grab when active
+```
+
+### Tab Colors
+
+```cpp
+ImGuiCol_Tab                   // Tab background when unselected
+ImGuiCol_TabSelected           // Tab background when selected
+ImGuiCol_TabSelectedOverline   // Tab horizontal overline when selected
+ImGuiCol_TabHovered            // Tab background when hovered
+ImGuiCol_TabDimmed             // Tab background when unfocused & unselected
+ImGuiCol_TabDimmedSelected     // Tab background when unfocused & selected
+```
+
+### Table Colors
+
+```cpp
+ImGuiCol_TableHeaderBg      // Table header background
+ImGuiCol_TableBorderStrong  // Table outer and header borders
+ImGuiCol_TableBorderLight   // Table inner borders
+ImGuiCol_TableRowBg         // Table row background (even rows)
+ImGuiCol_TableRowBgAlt      // Table row background (odd rows)
+```
+
+## Modifying Colors
+
+### Direct Modification
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+style.Colors[ImGuiCol_Text] = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);       // White
+style.Colors[ImGuiCol_WindowBg] = ImVec4(0.06f, 0.06f, 0.06f, 0.94f); // Dark gray
+style.Colors[ImGuiCol_Button] = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);  // Blue
+```
+
+### Temporary Color Changes
+
+Use `PushStyleColor()` and `PopStyleColor()` to temporarily change colors:
+
+```cpp
+// Push color changes
+ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));        // Red button
+ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.3f, 0.3f, 1.0f)); // Light red when hovered
+ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.8f, 0.0f, 0.0f, 1.0f));  // Dark red when clicked
+
+if (ImGui::Button("Delete")) {
+    // Danger action
+}
+
+ImGui::PopStyleColor(3); // Pop all 3 color changes
+```
+
+<Warning>
+  Always match your `PushStyleColor()` calls with `PopStyleColor()`! Mismatched push/pop will cause visual glitches.
+</Warning>
+
+### Using ImU32 Colors
+
+```cpp
+// Using packed 32-bit color
+ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 255, 0, 255)); // Yellow text
+ImGui::Text("This text is yellow");
+ImGui::PopStyleColor();
+```
+
+## Modifying Style Variables
+
+Use `PushStyleVar()` and `PopStyleVar()` for temporary style changes:
+
+```cpp
+// Make windows more rounded temporarily
+ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 10.0f);
+ImGui::Begin("Rounded Window");
+ImGui::Text("This window has rounded corners");
+ImGui::End();
+ImGui::PopStyleVar();
+```
+
+### Common Style Variables
+
+```cpp
+// Modify padding
+ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(20, 20));
+ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(10, 5));
+
+// Modify spacing
+ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10, 5));
+
+// Modify rounding
+ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 5.0f);
+ImGui::PushStyleVar(ImGuiStyleVar_GrabRounding, 3.0f);
+
+// Your UI code here
+
+ImGui::PopStyleVar(5); // Pop all 5 changes
+```
+
+## Built-in Themes
+
+Dear ImGui provides three built-in color themes:
+
+### Dark Theme (Default)
+
+```cpp
+ImGui::StyleColorsDark();
+```
+
+A dark theme suitable for most applications. This is the recommended default style.
+
+### Light Theme
+
+```cpp
+ImGui::StyleColorsLight();
+```
+
+A light theme best used with borders and a custom, thicker font.
+
+### Classic Theme
+
+```cpp
+ImGui::StyleColorsClassic();
+```
+
+The classic ImGui style from earlier versions.
+
+## Style Editor
+
+Dear ImGui includes a built-in style editor for live customization:
+
+```cpp
+ImGui::Begin("Style Editor");
+ImGui::ShowStyleEditor();
+ImGui::End();
+```
+
+You can also compare against a reference style:
+
+```cpp
+ImGuiStyle ref = ImGuiStyle(); // Default style
+ImGui::ShowStyleEditor(&ref);
+```
+
+## Complete Styling Example
+
+```cpp
+void SetupCustomStyle()
+{
+    ImGuiStyle& style = ImGui::GetStyle();
+    
+    // Rounding
+    style.WindowRounding = 5.0f;
+    style.FrameRounding = 3.0f;
+    style.ScrollbarRounding = 2.0f;
+    style.GrabRounding = 2.0f;
+    style.TabRounding = 4.0f;
+    
+    // Spacing
+    style.WindowPadding = ImVec2(10, 10);
+    style.FramePadding = ImVec2(8, 4);
+    style.ItemSpacing = ImVec2(8, 4);
+    style.ItemInnerSpacing = ImVec2(4, 4);
+    
+    // Borders
+    style.WindowBorderSize = 1.0f;
+    style.FrameBorderSize = 0.0f;
+    
+    // Colors
+    ImVec4* colors = style.Colors;
+    colors[ImGuiCol_Text]                   = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+    colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.10f, 0.10f, 0.10f, 1.00f);
+    colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_PopupBg]                = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
+    colors[ImGuiCol_Border]                 = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
+    colors[ImGuiCol_FrameBg]                = ImVec4(0.16f, 0.29f, 0.48f, 0.54f);
+    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
+    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
+    colors[ImGuiCol_TitleBg]                = ImVec4(0.04f, 0.04f, 0.04f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.16f, 0.29f, 0.48f, 1.00f);
+    colors[ImGuiCol_Button]                 = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
+    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_ButtonActive]           = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
+}
+```
+
+## Tips and Best Practices
+
+<Note>
+  - Always use `PushStyleColor()`/`PushStyleVar()` to modify styles mid-frame
+  - Direct modification of `ImGuiStyle` should be done at initialization or between frames
+  - Use the built-in style editor during development to experiment with values
+  - Keep track of push/pop pairs to avoid style stack errors
+</Note>
+
+## See Also
+
+- [Customization](/styling/customization) - Advanced styling techniques
+- [Best Practices](/guides/best-practices) - General ImGui best practices
+- [Examples](/guides/examples) - See styling in action

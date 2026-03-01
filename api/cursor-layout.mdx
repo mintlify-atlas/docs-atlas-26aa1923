@@ -1,0 +1,170 @@
+---
+title: 'Cursor & Layout Positioning'
+description: 'Functions for controlling cursor position and layout flow in Dear ImGui'
+---
+
+## Overview
+
+Dear ImGui uses a cursor-based layout system. The cursor represents the current output position where the next widget will be placed. Understanding cursor positioning is fundamental to creating custom layouts.
+
+<Tip>
+YOU CAN DO 99% OF WHAT YOU NEED WITH ONLY `GetCursorScreenPos()` and `GetContentRegionAvail()`.
+</Tip>
+
+## Coordinate Systems
+
+Dear ImGui uses two coordinate systems:
+
+- **Absolute coordinates**: `GetCursorScreenPos()`, `SetCursorScreenPos()`, all `ImDrawList` functions
+- **Window-local coordinates**: `GetCursorPos()`, `SetCursorPos()`, `GetCursorStartPos()`
+
+<Warning>
+We currently have inconsistencies between window-local and absolute positions that will be addressed in future API updates. Prefer using absolute coordinates via `GetCursorScreenPos()`.
+</Warning>
+
+## Primary Cursor Functions
+
+### GetCursorScreenPos
+
+```cpp
+ImVec2 GetCursorScreenPos();
+```
+
+Get cursor position in absolute screen coordinates. **This is your best friend.**
+
+<ParamField path="Returns" type="ImVec2">
+  Current cursor position in absolute screen coordinates
+</ParamField>
+
+**Example:**
+```cpp
+ImVec2 pos = ImGui::GetCursorScreenPos();
+ImGui::GetWindowDrawList()->AddCircleFilled(pos, 10.0f, IM_COL32(255, 0, 0, 255));
+```
+
+### SetCursorScreenPos
+
+```cpp
+void SetCursorScreenPos(const ImVec2& pos);
+```
+
+Set cursor position using absolute screen coordinates. **This is your best friend.**
+
+<ParamField path="pos" type="const ImVec2&">
+  New cursor position in absolute screen coordinates
+</ParamField>
+
+**Example:**
+```cpp
+ImVec2 pos = ImGui::GetCursorScreenPos();
+ImGui::SetCursorScreenPos(ImVec2(pos.x + 100, pos.y + 50));
+ImGui::Text("Offset text");
+```
+
+### GetContentRegionAvail
+
+```cpp
+ImVec2 GetContentRegionAvail();
+```
+
+Get available space from current cursor position. **This is your best friend.**
+
+<ParamField path="Returns" type="ImVec2">
+  Available space in current region
+</ParamField>
+
+**Example:**
+```cpp
+ImVec2 avail = ImGui::GetContentRegionAvail();
+ImGui::Button("Full Width", ImVec2(avail.x, 0));
+```
+
+## Window-Local Cursor Functions
+
+<Note>
+These functions use window-local coordinates. Prefer using `GetCursorScreenPos()` instead.
+</Note>
+
+### GetCursorPos
+
+```cpp
+ImVec2 GetCursorPos();
+```
+
+Get cursor position in window-local coordinates.
+
+<ParamField path="Returns" type="ImVec2">
+  Cursor position in window-local coordinates
+</ParamField>
+
+### GetCursorPosX / GetCursorPosY
+
+```cpp
+float GetCursorPosX();
+float GetCursorPosY();
+```
+
+Get X or Y component of cursor position in window-local coordinates.
+
+### SetCursorPos
+
+```cpp
+void SetCursorPos(const ImVec2& local_pos);
+```
+
+Set cursor position in window-local coordinates.
+
+<ParamField path="local_pos" type="const ImVec2&">
+  New cursor position in window-local coordinates
+</ParamField>
+
+### SetCursorPosX / SetCursorPosY
+
+```cpp
+void SetCursorPosX(float local_x);
+void SetCursorPosY(float local_y);
+```
+
+Set X or Y component of cursor position in window-local coordinates.
+
+<ParamField path="local_x" type="float">
+  New X position in window-local coordinates
+</ParamField>
+
+<ParamField path="local_y" type="float">
+  New Y position in window-local coordinates
+</ParamField>
+
+### GetCursorStartPos
+
+```cpp
+ImVec2 GetCursorStartPos();
+```
+
+Get initial cursor position in window-local coordinates. Call `GetCursorScreenPos()` after `Begin()` to get the absolute coordinates version.
+
+<ParamField path="Returns" type="ImVec2">
+  Initial cursor position in window-local coordinates
+</ParamField>
+
+## Conversion
+
+To convert between coordinate systems:
+
+```cpp
+// Window-local to absolute
+ImVec2 absolute = GetCursorPos() + GetWindowPos();
+
+// Absolute to window-local
+ImVec2 local = absolute - GetWindowPos();
+```
+
+<Warning>
+`GetWindowPos()` is almost only ever useful to convert from window-local to absolute coordinates. Try not to use it.
+</Warning>
+
+## Related Functions
+
+See also:
+- [Spacing & Alignment](/api/spacing-and-alignment) for `Indent()`, `Unindent()`, `Spacing()`, `Dummy()`
+- [Columns & Groups](/api/columns-and-groups) for `BeginGroup()`, `EndGroup()`

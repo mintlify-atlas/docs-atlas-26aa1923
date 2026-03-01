@@ -1,0 +1,292 @@
+---
+title: Windows
+description: Functions for creating and managing top-level windows
+---
+
+Windows are the primary containers in Dear ImGui. They can contain any widgets, can be moved, resized, collapsed, and docked (in the docking branch).
+
+## Begin
+
+Starts a new window and pushes it onto the window stack.
+
+```cpp
+bool Begin(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0);
+```
+
+### Parameters
+
+<ParamField path="name" type="const char*" required>
+  Window title and unique identifier. Use "###" to separate display name from ID (e.g., "MyWindow###UniqueID").
+</ParamField>
+
+<ParamField path="p_open" type="bool*" default="NULL">
+  Pointer to a boolean controlling window visibility. When not NULL, displays a close button that sets this to false when clicked.
+</ParamField>
+
+<ParamField path="flags" type="ImGuiWindowFlags" default="0">
+  Window behavior flags. See `ImGuiWindowFlags_` enum for available options.
+</ParamField>
+
+### Returns
+
+<ResponseField name="return" type="bool">
+  Returns false if the window is collapsed or fully clipped. You can use this to skip rendering content, but you must still call `End()`.
+</ResponseField>
+
+### Description
+
+`Begin()` pushes a window onto the stack and begins appending to it. Key points:
+- Always call `End()` for each `Begin()`, regardless of return value
+- Return value indicates visibility, not whether you should call `End()`
+- Multiple `Begin()/End()` pairs with the same name append to the same window
+- First call in a frame determines window flags and `p_open` behavior
+
+### Example
+
+```cpp
+// Simple window
+ImGui::Begin("My Window");
+ImGui::Text("Hello, World!");
+ImGui::End();
+
+// Window with close button
+static bool show_window = true;
+if (show_window) {
+    ImGui::Begin("Closeable Window", &show_window);
+    ImGui::Text("You can close this window.");
+    ImGui::End();
+}
+
+// Skip content rendering when collapsed
+if (ImGui::Begin("Optimized Window")) {
+    // Only render expensive content when visible
+    ImGui::Text("Visible content");
+    for (int i = 0; i < 1000; i++) {
+        ImGui::Text("Line %d", i);
+    }
+}
+ImGui::End(); // Always call End()
+```
+
+### Common Flags
+
+```cpp
+// No title bar
+ImGui::Begin("Window", NULL, ImGuiWindowFlags_NoTitleBar);
+
+// No resize grip
+ImGui::Begin("Window", NULL, ImGuiWindowFlags_NoResize);
+
+// No moving
+ImGui::Begin("Window", NULL, ImGuiWindowFlags_NoMove);
+
+// No scrollbars
+ImGui::Begin("Window", NULL, ImGuiWindowFlags_NoScrollbar);
+
+// Always auto-resize
+ImGui::Begin("Window", NULL, ImGuiWindowFlags_AlwaysAutoResize);
+
+// Menu bar
+ImGui::Begin("Window", NULL, ImGuiWindowFlags_MenuBar);
+if (ImGui::BeginMenuBar()) {
+    if (ImGui::BeginMenu("File")) {
+        ImGui::MenuItem("Open");
+        ImGui::EndMenu();
+    }
+    ImGui::EndMenuBar();
+}
+ImGui::End();
+
+// Combine multiple flags
+ImGui::Begin("Fixed Window", NULL, 
+    ImGuiWindowFlags_NoResize | 
+    ImGuiWindowFlags_NoMove | 
+    ImGuiWindowFlags_NoCollapse);
+```
+
+<Warning>
+**Important**: Due to legacy reasons, `Begin/End` are inconsistent with other BeginXXX/EndXXX functions. You must always call `End()` even if `Begin()` returns false. This will be fixed in a future update.
+</Warning>
+
+## End
+
+Pops the current window from the stack.
+
+```cpp
+void End();
+```
+
+### Description
+
+Ends the current window context. Must be called for every `Begin()` call, regardless of its return value.
+
+### Example
+
+```cpp
+// Correct usage
+if (ImGui::Begin("Window")) {
+    ImGui::Text("Content");
+}
+ImGui::End(); // Always called
+
+// Also correct
+ImGui::Begin("Window");
+ImGui::Text("Content");
+ImGui::End();
+
+// WRONG - Don't do this!
+if (ImGui::Begin("Window")) {
+    ImGui::Text("Content");
+    ImGui::End(); // Only called when visible - INCORRECT!
+}
+```
+
+<Note>
+The bottom of the window stack always contains a window called "Debug". You cannot pop this window.
+</Note>
+
+## Window Positioning and Sizing
+
+### SetNextWindowPos
+
+Sets the position of the next window before `Begin()`.
+
+```cpp
+void SetNextWindowPos(const ImVec2& pos, ImGuiCond cond = 0, const ImVec2& pivot = ImVec2(0, 0));
+```
+
+#### Parameters
+
+<ParamField path="pos" type="const ImVec2&" required>
+  Window position in screen coordinates.
+</ParamField>
+
+<ParamField path="cond" type="ImGuiCond" default="0">
+  Condition for setting position. Use `ImGuiCond_FirstUseEver` to allow user to move window.
+</ParamField>
+
+<ParamField path="pivot" type="const ImVec2&" default="ImVec2(0, 0)">
+  Pivot point for positioning. (0,0) = top-left, (0.5,0.5) = center, (1,1) = bottom-right.
+</ParamField>
+
+#### Example
+
+```cpp
+// Position at top-left corner
+ImGui::SetNextWindowPos(ImVec2(0, 0));
+ImGui::Begin("Corner Window");
+
+// Center window on screen
+ImGuiIO& io = ImGui::GetIO();
+ImVec2 center = ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
+ImGui::SetNextWindowPos(center, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+ImGui::Begin("Centered Window");
+
+// Position only on first use, then user can move it
+ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+ImGui::Begin("User Moveable Window");
+```
+
+### SetNextWindowSize
+
+Sets the size of the next window before `Begin()`.
+
+```cpp
+void SetNextWindowSize(const ImVec2& size, ImGuiCond cond = 0);
+```
+
+#### Parameters
+
+<ParamField path="size" type="const ImVec2&" required>
+  Window size. Set axis to 0.0f to force auto-fit on that axis.
+</ParamField>
+
+<ParamField path="cond" type="ImGuiCond" default="0">
+  Condition for setting size.
+</ParamField>
+
+#### Example
+
+```cpp
+// Fixed size window
+ImGui::SetNextWindowSize(ImVec2(400, 300));
+ImGui::Begin("Fixed Size");
+
+// Auto-fit width, fixed height
+ImGui::SetNextWindowSize(ImVec2(0, 300));
+ImGui::Begin("Auto Width");
+
+// Set size only once
+ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+ImGui::Begin("User Resizable");
+```
+
+## Complete Window Example
+
+```cpp
+struct AppState {
+    bool show_main_window = true;
+    bool show_settings = false;
+    bool show_debug = false;
+};
+
+static AppState state;
+
+void RenderUI() {
+    // Main menu bar
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("Windows")) {
+            ImGui::MenuItem("Main Window", NULL, &state.show_main_window);
+            ImGui::MenuItem("Settings", NULL, &state.show_settings);
+            ImGui::MenuItem("Debug", NULL, &state.show_debug);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+    
+    // Main window
+    if (state.show_main_window) {
+        ImGui::SetNextWindowPos(ImVec2(50, 50), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+        
+        if (ImGui::Begin("Main Window", &state.show_main_window, ImGuiWindowFlags_MenuBar)) {
+            if (ImGui::BeginMenuBar()) {
+                if (ImGui::BeginMenu("File")) {
+                    if (ImGui::MenuItem("Settings")) {
+                        state.show_settings = true;
+                    }
+                    ImGui::EndMenu();
+                }
+                ImGui::EndMenuBar();
+            }
+            
+            ImGui::Text("Application content goes here");
+            ImGui::Separator();
+            ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+        }
+        ImGui::End();
+    }
+    
+    // Settings window
+    if (state.show_settings) {
+        ImGui::SetNextWindowSize(ImVec2(300, 200), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin("Settings", &state.show_settings)) {
+            ImGui::Text("Application Settings");
+            // Settings controls here
+        }
+        ImGui::End();
+    }
+    
+    // Debug window (fixed position, no resize)
+    if (state.show_debug) {
+        ImGui::SetNextWindowPos(ImVec2(10, 10), ImGuiCond_Always);
+        ImGui::SetNextWindowSize(ImVec2(300, 100), ImGuiCond_Always);
+        if (ImGui::Begin("Debug", &state.show_debug, 
+            ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove)) {
+            ImGui::Text("Debug Information");
+            ImGui::Text("Frame time: %.3f ms", 1000.0f / ImGui::GetIO().Framerate);
+        }
+        ImGui::End();
+    }
+}
+```

@@ -1,0 +1,405 @@
+---
+title: Docking and Viewports
+description: Learn about window docking and multi-viewport support in Dear ImGui (docking branch).
+---
+
+# Docking and Viewports
+
+Docking and multi-viewport features are available in the **docking branch** of Dear ImGui. These features allow windows to be docked together and moved outside the main application window.
+
+<Note>
+Docking and viewports are currently available in the `docking` branch, not in the `master` branch. You need to use the docking branch to access these features.
+</Note>
+
+## Docking Overview
+
+Docking allows users to:
+- Drag windows to dock them together
+- Create custom layouts by splitting docked spaces
+- Save and restore docking layouts
+- Create tab bars from docked windows
+
+### Enabling Docking
+
+Enable docking in your application:
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+```
+
+### Creating a Dockspace
+
+A dockspace is a region where windows can be docked:
+
+```cpp
+void ShowDockingExample()
+{
+    // Create a fullscreen dockspace
+    ImGuiViewport* viewport = ImGui::GetMainViewport();
+    ImGui::SetNextWindowPos(viewport->WorkPos);
+    ImGui::SetNextWindowSize(viewport->WorkSize);
+    ImGui::SetNextWindowViewport(viewport->ID);
+    
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | 
+                                     ImGuiWindowFlags_NoDocking;
+    window_flags |= ImGuiWindowFlags_NoTitleBar | 
+                    ImGuiWindowFlags_NoCollapse | 
+                    ImGuiWindowFlags_NoResize | 
+                    ImGuiWindowFlags_NoMove;
+    window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | 
+                    ImGuiWindowFlags_NoNavFocus;
+    
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    
+    ImGui::Begin("DockSpace", nullptr, window_flags);
+    ImGui::PopStyleVar(3);
+    
+    // Create dockspace
+    ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), 
+                     ImGuiDockNodeFlags_None);
+    
+    ImGui::End();
+}
+```
+
+### Simple Dockspace
+
+For a simpler approach:
+
+```cpp
+void ShowSimpleDockspace()
+{
+    ImGui::DockSpaceOverViewport(ImGui::GetMainViewport());
+    
+    // Now create your dockable windows
+    ImGui::Begin("Window 1");
+    ImGui::Text("This window can be docked");
+    ImGui::End();
+    
+    ImGui::Begin("Window 2");
+    ImGui::Text("This window can also be docked");
+    ImGui::End();
+}
+```
+
+## Docking Flags
+
+### Window Flags
+
+Control docking behavior per-window:
+
+```cpp
+// Prevent this window from being docked
+ImGui::Begin("No Docking", NULL, ImGuiWindowFlags_NoDocking);
+
+// Normal dockable window
+ImGui::Begin("Dockable Window");
+```
+
+**Docking-related window flags:**
+- `ImGuiWindowFlags_NoDocking` - Cannot be docked
+
+### DockNode Flags
+
+Customize dockspace behavior:
+
+```cpp
+enum ImGuiDockNodeFlags_
+{
+    ImGuiDockNodeFlags_None                     = 0,
+    ImGuiDockNodeFlags_KeepAliveOnly            = 1 << 0,  // Shared
+    ImGuiDockNodeFlags_NoDockingOverCentralNode = 1 << 2,  // Disable docking over central node
+    ImGuiDockNodeFlags_PassthruCentralNode      = 1 << 3,  // Enable passthru
+    ImGuiDockNodeFlags_NoDockingSplit           = 1 << 4,  // Disable splitting
+    ImGuiDockNodeFlags_NoResize                 = 1 << 5,  // Disable resizing
+    ImGuiDockNodeFlags_AutoHideTabBar           = 1 << 6,  // Hide tab bar when one tab
+    ImGuiDockNodeFlags_NoUndocking              = 1 << 7,  // Disable undocking
+};
+```
+
+Example usage:
+
+```cpp
+ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_PassthruCentralNode;
+ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+```
+
+## Programmatic Docking
+
+Set up initial docking layout programmatically:
+
+```cpp
+static bool first_time = true;
+ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+
+if (first_time)
+{
+    first_time = false;
+    
+    // Clear any existing layout
+    ImGui::DockBuilderRemoveNode(dockspace_id);
+    ImGui::DockBuilderAddNode(dockspace_id, 
+                              ImGuiDockNodeFlags_DockSpace);
+    ImGui::DockBuilderSetNodeSize(dockspace_id, viewport->Size);
+    
+    // Split the dockspace
+    ImGuiID dock_id_left = ImGui::DockBuilderSplitNode(
+        dockspace_id, ImGuiDir_Left, 0.2f, nullptr, &dockspace_id);
+    ImGuiID dock_id_right = ImGui::DockBuilderSplitNode(
+        dockspace_id, ImGuiDir_Right, 0.2f, nullptr, &dockspace_id);
+    ImGuiID dock_id_down = ImGui::DockBuilderSplitNode(
+        dockspace_id, ImGuiDir_Down, 0.25f, nullptr, &dockspace_id);
+    
+    // Dock windows into specific nodes
+    ImGui::DockBuilderDockWindow("Window 1", dock_id_left);
+    ImGui::DockBuilderDockWindow("Window 2", dock_id_right);
+    ImGui::DockBuilderDockWindow("Window 3", dock_id_down);
+    ImGui::DockBuilderDockWindow("Window 4", dockspace_id);
+    
+    ImGui::DockBuilderFinish(dockspace_id);
+}
+
+ImGui::DockSpace(dockspace_id);
+```
+
+## Multi-Viewport Support
+
+Multi-viewport allows Dear ImGui windows to be moved outside the main application window into their own OS windows.
+
+### Enabling Viewports
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+// Also enable docking if desired
+io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+```
+
+### Backend Requirements
+
+Multi-viewport requires:
+1. Platform backend support (e.g., `imgui_impl_glfw.cpp`, `imgui_impl_win32.cpp`)
+2. Renderer backend support (e.g., `imgui_impl_opengl3.cpp`, `imgui_impl_dx11.cpp`)
+3. Backend must create and manage additional OS windows
+
+### Rendering Viewports
+
+```cpp
+// In your render loop, after ImGui::Render():
+ImGui::Render();
+
+// Render main viewport
+ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+// Update and render additional viewports
+ImGuiIO& io = ImGui::GetIO();
+if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+{
+    GLFWwindow* backup_current_context = glfwGetCurrentContext();
+    ImGui::UpdatePlatformWindows();
+    ImGui::RenderPlatformWindowsDefault();
+    glfwMakeContextCurrent(backup_current_context);
+}
+```
+
+## Viewport Flags
+
+```cpp
+enum ImGuiViewportFlags_
+{
+    ImGuiViewportFlags_None                     = 0,
+    ImGuiViewportFlags_IsPlatformWindow         = 1 << 0,  // Is a platform window
+    ImGuiViewportFlags_IsPlatformMonitor        = 1 << 1,  // Is a monitor (unused)
+    ImGuiViewportFlags_OwnedByApp               = 1 << 2,  // Owned by application
+};
+```
+
+## ImGuiViewport Structure
+
+```cpp
+struct ImGuiViewport
+{
+    ImGuiID             ID;
+    ImGuiViewportFlags  Flags;
+    ImVec2              Pos;            // Position in screen coordinates
+    ImVec2              Size;           // Size in screen coordinates
+    ImVec2              WorkPos;        // Position minus task bars, menu bars
+    ImVec2              WorkSize;       // Size minus task bars, menu bars
+    float               DpiScale;
+    ImGuiID             ParentViewportId;
+    ImDrawData*         DrawData;
+    
+    // Platform/Renderer specific
+    void*               RendererUserData;
+    void*               PlatformUserData;
+    void*               PlatformHandle;      // HWND, GLFWwindow*, etc.
+    void*               PlatformHandleRaw;   // For ImeSetInputScreenPosFn
+    bool                PlatformWindowCreated;
+    bool                PlatformRequestMove;
+    bool                PlatformRequestResize;
+    bool                PlatformRequestClose;
+};
+```
+
+### Getting Viewport Information
+
+```cpp
+// Get main viewport
+ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+
+// Get current window's viewport  
+ImGuiViewport* window_viewport = ImGui::GetWindowViewport();
+
+// Use viewport information
+ImVec2 main_pos = main_viewport->Pos;
+ImVec2 main_size = main_viewport->Size;
+ImVec2 work_pos = main_viewport->WorkPos;   // Excludes OS decorations
+ImVec2 work_size = main_viewport->WorkSize;
+```
+
+## Complete Docking Example
+
+```cpp
+class DockingApp
+{
+public:
+    void Setup()
+    {
+        ImGuiIO& io = ImGui::GetIO();
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+        io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+    }
+    
+    void ShowMainWindow()
+    {
+        // Setup dockspace
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImGui::SetNextWindowPos(viewport->WorkPos);
+        ImGui::SetNextWindowSize(viewport->WorkSize);
+        ImGui::SetNextWindowViewport(viewport->ID);
+        
+        ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | 
+                                         ImGuiWindowFlags_NoDocking |
+                                         ImGuiWindowFlags_NoTitleBar |
+                                         ImGuiWindowFlags_NoCollapse |
+                                         ImGuiWindowFlags_NoResize |
+                                         ImGuiWindowFlags_NoMove |
+                                         ImGuiWindowFlags_NoBringToFrontOnFocus |
+                                         ImGuiWindowFlags_NoNavFocus;
+        
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+        
+        ImGui::Begin("DockSpace Demo", nullptr, window_flags);
+        ImGui::PopStyleVar(3);
+        
+        // Menu bar
+        if (ImGui::BeginMenuBar())
+        {
+            if (ImGui::BeginMenu("File"))
+            {
+                if (ImGui::MenuItem("Exit")) { /* exit */ }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenuBar();
+        }
+        
+        // Dockspace
+        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f));
+        
+        ImGui::End();
+        
+        // Show dockable windows
+        ShowToolPanel();
+        ShowPropertiesPanel();
+        ShowViewport();
+        ShowConsole();
+    }
+    
+    void ShowToolPanel()
+    {
+        ImGui::Begin("Tools");
+        ImGui::Text("Tool Panel");
+        if (ImGui::Button("Tool 1")) { /* ... */ }
+        if (ImGui::Button("Tool 2")) { /* ... */ }
+        ImGui::End();
+    }
+    
+    void ShowPropertiesPanel()
+    {
+        ImGui::Begin("Properties");
+        ImGui::Text("Properties Panel");
+        // Add property editors...
+        ImGui::End();
+    }
+    
+    void ShowViewport()
+    {
+        ImGui::Begin("Viewport");
+        // Render your 3D scene or canvas here
+        ImGui::Text("Main Viewport");
+        ImGui::End();
+    }
+    
+    void ShowConsole()
+    {
+        ImGui::Begin("Console");
+        ImGui::Text("Console Output");
+        // Add console text...
+        ImGui::End();
+    }
+};
+```
+
+## Saving and Loading Layouts
+
+Dear ImGui automatically saves docking layouts to `.ini` files:
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Set .ini filename (default is "imgui.ini")
+io.IniFilename = "my_layout.ini";
+
+// Disable automatic .ini saving
+io.IniFilename = NULL;
+
+// Manually save/load
+ImGui::SaveIniSettingsToDisk("my_layout.ini");
+ImGui::LoadIniSettingsFromDisk("my_layout.ini");
+```
+
+<Warning>
+**Important notes:**
+- Docking and viewports are in the `docking` branch, not `master`
+- Multi-viewport requires backend support for creating OS windows
+- Some backends may not fully support all viewport features
+- Test thoroughly on all target platforms
+</Warning>
+
+## Platform-Specific Considerations
+
+### Windows
+Full support in GLFW, Win32, SDL2 backends.
+
+### macOS
+Full support with some quirks around focus and decorations.
+
+### Linux
+Full support with X11 and Wayland backends.
+
+### Web (Emscripten)
+Multi-viewport not supported (browser limitation).
+
+## Reference
+
+- [Docking Branch](https://github.com/ocornut/imgui/tree/docking)
+- [Viewport API](https://github.com/ocornut/imgui/blob/master/imgui.h) (line 3922)
+- See backend implementations in `backends/` folder for multi-viewport examples

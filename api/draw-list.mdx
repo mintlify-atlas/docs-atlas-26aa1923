@@ -1,0 +1,413 @@
+---
+title: 'ImDrawList'
+description: 'Low-level drawing API for custom primitives and shapes'
+---
+
+## Overview
+
+`ImDrawList` is the low-level list of polygons that ImGui functions are filling. At the end of each frame, all command lists are passed to your rendering function. You can use `ImGui::GetWindowDrawList()` to access the current window's draw list and add custom primitives.
+
+<Tip>
+You can interleave normal ImGui calls and adding primitives to the current draw list.
+</Tip>
+
+## Getting a Draw List
+
+### GetWindowDrawList
+
+```cpp
+ImDrawList* GetWindowDrawList();
+```
+
+Get draw list associated to the current window, to append your own drawing primitives.
+
+<ParamField path="Returns" type="ImDrawList*">
+  Pointer to the current window's draw list
+</ParamField>
+
+**Example:**
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+ImVec2 pos = ImGui::GetCursorScreenPos();
+draw_list->AddCircleFilled(pos, 20.0f, IM_COL32(255, 0, 0, 255));
+```
+
+## Structure
+
+```cpp
+struct ImDrawList
+{
+    ImVector<ImDrawCmd>     CmdBuffer;      // Draw commands
+    ImVector<ImDrawIdx>     IdxBuffer;      // Index buffer
+    ImVector<ImDrawVert>    VtxBuffer;      // Vertex buffer
+    ImDrawListFlags         Flags;          // Flags (anti-aliasing, etc.)
+    
+    // ... internal members
+};
+```
+
+<ResponseField name="CmdBuffer" type="ImVector<ImDrawCmd>">
+  Draw commands. Typically 1 command = 1 GPU draw call (unless it's a callback).
+</ResponseField>
+
+<ResponseField name="IdxBuffer" type="ImVector<ImDrawIdx>">
+  Index buffer. Each command consumes `ImDrawCmd::ElemCount` of these.
+</ResponseField>
+
+<ResponseField name="VtxBuffer" type="ImVector<ImDrawVert>">
+  Vertex buffer.
+</ResponseField>
+
+<ResponseField name="Flags" type="ImDrawListFlags">
+  Flags controlling anti-aliasing and other rendering options.
+</ResponseField>
+
+## Clipping
+
+### PushClipRect
+
+```cpp
+void PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, 
+                  bool intersect_with_current_clip_rect = false);
+```
+
+Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping.
+
+<ParamField path="clip_rect_min" type="const ImVec2&">
+  Top-left corner of clipping rectangle
+</ParamField>
+
+<ParamField path="clip_rect_max" type="const ImVec2&">
+  Bottom-right corner of clipping rectangle
+</ParamField>
+
+<ParamField path="intersect_with_current_clip_rect" type="bool" default="false">
+  If true, intersect with current clip rect instead of replacing it
+</ParamField>
+
+<Note>
+Prefer using higher-level `ImGui::PushClipRect()` to affect logic (hit-testing and widget culling).
+</Note>
+
+### PopClipRect
+
+```cpp
+void PopClipRect();
+```
+
+Restore previous clipping rectangle.
+
+### PushClipRectFullScreen
+
+```cpp
+void PushClipRectFullScreen();
+```
+
+Set clipping rectangle to full screen.
+
+## Texture Management
+
+### PushTexture
+
+```cpp
+void PushTexture(ImTextureRef tex_ref);
+```
+
+Set texture for subsequent drawing commands.
+
+<ParamField path="tex_ref" type="ImTextureRef">
+  Texture reference to use
+</ParamField>
+
+### PopTexture
+
+```cpp
+void PopTexture();
+```
+
+Restore previous texture.
+
+## Primitive Shapes
+
+<Warning>
+Filled shapes must always use **clockwise winding order**. The anti-aliasing fringe depends on it. Counter-clockwise shapes will have "inward" anti-aliasing.
+</Warning>
+
+### AddLine
+
+```cpp
+void AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float thickness = 1.0f);
+```
+
+Draw a line between two points.
+
+<ParamField path="p1" type="const ImVec2&">
+  Start point
+</ParamField>
+
+<ParamField path="p2" type="const ImVec2&">
+  End point
+</ParamField>
+
+<ParamField path="col" type="ImU32">
+  Color (use `IM_COL32(r, g, b, a)` macro)
+</ParamField>
+
+<ParamField path="thickness" type="float" default="1.0f">
+  Line thickness in pixels
+</ParamField>
+
+**Example:**
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+ImVec2 p1 = ImGui::GetCursorScreenPos();
+ImVec2 p2 = ImVec2(p1.x + 100, p1.y + 50);
+draw_list->AddLine(p1, p2, IM_COL32(255, 255, 0, 255), 2.0f);
+```
+
+### AddRect
+
+```cpp
+void AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, 
+             float rounding = 0.0f, ImDrawFlags flags = 0, float thickness = 1.0f);
+```
+
+Draw a rectangle outline.
+
+<ParamField path="p_min" type="const ImVec2&">
+  Top-left corner
+</ParamField>
+
+<ParamField path="p_max" type="const ImVec2&">
+  Bottom-right corner
+</ParamField>
+
+<ParamField path="col" type="ImU32">
+  Color
+</ParamField>
+
+<ParamField path="rounding" type="float" default="0.0f">
+  Corner rounding radius
+</ParamField>
+
+<ParamField path="flags" type="ImDrawFlags" default="0">
+  Flags for corner rounding (e.g., `ImDrawFlags_RoundCornersTopLeft`)
+</ParamField>
+
+<ParamField path="thickness" type="float" default="1.0f">
+  Border thickness
+</ParamField>
+
+### AddRectFilled
+
+```cpp
+void AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, 
+                   float rounding = 0.0f, ImDrawFlags flags = 0);
+```
+
+Draw a filled rectangle.
+
+**Example:**
+```cpp
+ImVec2 p_min = ImGui::GetCursorScreenPos();
+ImVec2 p_max = ImVec2(p_min.x + 100, p_min.y + 100);
+draw_list->AddRectFilled(p_min, p_max, IM_COL32(0, 255, 0, 128), 10.0f);
+```
+
+### AddRectFilledMultiColor
+
+```cpp
+void AddRectFilledMultiColor(const ImVec2& p_min, const ImVec2& p_max, 
+                             ImU32 col_upr_left, ImU32 col_upr_right, 
+                             ImU32 col_bot_right, ImU32 col_bot_left);
+```
+
+Draw a filled rectangle with different colors at each corner (gradient).
+
+<ParamField path="col_upr_left" type="ImU32">
+  Top-left corner color
+</ParamField>
+
+<ParamField path="col_upr_right" type="ImU32">
+  Top-right corner color
+</ParamField>
+
+<ParamField path="col_bot_right" type="ImU32">
+  Bottom-right corner color
+</ParamField>
+
+<ParamField path="col_bot_left" type="ImU32">
+  Bottom-left corner color
+</ParamField>
+
+### AddQuad / AddQuadFilled
+
+```cpp
+void AddQuad(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, 
+             ImU32 col, float thickness = 1.0f);
+void AddQuadFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, 
+                   ImU32 col);
+```
+
+Draw a quadrilateral (4-sided polygon).
+
+### AddTriangle / AddTriangleFilled
+
+```cpp
+void AddTriangle(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, 
+                 ImU32 col, float thickness = 1.0f);
+void AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col);
+```
+
+Draw a triangle.
+
+### AddCircle / AddCircleFilled
+
+```cpp
+void AddCircle(const ImVec2& center, float radius, ImU32 col, 
+               int num_segments = 0, float thickness = 1.0f);
+void AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments = 0);
+```
+
+Draw a circle.
+
+<ParamField path="center" type="const ImVec2&">
+  Center point
+</ParamField>
+
+<ParamField path="radius" type="float">
+  Circle radius
+</ParamField>
+
+<ParamField path="col" type="ImU32">
+  Color
+</ParamField>
+
+<ParamField path="num_segments" type="int" default="0">
+  Number of segments (0 = auto-calculate based on radius)
+</ParamField>
+
+<Tip>
+Use `num_segments = 0` to automatically calculate tessellation (preferred).
+</Tip>
+
+**Example:**
+```cpp
+ImVec2 center = ImVec2(100, 100);
+draw_list->AddCircleFilled(center, 30.0f, IM_COL32(255, 0, 0, 255));
+draw_list->AddCircle(center, 35.0f, IM_COL32(255, 255, 255, 255), 0, 2.0f);
+```
+
+### AddNgon / AddNgonFilled
+
+```cpp
+void AddNgon(const ImVec2& center, float radius, ImU32 col, 
+             int num_segments, float thickness = 1.0f);
+void AddNgonFilled(const ImVec2& center, float radius, ImU32 col, int num_segments);
+```
+
+Draw a regular polygon with specified number of sides.
+
+<ParamField path="num_segments" type="int">
+  Number of sides (e.g., 5 for pentagon, 6 for hexagon)
+</ParamField>
+
+### AddEllipse / AddEllipseFilled
+
+```cpp
+void AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 col, 
+                float rot = 0.0f, int num_segments = 0, float thickness = 1.0f);
+void AddEllipseFilled(const ImVec2& center, const ImVec2& radius, ImU32 col, 
+                      float rot = 0.0f, int num_segments = 0);
+```
+
+Draw an ellipse.
+
+<ParamField path="radius" type="const ImVec2&">
+  Radius on X and Y axes
+</ParamField>
+
+<ParamField path="rot" type="float" default="0.0f">
+  Rotation in radians
+</ParamField>
+
+## Text
+
+### AddText
+
+```cpp
+void AddText(const ImVec2& pos, ImU32 col, const char* text_begin, 
+             const char* text_end = NULL);
+
+void AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, 
+             const char* text_begin, const char* text_end = NULL, 
+             float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
+```
+
+Draw text at specified position.
+
+<ParamField path="pos" type="const ImVec2&">
+  Text position (top-left)
+</ParamField>
+
+<ParamField path="col" type="ImU32">
+  Text color
+</ParamField>
+
+<ParamField path="text_begin" type="const char*">
+  Start of text string
+</ParamField>
+
+<ParamField path="text_end" type="const char*">
+  End of text string (NULL for null-terminated)
+</ParamField>
+
+<ParamField path="font" type="ImFont*">
+  Font to use (extended version)
+</ParamField>
+
+<ParamField path="font_size" type="float">
+  Font size (extended version)
+</ParamField>
+
+## Curves
+
+### AddBezierCubic
+
+```cpp
+void AddBezierCubic(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, 
+                    ImU32 col, float thickness, int num_segments = 0);
+```
+
+Draw a cubic Bezier curve (4 control points).
+
+<ParamField path="p1" type="const ImVec2&">
+  Start point
+</ParamField>
+
+<ParamField path="p2" type="const ImVec2&">
+  First control point
+</ParamField>
+
+<ParamField path="p3" type="const ImVec2&">
+  Second control point
+</ParamField>
+
+<ParamField path="p4" type="const ImVec2&">
+  End point
+</ParamField>
+
+### AddBezierQuadratic
+
+```cpp
+void AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, 
+                        ImU32 col, float thickness, int num_segments = 0);
+```
+
+Draw a quadratic Bezier curve (3 control points).
+
+## See Also
+
+- [Draw Commands](/api/draw-commands) - Primitives and path API
+- [ImDrawCmd](/api/draw-commands#imdrawcmd) - Individual draw command structure
+- [ImDrawVert](/api/vectors-and-types#imdrawvert) - Vertex structure

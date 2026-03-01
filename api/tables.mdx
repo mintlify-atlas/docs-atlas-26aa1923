@@ -1,0 +1,384 @@
+---
+title: 'Tables'
+description: 'Table widgets for Dear ImGui'
+---
+
+## Table Functions
+
+Full-featured replacement for old Columns API. See demo for usage examples.
+
+### BeginTable
+
+```cpp
+bool ImGui::BeginTable(const char* str_id, int columns, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0.0f, 0.0f), float inner_width = 0.0f)
+```
+
+Begin a table. Only call `EndTable()` if this returns true.
+
+<ParamField path="str_id" type="const char*">
+  Unique identifier for the table
+</ParamField>
+
+<ParamField path="columns" type="int">
+  Number of columns
+</ParamField>
+
+<ParamField path="flags" type="ImGuiTableFlags" default="0">
+  Table flags (see ImGuiTableFlags_)
+</ParamField>
+
+<ParamField path="outer_size" type="const ImVec2&" default="ImVec2(0.0f, 0.0f)">
+  Outer size of table
+</ParamField>
+
+<ParamField path="inner_width" type="float" default="0.0f">
+  Inner width of table (for horizontal scrolling)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if table is visible and can be appended to
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::BeginTable("table1", 3)) {
+    ImGui::TableNextRow();
+    ImGui::TableSetColumnIndex(0);
+    ImGui::Text("Row 0, Col 0");
+    ImGui::TableSetColumnIndex(1);
+    ImGui::Text("Row 0, Col 1");
+    ImGui::TableSetColumnIndex(2);
+    ImGui::Text("Row 0, Col 2");
+    ImGui::EndTable();
+}
+```
+
+### EndTable
+
+```cpp
+void ImGui::EndTable()
+```
+
+End table. Only call if `BeginTable()` returns true.
+
+### TableNextRow
+
+```cpp
+void ImGui::TableNextRow(ImGuiTableRowFlags row_flags = 0, float min_row_height = 0.0f)
+```
+
+Append into the first cell of a new row.
+
+<ParamField path="row_flags" type="ImGuiTableRowFlags" default="0">
+  Row flags (see ImGuiTableRowFlags_)
+</ParamField>
+
+<ParamField path="min_row_height" type="float" default="0.0f">
+  Minimum row height (includes CellPadding.y * 2.0f)
+</ParamField>
+
+```cpp
+// Example
+for (int row = 0; row < 10; row++) {
+    ImGui::TableNextRow();
+    for (int column = 0; column < 3; column++) {
+        ImGui::TableSetColumnIndex(column);
+        ImGui::Text("Row %d Column %d", row, column);
+    }
+}
+```
+
+### TableNextColumn
+
+```cpp
+bool ImGui::TableNextColumn()
+```
+
+Append into the next column (or first column of next row if currently in last column). Return true when column is visible.
+
+<ResponseField name="return" type="bool">
+  True when column is visible
+</ResponseField>
+
+```cpp
+// Example
+for (int row = 0; row < 10; row++) {
+    for (int column = 0; column < 3; column++) {
+        ImGui::TableNextColumn();
+        ImGui::Text("Cell %d,%d", row, column);
+    }
+}
+```
+
+### TableSetColumnIndex
+
+```cpp
+bool ImGui::TableSetColumnIndex(int column_n)
+```
+
+Append into the specified column. Return true when column is visible.
+
+<ParamField path="column_n" type="int">
+  Column index (0-based)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when column is visible
+</ResponseField>
+
+## Table Setup
+
+### TableSetupColumn
+
+```cpp
+void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags = 0, float init_width_or_weight = 0.0f, ImGuiID user_id = 0)
+```
+
+Specify label, resizing policy, default width/weight, ID, various other flags for a column.
+
+<ParamField path="label" type="const char*">
+  Column label (also used as ID unless user_id is provided)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiTableColumnFlags" default="0">
+  Column flags (see ImGuiTableColumnFlags_)
+</ParamField>
+
+<ParamField path="init_width_or_weight" type="float" default="0.0f">
+  Initial width (for fixed columns) or weight (for stretch columns)
+</ParamField>
+
+<ParamField path="user_id" type="ImGuiID" default="0">
+  Optional user ID
+</ParamField>
+
+```cpp
+// Example
+if (ImGui::BeginTable("table", 3, ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable)) {
+    ImGui::TableSetupColumn("ID", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+    ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, 80.0f);
+    ImGui::TableHeadersRow();
+    
+    for (int n = 0; n < 100; n++) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Text("%d", n);
+        ImGui::TableNextColumn();
+        ImGui::Text("Item %d", n);
+        ImGui::TableNextColumn();
+        ImGui::Text("1234");
+    }
+    ImGui::EndTable();
+}
+```
+
+### TableSetupScrollFreeze
+
+```cpp
+void ImGui::TableSetupScrollFreeze(int cols, int rows)
+```
+
+Lock columns/rows so they stay visible when scrolled.
+
+<ParamField path="cols" type="int">
+  Number of columns to freeze
+</ParamField>
+
+<ParamField path="rows" type="int">
+  Number of rows to freeze
+</ParamField>
+
+```cpp
+// Example - freeze first column and header row
+ImGui::TableSetupScrollFreeze(1, 1);
+```
+
+### TableHeadersRow
+
+```cpp
+void ImGui::TableHeadersRow()
+```
+
+Submit a row with headers cells based on data provided to `TableSetupColumn()` and submit context menu.
+
+```cpp
+// Example
+if (ImGui::BeginTable("table", 3)) {
+    ImGui::TableSetupColumn("ID");
+    ImGui::TableSetupColumn("Name");
+    ImGui::TableSetupColumn("Value");
+    ImGui::TableHeadersRow();
+    
+    // Table content...
+    ImGui::EndTable();
+}
+```
+
+### TableHeader
+
+```cpp
+void ImGui::TableHeader(const char* label)
+```
+
+Submit one header cell manually (rarely used).
+
+<ParamField path="label" type="const char*">
+  Header label
+</ParamField>
+
+### TableAngledHeadersRow
+
+```cpp
+void ImGui::TableAngledHeadersRow()
+```
+
+Submit a row with angled headers for every column with the `ImGuiTableColumnFlags_AngledHeader` flag. Must be first row.
+
+## Table Query
+
+### TableGetSortSpecs
+
+```cpp
+ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
+```
+
+Get latest sort specs for the table (NULL if not sorting).
+
+<ResponseField name="return" type="ImGuiTableSortSpecs*">
+  Sort specifications or NULL
+</ResponseField>
+
+```cpp
+// Example
+if (ImGuiTableSortSpecs* sort_specs = ImGui::TableGetSortSpecs()) {
+    if (sort_specs->SpecsDirty) {
+        // Sort your data
+        MyData::SortWithSortSpecs(sort_specs);
+        sort_specs->SpecsDirty = false;
+    }
+}
+```
+
+### TableGetColumnCount
+
+```cpp
+int ImGui::TableGetColumnCount()
+```
+
+Return number of columns (value passed to `BeginTable()`).
+
+<ResponseField name="return" type="int">
+  Number of columns
+</ResponseField>
+
+### TableGetColumnIndex
+
+```cpp
+int ImGui::TableGetColumnIndex()
+```
+
+Return current column index.
+
+<ResponseField name="return" type="int">
+  Current column index
+</ResponseField>
+
+### TableGetRowIndex
+
+```cpp
+int ImGui::TableGetRowIndex()
+```
+
+Return current row index (header rows are accounted for).
+
+<ResponseField name="return" type="int">
+  Current row index
+</ResponseField>
+
+### TableGetColumnName
+
+```cpp
+const char* ImGui::TableGetColumnName(int column_n = -1)
+```
+
+Return column name. Pass -1 to use current column.
+
+<ParamField path="column_n" type="int" default="-1">
+  Column index (-1 = current column)
+</ParamField>
+
+<ResponseField name="return" type="const char*">
+  Column name or empty string
+</ResponseField>
+
+### TableGetColumnFlags
+
+```cpp
+ImGuiTableColumnFlags ImGui::TableGetColumnFlags(int column_n = -1)
+```
+
+Return column flags. Pass -1 to use current column.
+
+<ParamField path="column_n" type="int" default="-1">
+  Column index (-1 = current column)
+</ParamField>
+
+<ResponseField name="return" type="ImGuiTableColumnFlags">
+  Column flags
+</ResponseField>
+
+### TableSetColumnEnabled
+
+```cpp
+void ImGui::TableSetColumnEnabled(int column_n, bool v)
+```
+
+Change user accessible enabled/disabled state of a column.
+
+<ParamField path="column_n" type="int">
+  Column index
+</ParamField>
+
+<ParamField path="v" type="bool">
+  Enabled state
+</ParamField>
+
+### TableGetHoveredColumn
+
+```cpp
+int ImGui::TableGetHoveredColumn()
+```
+
+Return hovered column. Return -1 when table is not hovered. Return columns_count if the unused space at the right of visible columns is hovered.
+
+<ResponseField name="return" type="int">
+  Hovered column index or -1
+</ResponseField>
+
+### TableSetBgColor
+
+```cpp
+void ImGui::TableSetBgColor(ImGuiTableBgTarget target, ImU32 color, int column_n = -1)
+```
+
+Change the color of a cell, row, or column.
+
+<ParamField path="target" type="ImGuiTableBgTarget">
+  Target type (see ImGuiTableBgTarget_)
+</ParamField>
+
+<ParamField path="color" type="ImU32">
+  RGBA color packed as 32-bit
+</ParamField>
+
+<ParamField path="column_n" type="int" default="-1">
+  Column index (-1 = current column)
+</ParamField>
+
+```cpp
+// Example
+ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, IM_COL32(255, 0, 0, 255)); // Red cell
+```
+
+See the full tables documentation for flag descriptions and advanced examples.

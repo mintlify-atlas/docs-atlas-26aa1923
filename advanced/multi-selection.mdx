@@ -1,0 +1,492 @@
+---
+title: Multi-Selection API
+description: Implement robust multi-selection in lists, tables, and trees using ImGui's BeginMultiSelect/EndMultiSelect API.
+---
+
+# Multi-Selection API
+
+The Multi-Selection API provides a powerful system for handling complex selection scenarios including range selection, keyboard navigation, and box selection.
+
+## Overview
+
+The multi-selection system works through `BeginMultiSelect()` and `EndMultiSelect()` functions that return an `ImGuiMultiSelectIO` structure containing selection requests to apply to your data.
+
+### Basic Workflow
+
+<Steps>
+
+### Call BeginMultiSelect()
+
+Receive the `ImGuiMultiSelectIO*` result and process requests.
+
+### Submit Your Items
+
+Use `Selectable()`, `TreeNode()`, or custom widgets with `SetNextItemSelectionUserData()`.
+
+### Call EndMultiSelect()
+
+Receive another `ImGuiMultiSelectIO*` and process final requests.
+
+### Apply Selection Changes
+
+Update your selection state based on the requests.
+
+</Steps>
+
+## Basic Example
+
+```cpp
+static ImGuiSelectionBasicStorage selection;
+const int ITEMS_COUNT = 1000;
+
+void ShowMultiSelectList()
+{
+    ImGui::Begin("Multi-Select List");
+    
+    // Begin multi-select
+    ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_None;
+    ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, selection.Size, ITEMS_COUNT);
+    
+    // Apply selection requests from BeginMultiSelect
+    selection.ApplyRequests(ms_io);
+    
+    // Display items
+    for (int n = 0; n < ITEMS_COUNT; n++)
+    {
+        char label[64];
+        sprintf(label, "Item %d", n);
+        
+        // Provide unique ID for this item
+        ImGui::SetNextItemSelectionUserData(n);
+        
+        // Check if item is selected
+        bool is_selected = selection.Contains(ImGui::GetID(label));
+        
+        // Display selectable item
+        if (ImGui::Selectable(label, is_selected))
+        {
+            // Selection state will be updated by EndMultiSelect
+        }
+    }
+    
+    // End multi-select and apply final requests
+    ms_io = ImGui::EndMultiSelect();
+    selection.ApplyRequests(ms_io);
+    
+    ImGui::End();
+}
+```
+
+## Selection Storage
+
+### ImGuiSelectionBasicStorage
+
+A helper class that stores selection state:
+
+```cpp
+ImGuiSelectionBasicStorage selection;
+
+// Apply selection requests automatically
+selection.ApplyRequests(ms_io);
+
+// Check if item is selected
+bool is_selected = selection.Contains(item_id);
+
+// Manually add/remove items
+selection.SetItemSelected(item_id, true);
+selection.SetItemSelected(item_id, false);
+
+// Clear all selection
+selection.Clear();
+
+// Iterate selected items
+void* it = NULL;
+ImGuiID id;
+while (selection.GetNextSelectedItem(&it, &id))
+{
+    // Process selected item
+    printf("Selected: %d\n", id);
+}
+```
+
+### Custom Storage Adapter
+
+For custom storage (e.g., storing indices in a vector):
+
+```cpp
+struct MyItem {
+    int ID;
+    char Name[32];
+    bool Selected;
+};
+
+std::vector<MyItem> items;
+
+// Use ImGuiSelectionExternalStorage for random-access storage
+ImGuiSelectionExternalStorage sel_adapter;
+sel_adapter.UserData = (void*)&items;
+sel_adapter.AdapterSetItemSelected = [](ImGuiSelectionExternalStorage* self, 
+                                        int idx, bool selected) {
+    std::vector<MyItem>* items = (std::vector<MyItem>*)self->UserData;
+    (*items)[idx].Selected = selected;
+};
+
+// Apply requests
+sel_adapter.ApplyRequests(ms_io);
+```
+
+## Multi-Select Flags
+
+Customize selection behavior:
+
+```cpp
+enum ImGuiMultiSelectFlags_
+{
+    ImGuiMultiSelectFlags_None                  = 0,
+    
+    // Selection type
+    ImGuiMultiSelectFlags_SingleSelect          = 1 << 0,  // Disable multi-selection
+    
+    // Box selection
+    ImGuiMultiSelectFlags_NoBoxSelect           = 1 << 1,  // Disable box-selection
+    ImGuiMultiSelectFlags_BoxSelect1d           = 1 << 2,  // Box-select in 1D mode
+    ImGuiMultiSelectFlags_BoxSelect2d           = 1 << 3,  // Box-select in 2D mode
+    
+    // Click behaviors  
+    ImGuiMultiSelectFlags_NoSelectAll           = 1 << 4,  // Disable Ctrl+A
+    ImGuiMultiSelectFlags_NoRangeSelect         = 1 << 5,  // Disable Shift+Click range select
+    ImGuiMultiSelectFlags_NoAutoSelect          = 1 << 6,  // Disable auto-select on nav
+    ImGuiMultiSelectFlags_NoAutoClear           = 1 << 7,  // Disable clearing on click void
+    ImGuiMultiSelectFlags_NoAutoClearOnReselect = 1 << 8,  // Disable clearing when re-selecting
+    
+    // Navigation
+    ImGuiMultiSelectFlags_NavWrapX              = 1 << 10, // Wrap navigation horizontally
+    
+    // Scope
+    ImGuiMultiSelectFlags_ScopeWindow           = 1 << 11, // Scope is whole window (default)
+    ImGuiMultiSelectFlags_ScopeRect             = 1 << 12, // Scope is BeginMultiSelect/End rect
+};
+```
+
+### Example with Flags
+
+```cpp
+// Single selection only
+ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_SingleSelect;
+
+// Disable box selection and Ctrl+A
+flags = ImGuiMultiSelectFlags_NoBoxSelect | ImGuiMultiSelectFlags_NoSelectAll;
+
+// 2D box selection with wrapping navigation
+flags = ImGuiMultiSelectFlags_BoxSelect2d | ImGuiMultiSelectFlags_NavWrapX;
+
+ImGui::BeginMultiSelect(flags, selection.Size, items_count);
+```
+
+## Using with Clipper
+
+For large lists, combine with `ImGuiListClipper` for efficient rendering:
+
+```cpp
+static ImGuiSelectionBasicStorage selection;
+const int ITEMS_COUNT = 100000;
+
+void ShowLargeMultiSelectList()
+{
+    ImGui::Begin("Large Multi-Select List");
+    
+    ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(
+        ImGuiMultiSelectFlags_None, selection.Size, ITEMS_COUNT);
+    selection.ApplyRequests(ms_io);
+    
+    // IMPORTANT: Ensure RangeSrcItem is always submitted
+    if (ms_io->RangeSrcItem != -1)
+        ImGui::SetNextItemSelectionUserData(ms_io->RangeSrcItem);
+    
+    ImGuiListClipper clipper;
+    clipper.Begin(ITEMS_COUNT);
+    
+    // Include range source item if using clipper
+    if (ms_io->RangeSrcItem != -1)
+        clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem);
+    
+    while (clipper.Step())
+    {
+        for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
+        {
+            char label[64];
+            sprintf(label, "Item %d", n);
+            
+            ImGui::SetNextItemSelectionUserData(n);
+            bool is_selected = selection.Contains(ImGui::GetID(label));
+            ImGui::Selectable(label, is_selected);
+        }
+    }
+    
+    ms_io = ImGui::EndMultiSelect();
+    selection.ApplyRequests(ms_io);
+    
+    ImGui::End();
+}
+```
+
+<Warning>
+**When using ImGuiListClipper:**
+- Always check `ms_io->RangeSrcItem` and ensure it's submitted (use `clipper.IncludeItemByIndex()`)
+- The range source item must never be clipped or range selection won't work correctly
+</Warning>
+
+## Selection with Deletion
+
+Handle item deletion while maintaining selection:
+
+```cpp
+static ImGuiSelectionBasicStorage selection;
+static std::vector<MyItem> items;
+
+void ShowMultiSelectWithDeletion()
+{
+    ImGui::Begin("Multi-Select with Deletion");
+    
+    ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(
+        ImGuiMultiSelectFlags_None, selection.Size, items.size());
+    selection.ApplyRequests(ms_io);
+    
+    // Submit items
+    for (int n = 0; n < items.size(); n++)
+    {
+        ImGui::PushID(n);
+        ImGui::SetNextItemSelectionUserData(n);
+        
+        bool is_selected = selection.Contains(items[n].ID);
+        ImGui::Selectable(items[n].Name, is_selected);
+        
+        ImGui::PopID();
+    }
+    
+    // Handle deletion
+    if (ImGui::Button("Delete Selected"))
+    {
+        // Delete items (iterate backwards)
+        for (int n = items.size() - 1; n >= 0; n--)
+        {
+            if (selection.Contains(items[n].ID))
+            {
+                items.erase(items.begin() + n);
+            }
+        }
+        
+        // Clear selection after deletion
+        selection.Clear();
+        
+        // Signal that RangeSrc needs reset
+        ms_io->RangeSrcReset = true;
+    }
+    
+    ms_io = ImGui::EndMultiSelect();
+    selection.ApplyRequests(ms_io);
+    
+    ImGui::End();
+}
+```
+
+<Note>
+**Deletion best practices:**
+- Set `ms_io->RangeSrcReset = true` after deleting selected items
+- Clear or update NavId tracking if necessary
+- Iterate backwards when deleting from vectors
+</Note>
+
+## Multi-Selection in Tables
+
+```cpp
+void ShowMultiSelectTable()
+{
+    static ImGuiSelectionBasicStorage selection;
+    const int ITEMS_COUNT = 100;
+    
+    ImGui::Begin("Multi-Select Table");
+    
+    if (ImGui::BeginTable("table", 3, ImGuiTableFlags_Borders | 
+                                       ImGuiTableFlags_RowBg))
+    {
+        ImGui::TableSetupColumn("ID");
+        ImGui::TableSetupColumn("Name");
+        ImGui::TableSetupColumn("Value");
+        ImGui::TableHeadersRow();
+        
+        ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(
+            ImGuiMultiSelectFlags_None, selection.Size, ITEMS_COUNT);
+        selection.ApplyRequests(ms_io);
+        
+        for (int n = 0; n < ITEMS_COUNT; n++)
+        {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            
+            char label[32];
+            sprintf(label, "%04d", n);
+            
+            ImGui::SetNextItemSelectionUserData(n);
+            bool is_selected = selection.Contains(ImGui::GetID(label));
+            
+            ImGuiSelectableFlags sel_flags = ImGuiSelectableFlags_SpanAllColumns |
+                                             ImGuiSelectableFlags_AllowOverlap;
+            ImGui::Selectable(label, is_selected, sel_flags);
+            
+            ImGui::TableNextColumn();
+            ImGui::Text("Item %d", n);
+            
+            ImGui::TableNextColumn();
+            ImGui::Text("Value %d", n * 100);
+        }
+        
+        ms_io = ImGui::EndMultiSelect();
+        selection.ApplyRequests(ms_io);
+        
+        ImGui::EndTable();
+    }
+    
+    ImGui::End();
+}
+```
+
+## Per-Item Selection State
+
+Check if an individual item was toggled:
+
+```cpp
+ImGui::SetNextItemSelectionUserData(n);
+bool is_selected = selection.Contains(item_id);
+ImGui::Selectable(label, is_selected);
+
+// Check if THIS specific item was toggled
+if (ImGui::IsItemToggledSelection())
+{
+    printf("Item %d was just toggled!\n", n);
+}
+```
+
+## Selection Requests
+
+Understand the request types returned in `ImGuiMultiSelectIO`:
+
+```cpp
+enum ImGuiSelectionRequestType
+{
+    ImGuiSelectionRequestType_None,
+    ImGuiSelectionRequestType_SetAll,     // Select all or clear all
+    ImGuiSelectionRequestType_SetRange,   // Select/deselect range
+};
+
+struct ImGuiSelectionRequest
+{
+    ImGuiSelectionRequestType   Type;
+    bool                        Selected;        // true = select, false = unselect
+    ImS8                        RangeDirection;  // +1 or -1
+    ImGuiSelectionUserData      RangeFirstItem;  // First item in range
+    ImGuiSelectionUserData      RangeLastItem;   // Last item in range (inclusive)
+};
+```
+
+### Manual Request Processing
+
+```cpp
+// Process requests manually instead of using helper
+for (int i = 0; i < ms_io->Requests.Size; i++)
+{
+    const ImGuiSelectionRequest& req = ms_io->Requests[i];
+    
+    if (req.Type == ImGuiSelectionRequestType_SetAll)
+    {
+        // Select or clear all
+        if (req.Selected)
+            SelectAll();
+        else
+            ClearAll();
+    }
+    else if (req.Type == ImGuiSelectionRequestType_SetRange)
+    {
+        // Select/deselect range
+        for (int n = req.RangeFirstItem; n <= req.RangeLastItem; n++)
+        {
+            SetItemSelected(n, req.Selected);
+        }
+    }
+}
+```
+
+## Complete Example
+
+```cpp
+struct MyItem {
+    ImGuiID ID;
+    char Name[64];
+};
+
+static std::vector<MyItem> g_Items;
+static ImGuiSelectionBasicStorage g_Selection;
+
+void InitializeItems()
+{
+    for (int n = 0; n < 1000; n++)
+    {
+        MyItem item;
+        item.ID = ImHashStr(ImGui::GetID(""), 0, &n, sizeof(n));
+        sprintf(item.Name, "Item %04d", n);
+        g_Items.push_back(item);
+    }
+}
+
+void ShowAdvancedMultiSelect()
+{
+    ImGui::Begin("Advanced Multi-Select");
+    
+    // Toolbar
+    if (ImGui::Button("Select All"))
+        for (auto& item : g_Items)
+            g_Selection.SetItemSelected(item.ID, true);
+    ImGui::SameLine();
+    if (ImGui::Button("Clear All"))
+        g_Selection.Clear();
+    ImGui::SameLine();
+    ImGui::Text("%d/%d selected", g_Selection.Size, (int)g_Items.size());
+    
+    // Multi-select list
+    ImGuiMultiSelectFlags flags = ImGuiMultiSelectFlags_None;
+    ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(flags, 
+        g_Selection.Size, g_Items.size());
+    g_Selection.ApplyRequests(ms_io);
+    
+    ImGuiListClipper clipper;
+    clipper.Begin(g_Items.size());
+    if (ms_io->RangeSrcItem != -1)
+        clipper.IncludeItemByIndex((int)ms_io->RangeSrcItem);
+    
+    while (clipper.Step())
+    {
+        for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
+        {
+            MyItem& item = g_Items[n];
+            ImGui::PushID(item.ID);
+            
+            ImGui::SetNextItemSelectionUserData(n);
+            bool is_selected = g_Selection.Contains(item.ID);
+            ImGui::Selectable(item.Name, is_selected);
+            
+            ImGui::PopID();
+        }
+    }
+    
+    ms_io = ImGui::EndMultiSelect();
+    g_Selection.ApplyRequests(ms_io);
+    
+    ImGui::End();
+}
+```
+
+## Reference
+
+- [Multi-Select API](https://github.com/ocornut/imgui/blob/master/imgui.h) (line 2974)
+- [Multi-Select Wiki](https://github.com/ocornut/imgui/wiki/Multi-Select)
+- See `imgui_demo.cpp` under "Widgets->Selection State & Multi-Select" for extensive examples

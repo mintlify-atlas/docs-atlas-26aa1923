@@ -1,0 +1,367 @@
+---
+title: 'Selectables'
+description: 'Selectable widgets and multi-selection for Dear ImGui'
+---
+
+## Selectable Widgets
+
+A selectable highlights when hovered, and can display another color when selected. Neighbors selectable extend their highlight bounds in order to leave no gap between them.
+
+### Selectable
+
+```cpp
+bool ImGui::Selectable(const char* label, bool selected = false, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0, 0))
+```
+
+Selectable widget. `selected` carries the selection state (read-only). Returns true when clicked.
+
+<ParamField path="label" type="const char*">
+  Selectable label
+</ParamField>
+
+<ParamField path="selected" type="bool" default="false">
+  Current selection state (read-only)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiSelectableFlags" default="0">
+  Selectable flags (see ImGuiSelectableFlags_)
+</ParamField>
+
+<ParamField path="size" type="const ImVec2&" default="ImVec2(0, 0)">
+  Size (0.0f = use remaining width/height, >0.0f = specify)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when clicked (modify your selection state)
+</ResponseField>
+
+```cpp
+// Example
+static int selected = -1;
+for (int n = 0; n < 10; n++) {
+    char buf[32];
+    sprintf(buf, "Object %d", n);
+    if (ImGui::Selectable(buf, selected == n)) {
+        selected = n;
+    }
+}
+```
+
+### Selectable (pointer)
+
+```cpp
+bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0, 0))
+```
+
+Selectable with pointer to selection state (read-write), as a convenient helper.
+
+<ParamField path="label" type="const char*">
+  Selectable label
+</ParamField>
+
+<ParamField path="p_selected" type="bool*">
+  Pointer to selection state (read-write)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiSelectableFlags" default="0">
+  Selectable flags
+</ParamField>
+
+<ParamField path="size" type="const ImVec2&" default="ImVec2(0, 0)">
+  Size
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when clicked
+</ResponseField>
+
+```cpp
+// Example
+static bool selection[5] = { false, false, false, false, false };
+for (int n = 0; n < 5; n++) {
+    char buf[32];
+    sprintf(buf, "Object %d", n);
+    ImGui::Selectable(buf, &selection[n]);
+}
+```
+
+## Multi-Selection
+
+Multi-selection system for `Selectable()`, `Checkbox()`, `TreeNode()` functions. This enables standard multi-selection/range-selection idioms (Ctrl+Mouse/Keyboard, Shift+Mouse/Keyboard, etc.).
+
+### BeginMultiSelect
+
+```cpp
+ImGuiMultiSelectIO* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, int selection_size = -1, int items_count = -1)
+```
+
+Begin multi-selection scope.
+
+<ParamField path="flags" type="ImGuiMultiSelectFlags">
+  Multi-select flags (see ImGuiMultiSelectFlags_)
+</ParamField>
+
+<ParamField path="selection_size" type="int" default="-1">
+  Current number of selected items (-1 if expensive to compute)
+</ParamField>
+
+<ParamField path="items_count" type="int" default="-1">
+  Total number of items (-1 if expensive to compute)
+</ParamField>
+
+<ResponseField name="return" type="ImGuiMultiSelectIO*">
+  Multi-select I/O structure with requests to apply
+</ResponseField>
+
+```cpp
+// Example
+static ImGuiSelectionBasicStorage selection;
+ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_None, selection.Size, items.Size);
+// Apply selection requests
+for (int n = 0; n < items.Size; n++) {
+    ImGui::SetNextItemSelectionUserData(n);
+    bool is_selected = selection.Contains((ImGuiID)n);
+    ImGui::Selectable(items[n].Name, is_selected);
+}
+ms_io = ImGui::EndMultiSelect();
+// Apply post-selection requests
+```
+
+### EndMultiSelect
+
+```cpp
+ImGuiMultiSelectIO* ImGui::EndMultiSelect()
+```
+
+End multi-selection scope.
+
+<ResponseField name="return" type="ImGuiMultiSelectIO*">
+  Multi-select I/O structure with post-loop requests
+</ResponseField>
+
+### SetNextItemSelectionUserData
+
+```cpp
+void ImGui::SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_data)
+```
+
+Set selection user data for the next item. This is typically an item index within your current view.
+
+<ParamField path="selection_user_data" type="ImGuiSelectionUserData">
+  User data (typically item index)
+</ParamField>
+
+### IsItemToggledSelection
+
+```cpp
+bool ImGui::IsItemToggledSelection()
+```
+
+Was the last item selection state toggled? Useful if you need the per-item information before reaching `EndMultiSelect()`.
+
+<ResponseField name="return" type="bool">
+  True if item selection was toggled
+</ResponseField>
+
+## Selectable Flags
+
+### ImGuiSelectableFlags_
+
+Flags for `Selectable()`.
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiSelectableFlags_None` | Default |
+| `ImGuiSelectableFlags_NoAutoClosePopups` | Clicking this doesn't close parent popup window |
+| `ImGuiSelectableFlags_SpanAllColumns` | Frame will span all columns of container table |
+| `ImGuiSelectableFlags_AllowDoubleClick` | Generate press events on double clicks too |
+| `ImGuiSelectableFlags_Disabled` | Cannot be selected, display grayed out text |
+| `ImGuiSelectableFlags_AllowOverlap` | Hit testing to allow subsequent widgets to overlap |
+| `ImGuiSelectableFlags_Highlight` | Make the item be displayed as if it is hovered |
+| `ImGuiSelectableFlags_SelectOnNav` | Auto-select when moved into (unless Ctrl is held) |
+
+```cpp
+// Examples
+
+// Span all columns in a table
+if (ImGui::BeginTable("table", 3)) {
+    for (int row = 0; row < 5; row++) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        ImGui::Selectable("Row", false, ImGuiSelectableFlags_SpanAllColumns);
+    }
+    ImGui::EndTable();
+}
+
+// Disabled selectable
+ImGui::Selectable("Disabled", false, ImGuiSelectableFlags_Disabled);
+
+// Allow double-click
+if (ImGui::Selectable("Double-click me", false, ImGuiSelectableFlags_AllowDoubleClick)) {
+    if (ImGui::IsMouseDoubleClicked(0)) {
+        // Double-clicked
+    }
+}
+
+// Highlight
+ImGui::Selectable("Highlighted", false, ImGuiSelectableFlags_Highlight);
+```
+
+## Multi-Select Flags
+
+### ImGuiMultiSelectFlags_
+
+Flags for `BeginMultiSelect()`.
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiMultiSelectFlags_None` | Default |
+| `ImGuiMultiSelectFlags_SingleSelect` | Single selection mode (default is multi-select) |
+| `ImGuiMultiSelectFlags_NoSelectAll` | Disable select all (Ctrl+A) |
+| `ImGuiMultiSelectFlags_NoRangeSelect` | Disable range select (Shift+Click) |
+| `ImGuiMultiSelectFlags_NoAutoSelect` | Disable auto-select on navigation |
+| `ImGuiMultiSelectFlags_NoAutoClear` | Disable auto-clear on click in empty space |
+| `ImGuiMultiSelectFlags_NoAutoClearOnReselect` | Disable auto-clear when re-clicking selected item |
+| `ImGuiMultiSelectFlags_BoxSelect1d` | Enable 1D box-select (within a single axis) |
+| `ImGuiMultiSelectFlags_BoxSelect2d` | Enable 2D box-select |
+| `ImGuiMultiSelectFlags_BoxSelectNoScroll` | Disable scrolling when box-selecting |
+| `ImGuiMultiSelectFlags_ClearOnEscape` | Clear selection on Escape key |
+| `ImGuiMultiSelectFlags_ClearOnClickVoid` | Clear selection when clicking in void |
+
+```cpp
+// Single selection mode
+ImGuiMultiSelectIO* ms_io = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_SingleSelect);
+// ...
+ImGui::EndMultiSelect();
+
+// Disable Ctrl+A
+ms_io = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_NoSelectAll);
+// ...
+ImGui::EndMultiSelect();
+```
+
+## List Boxes
+
+List boxes are thin wrappers around `BeginChild()` with the `ImGuiChildFlags_FrameStyle` flag.
+
+### BeginListBox
+
+```cpp
+bool ImGui::BeginListBox(const char* label, const ImVec2& size = ImVec2(0, 0))
+```
+
+Open a framed scrolling region. Only call `EndListBox()` if `BeginListBox()` returns true.
+
+<ParamField path="label" type="const char*">
+  List box label
+</ParamField>
+
+<ParamField path="size" type="const ImVec2&" default="ImVec2(0, 0)">
+  Size (0 = default size)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if list box is open
+</ResponseField>
+
+```cpp
+// Example
+const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
+static int item_current = 1;
+
+if (ImGui::BeginListBox("Items")) {
+    for (int n = 0; n < IM_COUNTOF(items); n++) {
+        const bool is_selected = (item_current == n);
+        if (ImGui::Selectable(items[n], is_selected)) {
+            item_current = n;
+        }
+        if (is_selected) {
+            ImGui::SetItemDefaultFocus();
+        }
+    }
+    ImGui::EndListBox();
+}
+```
+
+### EndListBox
+
+```cpp
+void ImGui::EndListBox()
+```
+
+Close list box. Only call if `BeginListBox()` returned true.
+
+### ListBox (simple)
+
+```cpp
+bool ImGui::ListBox(const char* label, int* current_item, const char* const items[], int items_count, int height_in_items = -1)
+```
+
+Simple list box helper.
+
+<ParamField path="label" type="const char*">
+  List box label
+</ParamField>
+
+<ParamField path="current_item" type="int*">
+  Pointer to current selected item index
+</ParamField>
+
+<ParamField path="items" type="const char* const[]">
+  Array of item strings
+</ParamField>
+
+<ParamField path="items_count" type="int">
+  Number of items in array
+</ParamField>
+
+<ParamField path="height_in_items" type="int" default="-1">
+  Height in number of items (-1 = default ~7)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when selection has been modified
+</ResponseField>
+
+```cpp
+// Example
+const char* items[] = { "Apple", "Banana", "Cherry" };
+static int item_current = 1;
+ImGui::ListBox("Fruits", &item_current, items, IM_COUNTOF(items), 4);
+```
+
+### ListBox (callback)
+
+```cpp
+bool ImGui::ListBox(const char* label, int* current_item, const char* (*getter)(void* user_data, int idx), void* user_data, int items_count, int height_in_items = -1)
+```
+
+List box with callback to get item strings.
+
+<ParamField path="label" type="const char*">
+  List box label
+</ParamField>
+
+<ParamField path="current_item" type="int*">
+  Pointer to current selected item index
+</ParamField>
+
+<ParamField path="getter" type="const char* (*)(void*, int)">
+  Callback function to get item string
+</ParamField>
+
+<ParamField path="user_data" type="void*">
+  User data passed to callback
+</ParamField>
+
+<ParamField path="items_count" type="int">
+  Number of items
+</ParamField>
+
+<ParamField path="height_in_items" type="int" default="-1">
+  Height in number of items
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when selection has been modified
+</ResponseField>

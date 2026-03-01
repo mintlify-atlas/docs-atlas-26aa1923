@@ -1,0 +1,590 @@
+---
+title: Input Handling
+description: How to handle mouse, keyboard, and gamepad input in Dear ImGui and route input between your app and the UI
+---
+
+## Input Routing Philosophy
+
+Dear ImGui's input system is designed around a crucial principle:
+
+<Info>
+**Always forward ALL input to Dear ImGui**, then check if ImGui wants to use it before passing it to your application.
+</Info>
+
+This allows Dear ImGui to:
+- Detect clicks in empty space to unfocus windows
+- Handle dragging that starts outside widgets
+- Properly manage focus and hover states
+- Provide smooth interaction behavior
+
+## The Want Capture Flags
+
+After calling `ImGui::NewFrame()`, check these flags in `ImGuiIO` to determine input routing:
+
+### io.WantCaptureMouse
+
+Set when Dear ImGui wants to use mouse input:
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+void HandleMouseInput()
+{
+    // (1) ALWAYS forward mouse input to ImGui
+    io.AddMousePosEvent(mouse_x, mouse_y);
+    io.AddMouseButtonEvent(0, left_button_down);
+    io.AddMouseWheelEvent(wheel_h, wheel_v);
+    
+    // (2) ONLY forward to your game if ImGui doesn't want it
+    if (!io.WantCaptureMouse)
+    {
+        my_game->HandleMouseInput(mouse_x, mouse_y, left_button_down);
+    }
+}
+```
+
+**When is it set?**
+- Hovering over any Dear ImGui window
+- Clicking on any Dear ImGui widget
+- Dragging a slider, scrollbar, or window
+- Using mouse wheel over a Dear ImGui window
+
+<Warning>
+**Don't** manually check if the mouse is over a window! Use `io.WantCaptureMouse` instead:
+
+```cpp
+// WRONG - doesn't handle dragging, popups, etc.
+if (!ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
+    my_game->HandleMouse();
+
+// CORRECT
+if (!io.WantCaptureMouse)
+    my_game->HandleMouse();
+```
+</Warning>
+
+### io.WantCaptureKeyboard
+
+Set when Dear ImGui wants to use keyboard input:
+
+```cpp
+void HandleKeyboardInput()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // (1) ALWAYS forward keyboard input to ImGui
+    io.AddKeyEvent(ImGuiKey_A, key_down);
+    io.AddKeyEvent(ImGuiKey_Space, space_down);
+    // ... etc
+    
+    // (2) ONLY forward to your game if ImGui doesn't want it
+    if (!io.WantCaptureKeyboard)
+    {
+        my_game->HandleKeyboard(key_codes);
+    }
+}
+```
+
+**When is it set?**
+- An `InputText` widget has focus
+- Keyboard navigation is active (`io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard`)
+- A keyboard shortcut is being processed
+
+<Note>
+**Special case:** Text input widgets release focus on the "KeyDown" event of Return, so the "KeyUp" event will have `io.WantCaptureKeyboard == false`. Track which keys were pressed while ImGui had focus if this matters to your application.
+</Note>
+
+### io.WantTextInput
+
+Set when Dear ImGui expects text input (useful for on-screen keyboards):
+
+```cpp
+if (io.WantTextInput)
+{
+    // Show on-screen keyboard (mobile, console)
+    ShowVirtualKeyboard();
+}
+else
+{
+    HideVirtualKeyboard();
+}
+```
+
+**When is it set?**
+- An `InputText` widget is active
+- An `InputTextMultiline` widget is active
+
+## Mouse Input
+
+### Mouse Position
+
+```cpp
+// Update mouse position every frame
+io.AddMousePosEvent(mouse_x, mouse_y);
+
+// Mouse left the window/application
+io.AddMousePosEvent(-FLT_MAX, -FLT_MAX);
+```
+
+### Mouse Buttons
+
+```cpp
+// Button 0 = Left, 1 = Right, 2 = Middle
+io.AddMouseButtonEvent(0, button_down);  // Left button
+io.AddMouseButtonEvent(1, button_down);  // Right button  
+io.AddMouseButtonEvent(2, button_down);  // Middle button
+```
+
+### Mouse Wheel
+
+```cpp
+// Vertical scroll
+io.AddMouseWheelEvent(0.0f, wheel_delta_y);
+
+// Horizontal scroll
+io.AddMouseWheelEvent(wheel_delta_x, 0.0f);
+
+// Both
+io.AddMouseWheelEvent(wheel_delta_x, wheel_delta_y);
+```
+
+### Mouse Source (Optional)
+
+```cpp
+// Specify input source (useful for multi-input devices)
+io.AddMouseSourceEvent(ImGuiMouseSource_Mouse);      // Regular mouse
+io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen); // Touch screen
+io.AddMouseSourceEvent(ImGuiMouseSource_Pen);        // Stylus/pen
+```
+
+### Reading Mouse State
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Current mouse position
+ImVec2 mouse_pos = io.MousePos;
+
+// Mouse button states
+bool left_down = io.MouseDown[0];
+bool right_down = io.MouseDown[1];
+
+// Mouse button clicks this frame
+bool left_clicked = io.MouseClicked[0];
+
+// Mouse button double-clicks
+bool left_double_clicked = io.MouseDoubleClicked[0];
+
+// Mouse wheel delta this frame
+float wheel_y = io.MouseWheel;
+float wheel_x = io.MouseWheelH;
+
+// Mouse drag delta
+ImVec2 drag_delta = io.MouseDelta;
+```
+
+## Keyboard Input
+
+### Key Events (Modern API)
+
+Dear ImGui uses a named key system:
+
+```cpp
+// Send key press/release
+io.AddKeyEvent(ImGuiKey_A, is_down);
+io.AddKeyEvent(ImGuiKey_Space, is_down);
+io.AddKeyEvent(ImGuiKey_Enter, is_down);
+io.AddKeyEvent(ImGuiKey_Escape, is_down);
+io.AddKeyEvent(ImGuiKey_Backspace, is_down);
+
+// Arrow keys
+io.AddKeyEvent(ImGuiKey_LeftArrow, is_down);
+io.AddKeyEvent(ImGuiKey_RightArrow, is_down);
+io.AddKeyEvent(ImGuiKey_UpArrow, is_down);
+io.AddKeyEvent(ImGuiKey_DownArrow, is_down);
+
+// Modifiers
+io.AddKeyEvent(ImGuiMod_Ctrl, is_down);
+io.AddKeyEvent(ImGuiMod_Shift, is_down);
+io.AddKeyEvent(ImGuiMod_Alt, is_down);
+io.AddKeyEvent(ImGuiMod_Super, is_down);  // Windows key, Command key
+```
+
+### Character Input
+
+For text input, send Unicode characters:
+
+```cpp
+// Add a character to the input queue
+io.AddInputCharacter('A');
+io.AddInputCharacter(0x4E2D);  // Unicode character (中)
+
+// UTF-16 surrogate pairs
+io.AddInputCharacterUTF16(0xD83D);  // High surrogate
+io.AddInputCharacterUTF16(0xDE00);  // Low surrogate
+```
+
+<Info>
+On Windows, use `WM_CHAR` messages. On other platforms, convert keyboard input to UTF-8/UTF-16 characters.
+</Info>
+
+### Reading Keyboard State
+
+```cpp
+// Check if key is currently down
+if (ImGui::IsKeyDown(ImGuiKey_Space))
+    printf("Space is held\n");
+
+// Check if key was pressed this frame
+if (ImGui::IsKeyPressed(ImGuiKey_Enter))
+    printf("Enter was pressed\n");
+
+// Check if key was released this frame  
+if (ImGui::IsKeyReleased(ImGuiKey_Escape))
+    printf("Escape was released\n");
+
+// Check key presses with repeat
+if (ImGui::IsKeyPressed(ImGuiKey_Backspace, true))  // true = allow repeat
+    printf("Backspace (with repeat)\n");
+```
+
+### Keyboard Shortcuts
+
+```cpp
+// Check for Ctrl+S
+if (ImGui::IsKeyPressed(ImGuiKey_S) && io.KeyCtrl)
+    SaveFile();
+
+// Check for Ctrl+Shift+N
+if (ImGui::IsKeyPressed(ImGuiKey_N) && io.KeyCtrl && io.KeyShift)
+    NewFile();
+
+// Using Shortcut() function (cleaner)
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S))
+    SaveFile();
+
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_N))
+    NewFile();
+```
+
+### Modifier Keys
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+if (io.KeyCtrl)
+    printf("Ctrl is held\n");
+
+if (io.KeyShift)
+    printf("Shift is held\n");
+
+if (io.KeyAlt)
+    printf("Alt is held\n");
+
+if (io.KeySuper)
+    printf("Super/Windows/Command key is held\n");
+```
+
+## Gamepad Input
+
+Enable gamepad navigation:
+
+```cpp
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+io.BackendFlags |= ImGuiBackendFlags_HasGamepad;  // Set by backend
+```
+
+### Gamepad Buttons
+
+```cpp
+// D-Pad
+io.AddKeyEvent(ImGuiKey_GamepadDpadUp, is_down);
+io.AddKeyEvent(ImGuiKey_GamepadDpadDown, is_down);
+io.AddKeyEvent(ImGuiKey_GamepadDpadLeft, is_down);
+io.AddKeyEvent(ImGuiKey_GamepadDpadRight, is_down);
+
+// Face buttons (Xbox layout: A, B, X, Y)
+io.AddKeyEvent(ImGuiKey_GamepadFaceDown, is_down);   // A / Cross
+io.AddKeyEvent(ImGuiKey_GamepadFaceRight, is_down);  // B / Circle
+io.AddKeyEvent(ImGuiKey_GamepadFaceLeft, is_down);   // X / Square
+io.AddKeyEvent(ImGuiKey_GamepadFaceUp, is_down);     // Y / Triangle
+
+// Shoulder buttons
+io.AddKeyEvent(ImGuiKey_GamepadL1, is_down);  // Left bumper
+io.AddKeyEvent(ImGuiKey_GamepadR1, is_down);  // Right bumper
+
+// Triggers (digital)
+io.AddKeyEvent(ImGuiKey_GamepadL2, is_down);  // Left trigger
+io.AddKeyEvent(ImGuiKey_GamepadR2, is_down);  // Right trigger
+
+// Stick buttons
+io.AddKeyEvent(ImGuiKey_GamepadL3, is_down);  // Left stick click
+io.AddKeyEvent(ImGuiKey_GamepadR3, is_down);  // Right stick click
+
+// System buttons
+io.AddKeyEvent(ImGuiKey_GamepadStart, is_down);
+io.AddKeyEvent(ImGuiKey_GamepadBack, is_down);
+```
+
+### Gamepad Analog Inputs
+
+```cpp
+// Left stick
+io.AddKeyAnalogEvent(ImGuiKey_GamepadLStickLeft, left_x < 0, fabs(left_x));
+io.AddKeyAnalogEvent(ImGuiKey_GamepadLStickRight, left_x > 0, fabs(left_x));
+io.AddKeyAnalogEvent(ImGuiKey_GamepadLStickUp, left_y < 0, fabs(left_y));
+io.AddKeyAnalogEvent(ImGuiKey_GamepadLStickDown, left_y > 0, fabs(left_y));
+
+// Right stick  
+io.AddKeyAnalogEvent(ImGuiKey_GamepadRStickLeft, right_x < 0, fabs(right_x));
+io.AddKeyAnalogEvent(ImGuiKey_GamepadRStickRight, right_x > 0, fabs(right_x));
+io.AddKeyAnalogEvent(ImGuiKey_GamepadRStickUp, right_y < 0, fabs(right_y));
+io.AddKeyAnalogEvent(ImGuiKey_GamepadRStickDown, right_y > 0, fabs(right_y));
+
+// Triggers (analog 0.0 to 1.0)
+io.AddKeyAnalogEvent(ImGuiKey_GamepadL2, left_trigger > 0.1f, left_trigger);
+io.AddKeyAnalogEvent(ImGuiKey_GamepadR2, right_trigger > 0.1f, right_trigger);
+```
+
+<Note>
+You're responsible for applying dead zones and normalizing analog values. ImGui expects values in the range 0.0 to 1.0.
+</Note>
+
+## Focus and Hover Detection
+
+### Window Focus
+
+```cpp
+if (ImGui::IsWindowFocused())
+    printf("Current window is focused\n");
+
+// Check if any ImGui window is focused
+if (ImGui::IsWindowFocused(ImGuiHoveredFlags_AnyWindow))
+    printf("Some ImGui window is focused\n");
+
+// Check if current window or any child is focused
+if (ImGui::IsWindowFocused(ImGuiHoveredFlags_ChildWindows))
+    printf("This window or a child is focused\n");
+```
+
+### Window Hover
+
+```cpp
+if (ImGui::IsWindowHovered())
+    printf("Mouse is over current window\n");
+
+// Check if mouse is over any ImGui window
+if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
+    printf("Mouse over some ImGui window\n");
+
+// Include child windows
+if (ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows))
+    printf("Mouse over this window or a child\n");
+
+// Ignore popups blocking this window
+if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+    printf("Mouse over window (popup-aware)\n");
+```
+
+### Item Hover and Focus
+
+```cpp
+ImGui::Button("My Button");
+
+if (ImGui::IsItemHovered())
+    printf("Button is hovered\n");
+
+if (ImGui::IsItemActive())
+    printf("Button is being clicked\n");
+
+if (ImGui::IsItemFocused())
+    printf("Button has keyboard focus\n");
+
+if (ImGui::IsItemClicked())
+    printf("Button was clicked this frame\n");
+
+if (ImGui::IsItemClicked(ImGuiMouseButton_Right))
+    printf("Button was right-clicked\n");
+```
+
+## Custom Input Handling Example
+
+Here's a complete example of routing input:
+
+```cpp
+class MyApplication
+{
+    ImGuiIO* io;
+    
+public:
+    void ProcessInput()
+    {
+        // Update Dear ImGui input state
+        UpdateMouseInput();
+        UpdateKeyboardInput();
+        UpdateGamepadInput();
+        
+        // Dear ImGui processes the input during NewFrame()
+        ImGui::NewFrame();
+        
+        // Now check flags and route to application
+        if (!io->WantCaptureMouse)
+        {
+            // Mouse is not over ImGui - handle game input
+            if (IsMouseButtonDown(MOUSE_LEFT))
+                FireWeapon();
+            
+            if (IsMouseButtonDown(MOUSE_RIGHT))
+                Aim();
+        }
+        
+        if (!io->WantCaptureKeyboard)
+        {
+            // Keyboard not captured - handle game input
+            if (IsKeyDown(KEY_W)) MoveForward();
+            if (IsKeyDown(KEY_S)) MoveBackward();
+            if (IsKeyDown(KEY_A)) MoveLeft();
+            if (IsKeyDown(KEY_D)) MoveRight();
+        }
+    }
+    
+    void UpdateMouseInput()
+    {
+        float mouse_x = GetMouseX();
+        float mouse_y = GetMouseY();
+        io->AddMousePosEvent(mouse_x, mouse_y);
+        
+        io->AddMouseButtonEvent(0, IsMouseButtonDown(MOUSE_LEFT));
+        io->AddMouseButtonEvent(1, IsMouseButtonDown(MOUSE_RIGHT));
+        io->AddMouseButtonEvent(2, IsMouseButtonDown(MOUSE_MIDDLE));
+        
+        float wheel = GetMouseWheel();
+        if (wheel != 0.0f)
+            io->AddMouseWheelEvent(0.0f, wheel);
+    }
+    
+    void UpdateKeyboardInput()
+    {
+        // Update all keys that changed state
+        for (int key = 0; key < 512; key++)
+        {
+            bool was_down = prev_keys[key];
+            bool is_down = IsKeyDown(key);
+            
+            if (was_down != is_down)
+            {
+                ImGuiKey imgui_key = MapKeyToImGuiKey(key);
+                if (imgui_key != ImGuiKey_None)
+                    io->AddKeyEvent(imgui_key, is_down);
+            }
+            
+            prev_keys[key] = is_down;
+        }
+        
+        // Send character input
+        while (char c = GetCharFromQueue())
+            io->AddInputCharacter(c);
+    }
+};
+```
+
+## IME (Input Method Editor) Support
+
+For languages like Chinese, Japanese, Korean:
+
+```cpp
+// Set IME callback
+io.SetPlatformImeDataFn = MySetPlatformImeDataFn;
+
+// Implement callback
+void MySetPlatformImeDataFn(ImGuiViewport* viewport, ImGuiPlatformImeData* data)
+{
+    if (data->WantVisible)
+    {
+        // Position IME window at cursor
+        SetIMEPosition(data->InputPos.x, data->InputPos.y);
+    }
+}
+
+// Or use default implementation for Win32
+io.GetMainViewport()->PlatformHandleRaw = hwnd;  // Set HWND
+// Default implementation will position IME automatically
+```
+
+## Touch Input
+
+Touch input can be mapped to mouse input:
+
+```cpp
+// Touch down = mouse button down + position
+io.AddMousePosEvent(touch_x, touch_y);
+io.AddMouseButtonEvent(0, true);
+
+// Touch move = mouse position update
+io.AddMousePosEvent(touch_x, touch_y);
+
+// Touch up = mouse button up
+io.AddMouseButtonEvent(0, false);
+
+// Optionally specify it's touch input
+io.AddMouseSourceEvent(ImGuiMouseSource_TouchScreen);
+```
+
+For better touch support:
+
+```cpp
+// Increase touch padding for better hit detection
+ImGuiStyle& style = ImGui::GetStyle();
+style.TouchExtraPadding = ImVec2(4, 4);
+```
+
+## Common Patterns
+
+### Pausing Game When UI is Active
+
+```cpp
+if (io.WantCaptureMouse || io.WantCaptureKeyboard)
+{
+    // Pause game or reduce game input sensitivity
+    game.paused = true;
+}
+else
+{
+    game.paused = false;
+}
+```
+
+### Global Shortcuts
+
+```cpp
+// Always handle global shortcuts, even when ImGui wants keyboard
+if (ImGui::IsKeyPressed(ImGuiKey_F1))
+    show_help = !show_help;
+
+if (ImGui::IsKeyPressed(ImGuiKey_F11))
+    ToggleFullscreen();
+
+// Only handle game shortcuts when ImGui doesn't want keyboard
+if (!io.WantCaptureKeyboard)
+{
+    if (ImGui::IsKeyPressed(ImGuiKey_I))
+        OpenInventory();
+}
+```
+
+### Mouse Delta for Camera
+
+```cpp
+if (!io.WantCaptureMouse)
+{
+    // Use mouse delta for camera rotation
+    camera_yaw += io.MouseDelta.x * sensitivity;
+    camera_pitch += io.MouseDelta.y * sensitivity;
+}
+```
+
+## Next Steps
+
+- Explore [Widgets](/widgets/overview) to see how input is used in practice
+- Learn about [Best Practices](/guides/best-practices)
+- Check out [Backend Overview](/backends/overview) for platform-specific input handling

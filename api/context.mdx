@@ -1,0 +1,175 @@
+---
+title: Context Management
+description: Functions for creating and managing Dear ImGui contexts
+---
+
+Context management functions allow you to create, destroy, and switch between multiple Dear ImGui contexts. Each context maintains its own state, including font atlas, style, and window data.
+
+<Note>
+Each context creates its own `ImFontAtlas` by default. You can share a font atlas between contexts by passing it to `CreateContext()`.
+</Note>
+
+## CreateContext
+
+Creates a new Dear ImGui context.
+
+```cpp
+ImGuiContext* CreateContext(ImFontAtlas* shared_font_atlas = NULL);
+```
+
+### Parameters
+
+<ParamField path="shared_font_atlas" type="ImFontAtlas*" default="NULL">
+  Optional font atlas to share between contexts. If NULL, a new font atlas will be created.
+</ParamField>
+
+### Returns
+
+<ResponseField name="return" type="ImGuiContext*">
+  Pointer to the newly created context.
+</ResponseField>
+
+### Example
+
+```cpp
+// Create a context with its own font atlas
+ImGuiContext* ctx1 = ImGui::CreateContext();
+
+// Create a context that shares the font atlas
+ImFontAtlas* shared_atlas = new ImFontAtlas();
+ImGuiContext* ctx2 = ImGui::CreateContext(shared_atlas);
+ImGuiContext* ctx3 = ImGui::CreateContext(shared_atlas);
+```
+
+<Warning>
+For DLL users: heaps and globals are not shared across DLL boundaries. You must call `SetCurrentContext()` + `SetAllocatorFunctions()` for each static/DLL boundary.
+</Warning>
+
+## DestroyContext
+
+Destroys a Dear ImGui context and frees all associated resources.
+
+```cpp
+void DestroyContext(ImGuiContext* ctx = NULL);
+```
+
+### Parameters
+
+<ParamField path="ctx" type="ImGuiContext*" default="NULL">
+  The context to destroy. If NULL, destroys the current context.
+</ParamField>
+
+### Example
+
+```cpp
+// Destroy a specific context
+ImGuiContext* ctx = ImGui::CreateContext();
+ImGui::DestroyContext(ctx);
+
+// Destroy the current context
+ImGui::DestroyContext();
+```
+
+<Note>
+Always destroy contexts before application shutdown to prevent memory leaks.
+</Note>
+
+## GetCurrentContext
+
+Retrieves the currently active Dear ImGui context.
+
+```cpp
+ImGuiContext* GetCurrentContext();
+```
+
+### Returns
+
+<ResponseField name="return" type="ImGuiContext*">
+  Pointer to the current context, or NULL if no context is set.
+</ResponseField>
+
+### Example
+
+```cpp
+ImGuiContext* current = ImGui::GetCurrentContext();
+if (current != nullptr) {
+    // Context is active
+}
+```
+
+## SetCurrentContext
+
+Sets the active Dear ImGui context. All subsequent ImGui calls will operate on this context.
+
+```cpp
+void SetCurrentContext(ImGuiContext* ctx);
+```
+
+### Parameters
+
+<ParamField path="ctx" type="ImGuiContext*" required>
+  The context to make active.
+</ParamField>
+
+### Example
+
+```cpp
+// Create two contexts for different windows
+ImGuiContext* ctx_main = ImGui::CreateContext();
+ImGuiContext* ctx_overlay = ImGui::CreateContext();
+
+// Render main window
+ImGui::SetCurrentContext(ctx_main);
+ImGui::NewFrame();
+ImGui::Begin("Main Window");
+// ... main window content ...
+ImGui::End();
+ImGui::Render();
+
+// Render overlay window
+ImGui::SetCurrentContext(ctx_overlay);
+ImGui::NewFrame();
+ImGui::Begin("Overlay");
+// ... overlay content ...
+ImGui::End();
+ImGui::Render();
+```
+
+<Warning>
+When switching contexts, make sure to complete the frame (call `Render()` or `EndFrame()`) before switching to avoid state corruption.
+</Warning>
+
+## Multi-Context Usage Pattern
+
+```cpp
+// Initialization
+ImFontAtlas* shared_atlas = new ImFontAtlas();
+ImGuiContext* ctx1 = ImGui::CreateContext(shared_atlas);
+ImGuiContext* ctx2 = ImGui::CreateContext(shared_atlas);
+
+// Per-frame rendering
+void RenderFrame() {
+    // Render first context
+    ImGui::SetCurrentContext(ctx1);
+    ImGui::NewFrame();
+    ImGui::Begin("Window 1");
+    ImGui::Text("First context");
+    ImGui::End();
+    ImGui::Render();
+    ImGui_ImplXXX_RenderDrawData(ImGui::GetDrawData());
+    
+    // Render second context
+    ImGui::SetCurrentContext(ctx2);
+    ImGui::NewFrame();
+    ImGui::Begin("Window 2");
+    ImGui::Text("Second context");
+    ImGui::End();
+    ImGui::Render();
+    ImGui_ImplXXX_RenderDrawData(ImGui::GetDrawData());
+}
+
+// Cleanup
+ImGui::DestroyContext(ctx1);
+ImGui::DestroyContext(ctx2);
+delete shared_atlas;
+```

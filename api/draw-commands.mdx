@@ -1,0 +1,410 @@
+---
+title: 'Draw Commands & Primitives'
+description: 'Advanced drawing commands, polygons, images, and path API'
+---
+
+## ImDrawCmd Structure
+
+```cpp
+struct ImDrawCmd
+{
+    ImVec4          ClipRect;           // Clipping rectangle (x1, y1, x2, y2)
+    ImTextureRef    TexRef;             // Texture reference
+    unsigned int    VtxOffset;          // Start offset in vertex buffer
+    unsigned int    IdxOffset;          // Start offset in index buffer
+    unsigned int    ElemCount;          // Number of indices (multiple of 3)
+    ImDrawCallback  UserCallback;       // Custom callback function
+    void*           UserCallbackData;   // User data for callback
+    
+    ImTextureID GetTexID() const;       // Get texture ID for this command
+};
+```
+
+Typically, 1 command = 1 GPU draw call (unless it's a callback).
+
+<ResponseField name="ClipRect" type="ImVec4">
+  Clipping rectangle (x1, y1, x2, y2). Subtract `ImDrawData->DisplayPos` to get clipping rectangle in viewport coordinates.
+</ResponseField>
+
+<ResponseField name="TexRef" type="ImTextureRef">
+  Reference to font/texture atlas or user-provided texture ID.
+</ResponseField>
+
+<ResponseField name="VtxOffset" type="unsigned int">
+  Start offset in vertex buffer. Always 0 unless `ImGuiBackendFlags_RendererHasVtxOffset` is enabled.
+</ResponseField>
+
+<ResponseField name="ElemCount" type="unsigned int">
+  Number of indices to render (multiple of 3 for triangles).
+</ResponseField>
+
+## Polygon Primitives
+
+### AddPolyline
+
+```cpp
+void AddPolyline(const ImVec2* points, int num_points, ImU32 col, 
+                 ImDrawFlags flags, float thickness);
+```
+
+Draw a polyline (connected line segments).
+
+<ParamField path="points" type="const ImVec2*">
+  Array of points
+</ParamField>
+
+<ParamField path="num_points" type="int">
+  Number of points in array
+</ParamField>
+
+<ParamField path="col" type="ImU32">
+  Color
+</ParamField>
+
+<ParamField path="flags" type="ImDrawFlags">
+  Flags (e.g., `ImDrawFlags_Closed` to close the polyline)
+</ParamField>
+
+<ParamField path="thickness" type="float">
+  Line thickness
+</ParamField>
+
+**Example:**
+```cpp
+ImVec2 points[] = {
+    ImVec2(100, 100),
+    ImVec2(150, 150),
+    ImVec2(200, 100),
+    ImVec2(150, 50)
+};
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+draw_list->AddPolyline(points, 4, IM_COL32(255, 0, 0, 255), ImDrawFlags_Closed, 2.0f);
+```
+
+### AddConvexPolyFilled
+
+```cpp
+void AddConvexPolyFilled(const ImVec2* points, int num_points, ImU32 col);
+```
+
+Draw a filled convex polygon. Fast O(N) algorithm.
+
+<Warning>
+Only simple polygons are supported (no self-intersections, no holes). Polygon must be convex.
+</Warning>
+
+### AddConcavePolyFilled
+
+```cpp
+void AddConcavePolyFilled(const ImVec2* points, int num_points, ImU32 col);
+```
+
+Draw a filled concave polygon. Slower O(N²) algorithm.
+
+<Warning>
+Concave polygon fill is more expensive than convex. Only simple polygons are supported (no self-intersections, no holes).
+</Warning>
+
+## Image Primitives
+
+### AddImage
+
+```cpp
+void AddImage(ImTextureRef tex_ref, const ImVec2& p_min, const ImVec2& p_max, 
+              const ImVec2& uv_min = ImVec2(0, 0), const ImVec2& uv_max = ImVec2(1, 1), 
+              ImU32 col = IM_COL32_WHITE);
+```
+
+Draw a textured rectangle.
+
+<ParamField path="tex_ref" type="ImTextureRef">
+  Texture reference
+</ParamField>
+
+<ParamField path="p_min" type="const ImVec2&">
+  Top-left corner position
+</ParamField>
+
+<ParamField path="p_max" type="const ImVec2&">
+  Bottom-right corner position
+</ParamField>
+
+<ParamField path="uv_min" type="const ImVec2&" default="(0, 0)">
+  Top-left UV coordinate
+</ParamField>
+
+<ParamField path="uv_max" type="const ImVec2&" default="(1, 1)">
+  Bottom-right UV coordinate
+</ParamField>
+
+<ParamField path="col" type="ImU32" default="IM_COL32_WHITE">
+  Tint color
+</ParamField>
+
+<Note>
+Using (0,0)->(1,1) texture coordinates will generally display the entire texture.
+</Note>
+
+**Example:**
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+ImVec2 p_min = ImGui::GetCursorScreenPos();
+ImVec2 p_max = ImVec2(p_min.x + 100, p_min.y + 100);
+draw_list->AddImage(my_texture, p_min, p_max);
+```
+
+### AddImageQuad
+
+```cpp
+void AddImageQuad(ImTextureRef tex_ref, 
+                  const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, 
+                  const ImVec2& uv1 = ImVec2(0, 0), const ImVec2& uv2 = ImVec2(1, 0), 
+                  const ImVec2& uv3 = ImVec2(1, 1), const ImVec2& uv4 = ImVec2(0, 1), 
+                  ImU32 col = IM_COL32_WHITE);
+```
+
+Draw a textured quadrilateral (allows perspective distortion).
+
+<ParamField path="p1, p2, p3, p4" type="const ImVec2&">
+  Four corner positions
+</ParamField>
+
+<ParamField path="uv1, uv2, uv3, uv4" type="const ImVec2&">
+  UV coordinates for each corner
+</ParamField>
+
+### AddImageRounded
+
+```cpp
+void AddImageRounded(ImTextureRef tex_ref, const ImVec2& p_min, const ImVec2& p_max, 
+                     const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col, 
+                     float rounding, ImDrawFlags flags = 0);
+```
+
+Draw a textured rectangle with rounded corners.
+
+<ParamField path="rounding" type="float">
+  Corner rounding radius
+</ParamField>
+
+<ParamField path="flags" type="ImDrawFlags">
+  Flags to control which corners are rounded
+</ParamField>
+
+## Path API
+
+The path API allows building complex shapes by accumulating points, then rendering them.
+
+<Warning>
+**Important**: Filled shapes must always use clockwise winding order! Counter-clockwise shapes will have "inward" anti-aliasing.
+</Warning>
+
+### PathClear
+
+```cpp
+void PathClear();
+```
+
+Clear the current path (remove all accumulated points).
+
+### PathLineTo
+
+```cpp
+void PathLineTo(const ImVec2& pos);
+```
+
+Add a point to the current path.
+
+<ParamField path="pos" type="const ImVec2&">
+  Point position
+</ParamField>
+
+### PathLineToMergeDuplicate
+
+```cpp
+void PathLineToMergeDuplicate(const ImVec2& pos);
+```
+
+Add a point to path only if it's different from the last point.
+
+### PathFillConvex
+
+```cpp
+void PathFillConvex(ImU32 col);
+```
+
+Fill the current path as a convex polygon and clear the path.
+
+<ParamField path="col" type="ImU32">
+  Fill color
+</ParamField>
+
+### PathFillConcave
+
+```cpp
+void PathFillConcave(ImU32 col);
+```
+
+Fill the current path as a concave polygon and clear the path. Slower than `PathFillConvex()`.
+
+### PathStroke
+
+```cpp
+void PathStroke(ImU32 col, ImDrawFlags flags = 0, float thickness = 1.0f);
+```
+
+Stroke the current path and clear it.
+
+<ParamField path="col" type="ImU32">
+  Stroke color
+</ParamField>
+
+<ParamField path="flags" type="ImDrawFlags">
+  Flags (e.g., `ImDrawFlags_Closed`)
+</ParamField>
+
+<ParamField path="thickness" type="float" default="1.0f">
+  Line thickness
+</ParamField>
+
+### Path Arcs
+
+```cpp
+void PathArcTo(const ImVec2& center, float radius, float a_min, float a_max, 
+               int num_segments = 0);
+
+void PathArcToFast(const ImVec2& center, float radius, int a_min_of_12, int a_max_of_12);
+
+void PathEllipticalArcTo(const ImVec2& center, const ImVec2& radius, float rot, 
+                         float a_min, float a_max, int num_segments = 0);
+```
+
+Add arc segments to the path.
+
+<ParamField path="center" type="const ImVec2&">
+  Arc center
+</ParamField>
+
+<ParamField path="radius" type="float">
+  Arc radius
+</ParamField>
+
+<ParamField path="a_min" type="float">
+  Start angle in radians
+</ParamField>
+
+<ParamField path="a_max" type="float">
+  End angle in radians
+</ParamField>
+
+<Note>
+`PathArcToFast()` uses precomputed angles for a 12-step circle. `a_min_of_12` and `a_max_of_12` are in range 0-11.
+</Note>
+
+### Path Bezier Curves
+
+```cpp
+void PathBezierCubicCurveTo(const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, 
+                            int num_segments = 0);
+
+void PathBezierQuadraticCurveTo(const ImVec2& p2, const ImVec2& p3, int num_segments = 0);
+```
+
+Add Bezier curve segments to the path.
+
+**Example - Custom Shape with Path API:**
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+ImVec2 center = ImGui::GetCursorScreenPos();
+
+// Draw a star shape
+draw_list->PathClear();
+for (int i = 0; i < 10; i++)
+{
+    float angle = (i * 2.0f * IM_PI) / 10.0f;
+    float radius = (i % 2 == 0) ? 40.0f : 20.0f;
+    ImVec2 pos = ImVec2(
+        center.x + cosf(angle) * radius,
+        center.y + sinf(angle) * radius
+    );
+    draw_list->PathLineTo(pos);
+}
+draw_list->PathFillConvex(IM_COL32(255, 255, 0, 255));
+```
+
+### PathRect
+
+```cpp
+void PathRect(const ImVec2& rect_min, const ImVec2& rect_max, 
+              float rounding = 0.0f, ImDrawFlags flags = 0);
+```
+
+Add a rectangle to the path.
+
+## Advanced: Draw Callbacks
+
+### AddCallback
+
+```cpp
+void AddCallback(ImDrawCallback callback, void* userdata, size_t userdata_size = 0);
+```
+
+Add a custom callback to alter render state or emit custom rendering commands.
+
+<ParamField path="callback" type="ImDrawCallback">
+  Function pointer to callback
+</ParamField>
+
+<ParamField path="userdata" type="void*">
+  User data to pass to callback
+</ParamField>
+
+<ParamField path="userdata_size" type="size_t" default="0">
+  Size of data to copy (0 = just copy pointer)
+</ParamField>
+
+<Warning>
+Be mindful of the difference:
+- If `userdata_size == 0`: Copy/store the pointer as-is
+- If `userdata_size > 0`: Copy `userdata_size` bytes into an internal buffer
+</Warning>
+
+**Example:**
+```cpp
+void MyCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd)
+{
+    // Change render state
+    MyEngine::SetBlendMode(BLEND_ADDITIVE);
+}
+
+draw_list->AddCallback(MyCallback, nullptr);
+// ... draw commands with additive blending ...
+draw_list->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
+```
+
+### AddDrawCmd
+
+```cpp
+void AddDrawCmd();
+```
+
+Force creation of a new draw call. Useful for dependent rendering / blending. Otherwise primitives are merged into the same draw call.
+
+## Channels (Advanced)
+
+Channels allow splitting render into layers that can be drawn out-of-order.
+
+```cpp
+void ChannelsSplit(int count);
+void ChannelsMerge();
+void ChannelsSetCurrent(int n);
+```
+
+<Note>
+Prefer using your own persistent instance of `ImDrawListSplitter` instead of the channel functions.
+</Note>
+
+## See Also
+
+- [ImDrawList](/api/draw-list) - Main draw list overview
+- [ImDrawData](/api/draw-list#imdrawdata) - Frame draw data

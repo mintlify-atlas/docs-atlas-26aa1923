@@ -1,0 +1,494 @@
+---
+title: 'Utilities & Helper Functions'
+description: 'Utility functions, text helpers, color utilities, and memory management'
+---
+
+## Text Utilities
+
+### CalcTextSize
+
+```cpp
+ImVec2 CalcTextSize(const char* text, const char* text_end = NULL,
+                    bool hide_text_after_double_hash = false,
+                    float wrap_width = -1.0f);
+```
+
+Calculate text size for current font.
+
+<ParamField path="text" type="const char*">
+  Text to measure
+</ParamField>
+
+<ParamField path="text_end" type="const char*" default="NULL">
+  End of text (NULL for null-terminated)
+</ParamField>
+
+<ParamField path="hide_text_after_double_hash" type="bool" default="false">
+  Hide text after ## (useful for labels)
+</ParamField>
+
+<ParamField path="wrap_width" type="float" default="-1.0f">
+  Width for text wrapping (-1.0f = no wrapping)
+</ParamField>
+
+<ParamField path="Returns" type="ImVec2">
+  Text size in pixels
+</ParamField>
+
+**Example:**
+```cpp
+const char* text = "Hello, World!";
+ImVec2 size = ImGui::CalcTextSize(text);
+
+// Center text horizontally
+float avail_width = ImGui::GetContentRegionAvail().x;
+ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail_width - size.x) * 0.5f);
+ImGui::Text("%s", text);
+```
+
+## Color Utilities
+
+### ColorConvertU32ToFloat4
+
+```cpp
+ImVec4 ColorConvertU32ToFloat4(ImU32 in);
+```
+
+Convert 32-bit packed RGBA color to ImVec4.
+
+**Example:**
+```cpp
+ImU32 packed = IM_COL32(255, 128, 64, 255);
+ImVec4 float_color = ImGui::ColorConvertU32ToFloat4(packed);
+// float_color = (1.0f, 0.5f, 0.25f, 1.0f)
+```
+
+### ColorConvertFloat4ToU32
+
+```cpp
+ImU32 ColorConvertFloat4ToU32(const ImVec4& in);
+```
+
+Convert ImVec4 color to 32-bit packed RGBA.
+
+**Example:**
+```cpp
+ImVec4 float_color(1.0f, 0.5f, 0.25f, 1.0f);
+ImU32 packed = ImGui::ColorConvertFloat4ToU32(float_color);
+// packed = 0xFFFF7F40
+```
+
+### ColorConvertRGBtoHSV / ColorConvertHSVtoRGB
+
+```cpp
+void ColorConvertRGBtoHSV(float r, float g, float b, 
+                          float& out_h, float& out_s, float& out_v);
+
+void ColorConvertHSVtoRGB(float h, float s, float v, 
+                          float& out_r, float& out_g, float& out_b);
+```
+
+Convert between RGB and HSV color spaces.
+
+**Example:**
+```cpp
+float r = 1.0f, g = 0.5f, b = 0.25f;
+float h, s, v;
+ImGui::ColorConvertRGBtoHSV(r, g, b, h, s, v);
+
+// Modify in HSV space
+s *= 1.5f;  // Increase saturation
+v *= 0.8f;  // Decrease brightness
+
+// Convert back
+ImGui::ColorConvertHSVtoRGB(h, s, v, r, g, b);
+```
+
+## ID Functions
+
+### PushID
+
+```cpp
+void PushID(const char* str_id);
+void PushID(const char* str_id_begin, const char* str_id_end);
+void PushID(const void* ptr_id);
+void PushID(int int_id);
+```
+
+Push identifier into the ID stack (will hash the identifier).
+
+**Example:**
+```cpp
+for (int i = 0; i < 10; i++)
+{
+    ImGui::PushID(i);
+    ImGui::Button("Delete");  // Each button has unique ID
+    ImGui::PopID();
+}
+
+// With pointers
+for (auto& item : items)
+{
+    ImGui::PushID(&item);
+    ImGui::Button(item.name.c_str());
+    ImGui::PopID();
+}
+```
+
+### PopID
+
+```cpp
+void PopID();
+```
+
+Pop from the ID stack.
+
+### GetID
+
+```cpp
+ImGuiID GetID(const char* str_id);
+ImGuiID GetID(const char* str_id_begin, const char* str_id_end);
+ImGuiID GetID(const void* ptr_id);
+ImGuiID GetID(int int_id);
+```
+
+Calculate unique ID (hash of whole ID stack + given parameter).
+
+**Example:**
+```cpp
+ImGuiID id = ImGui::GetID("MyWidget");
+ImGuiID id2 = ImGui::GetID(&my_object);
+
+// Use ID for storage
+ImGuiStorage* storage = ImGui::GetStateStorage();
+storage->SetInt(id, 42);
+int value = storage->GetInt(id);
+```
+
+## Clipboard
+
+### GetClipboardText
+
+```cpp
+const char* GetClipboardText();
+```
+
+Get text from clipboard.
+
+<ParamField path="Returns" type="const char*">
+  Clipboard text, or empty string if unavailable
+</ParamField>
+
+**Example:**
+```cpp
+if (ImGui::Button("Paste"))
+{
+    const char* clipboard = ImGui::GetClipboardText();
+    ProcessPastedText(clipboard);
+}
+```
+
+### SetClipboardText
+
+```cpp
+void SetClipboardText(const char* text);
+```
+
+Set clipboard text.
+
+**Example:**
+```cpp
+if (ImGui::Button("Copy"))
+{
+    ImGui::SetClipboardText(my_text.c_str());
+}
+```
+
+## Version Information
+
+### GetVersion
+
+```cpp
+const char* GetVersion();
+```
+
+Get the compiled version string (e.g., "1.92.7 WIP").
+
+**Example:**
+```cpp
+const char* version = ImGui::GetVersion();
+ImGui::Text("Dear ImGui version: %s", version);
+```
+
+### IMGUI_CHECKVERSION
+
+```cpp
+#define IMGUI_CHECKVERSION() \
+    ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), \
+        sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), \
+        sizeof(ImDrawVert), sizeof(ImDrawIdx))
+```
+
+Check that version and structure layouts match between compiled code and headers.
+
+**Example:**
+```cpp
+IMGUI_CHECKVERSION();
+ImGui::CreateContext();
+```
+
+## Memory Management
+
+### SetAllocatorFunctions
+
+```cpp
+void SetAllocatorFunctions(ImGuiMemAllocFunc alloc_func,
+                          ImGuiMemFreeFunc free_func,
+                          void* user_data = NULL);
+```
+
+Set custom memory allocator functions.
+
+**Example:**
+```cpp
+void* MyAllocFunc(size_t sz, void* user_data)
+{
+    return malloc(sz);
+}
+
+void MyFreeFunc(void* ptr, void* user_data)
+{
+    free(ptr);
+}
+
+ImGui::SetAllocatorFunctions(MyAllocFunc, MyFreeFunc);
+```
+
+### MemAlloc / MemFree
+
+```cpp
+void* MemAlloc(size_t size);
+void MemFree(void* ptr);
+```
+
+Allocate/free memory using Dear ImGui's allocator.
+
+<Note>
+These functions use the allocator set via `SetAllocatorFunctions()`, or the default allocator.
+</Note>
+
+## Storage
+
+### GetStateStorage
+
+```cpp
+ImGuiStorage* GetStateStorage();
+```
+
+Get storage for current window.
+
+**Example:**
+```cpp
+ImGuiStorage* storage = ImGui::GetStateStorage();
+
+// Store values
+storage->SetInt(ImGui::GetID("MyCounter"), 42);
+storage->SetFloat(ImGui::GetID("MyValue"), 3.14f);
+
+// Retrieve values
+int counter = storage->GetInt(ImGui::GetID("MyCounter"), 0);
+float value = storage->GetFloat(ImGui::GetID("MyValue"), 0.0f);
+```
+
+### ImGuiStorage
+
+```cpp
+struct ImGuiStorage
+{
+    // Key-value storage
+    void    Clear();
+    int     GetInt(ImGuiID key, int default_val = 0) const;
+    void    SetInt(ImGuiID key, int val);
+    bool    GetBool(ImGuiID key, bool default_val = false) const;
+    void    SetBool(ImGuiID key, bool val);
+    float   GetFloat(ImGuiID key, float default_val = 0.0f) const;
+    void    SetFloat(ImGuiID key, float val);
+    void*   GetVoidPtr(ImGuiID key) const;
+    void    SetVoidPtr(ImGuiID key, void* val);
+    
+    // Advanced
+    int*    GetIntRef(ImGuiID key, int default_val = 0);
+    bool*   GetBoolRef(ImGuiID key, bool default_val = false);
+    float*  GetFloatRef(ImGuiID key, float default_val = 0.0f);
+    void**  GetVoidPtrRef(ImGuiID key, void* default_val = NULL);
+};
+```
+
+## Debug Tools
+
+### ShowMetricsWindow
+
+```cpp
+void ShowMetricsWindow(bool* p_open = NULL);
+```
+
+Create Metrics/Debugger window. Display Dear ImGui internals: windows, draw commands, various internal state, etc.
+
+**Example:**
+```cpp
+static bool show_metrics = false;
+if (ImGui::BeginMainMenuBar())
+{
+    if (ImGui::BeginMenu("Tools"))
+    {
+        ImGui::MenuItem("Metrics", NULL, &show_metrics);
+        ImGui::EndMenu();
+    }
+    ImGui::EndMainMenuBar();
+}
+
+if (show_metrics)
+    ImGui::ShowMetricsWindow(&show_metrics);
+```
+
+### ShowDebugLogWindow
+
+```cpp
+void ShowDebugLogWindow(bool* p_open = NULL);
+```
+
+Create Debug Log window. Display a simplified log of important Dear ImGui events.
+
+### ShowIDStackToolWindow
+
+```cpp
+void ShowIDStackToolWindow(bool* p_open = NULL);
+```
+
+Create Stack Tool window. Hover items with mouse to query information about the source of their unique ID.
+
+### ShowAboutWindow
+
+```cpp
+void ShowAboutWindow(bool* p_open = NULL);
+```
+
+Create About window. Display Dear ImGui version, credits and build/system information.
+
+### DebugTextEncoding
+
+```cpp
+void DebugTextEncoding(const char* text);
+```
+
+Helper to debug text encoding issues. Display UTF-8 text with markers.
+
+## Settings (.ini) Management
+
+### LoadIniSettingsFromDisk
+
+```cpp
+void LoadIniSettingsFromDisk(const char* ini_filename);
+```
+
+Call after `CreateContext()` and before first `NewFrame()`. `NewFrame()` automatically calls this with `io.IniFilename`.
+
+### SaveIniSettingsToDisk
+
+```cpp
+void SaveIniSettingsToDisk(const char* ini_filename);
+```
+
+Automatically called (if `io.IniFilename` is not empty) a few seconds after any modification.
+
+### LoadIniSettingsFromMemory
+
+```cpp
+void LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size = 0);
+```
+
+Call after `CreateContext()` and before first `NewFrame()` to provide .ini data from your own data source.
+
+### SaveIniSettingsToMemory
+
+```cpp
+const char* SaveIniSettingsToMemory(size_t* out_ini_size = NULL);
+```
+
+Return a zero-terminated string with the .ini data. Call when `io.WantSaveIniSettings` is set, then save by your own means and clear `io.WantSaveIniSettings`.
+
+**Example:**
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+if (io.WantSaveIniSettings)
+{
+    size_t ini_size;
+    const char* ini_data = ImGui::SaveIniSettingsToMemory(&ini_size);
+    SaveToFile("my_settings.ini", ini_data, ini_size);
+    io.WantSaveIniSettings = false;
+}
+```
+
+## Common Utility Patterns
+
+### Unique IDs in Loops
+
+```cpp
+for (int i = 0; i < items.size(); i++)
+{
+    ImGui::PushID(i);
+    
+    if (ImGui::Button("Edit"))
+        EditItem(i);
+    
+    ImGui::SameLine();
+    if (ImGui::Button("Delete"))
+        DeleteItem(i);
+    
+    ImGui::PopID();
+}
+```
+
+### Persistent State
+
+```cpp
+// Using storage
+ImGuiStorage* storage = ImGui::GetStateStorage();
+ImGuiID id = ImGui::GetID("MyWidget");
+
+int* counter = storage->GetIntRef(id, 0);
+if (ImGui::Button("Increment"))
+    (*counter)++;
+ImGui::Text("Counter: %d", *counter);
+```
+
+### Custom Widget with State
+
+```cpp
+bool MyWidget(const char* label)
+{
+    ImGui::PushID(label);
+    
+    ImGuiStorage* storage = ImGui::GetStateStorage();
+    int* state = storage->GetIntRef(ImGui::GetID("state"), 0);
+    
+    bool changed = false;
+    if (ImGui::Button(*state ? "On" : "Off"))
+    {
+        *state = !(*state);
+        changed = true;
+    }
+    
+    ImGui::SameLine();
+    ImGui::Text("%s", label);
+    
+    ImGui::PopID();
+    return changed;
+}
+```
+
+## See Also
+
+- [Colors](/api/colors) - Color conversion functions
+- [Input](/api/input) - Input state and ImGuiIO
+- [Text](/api/text) - Text rendering functions

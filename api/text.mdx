@@ -1,0 +1,210 @@
+---
+title: 'Text Widgets'
+description: 'Text display functions for Dear ImGui'
+---
+
+## Text Functions
+
+Functions for displaying text in various styles and formats.
+
+### Text
+
+```cpp
+void ImGui::Text(const char* fmt, ...)
+```
+
+Display formatted text.
+
+<ParamField path="fmt" type="const char*">
+  Format string (printf-style)
+</ParamField>
+
+```cpp
+// Example
+ImGui::Text("Hello, World!");
+ImGui::Text("FPS: %.1f", fps);
+```
+
+### TextUnformatted
+
+```cpp
+void ImGui::TextUnformatted(const char* text, const char* text_end = NULL)
+```
+
+Raw text without formatting. Roughly equivalent to `Text("%s", text)` but faster with no memory copy, no buffer size limits.
+
+<ParamField path="text" type="const char*">
+  Text to display
+</ParamField>
+
+<ParamField path="text_end" type="const char*" default="NULL">
+  Optional end pointer. If specified, doesn't require null-terminated string
+</ParamField>
+
+```cpp
+// Example
+const char* large_text = "...";
+ImGui::TextUnformatted(large_text);
+```
+
+### TextColored
+
+```cpp
+void ImGui::TextColored(const ImVec4& col, const char* fmt, ...)
+```
+
+Shortcut for `PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();`
+
+<ParamField path="col" type="const ImVec4&">
+  RGBA color (0.0f to 1.0f per component)
+</ParamField>
+
+<ParamField path="fmt" type="const char*">
+  Format string (printf-style)
+</ParamField>
+
+```cpp
+// Example
+ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Error!");
+ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Success!");
+```
+
+### TextDisabled
+
+```cpp
+void ImGui::TextDisabled(const char* fmt, ...)
+```
+
+Shortcut for `PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]); Text(fmt, ...); PopStyleColor();`
+
+<ParamField path="fmt" type="const char*">
+  Format string (printf-style)
+</ParamField>
+
+```cpp
+// Example
+ImGui::TextDisabled("(disabled)");
+```
+
+### TextWrapped
+
+```cpp
+void ImGui::TextWrapped(const char* fmt, ...)
+```
+
+Shortcut for `PushTextWrapPos(0.0f); Text(fmt, ...); PopTextWrapPos();`. Note that this won't work on an auto-resizing window if there's no other widgets to extend the window width.
+
+<ParamField path="fmt" type="const char*">
+  Format string (printf-style)
+</ParamField>
+
+```cpp
+// Example
+ImGui::TextWrapped("This is a long text that will wrap to the next line when it reaches the edge of the window.");
+```
+
+### LabelText
+
+```cpp
+void ImGui::LabelText(const char* label, const char* fmt, ...)
+```
+
+Display text+label aligned the same way as value+label widgets.
+
+<ParamField path="label" type="const char*">
+  Label text displayed on the left
+</ParamField>
+
+<ParamField path="fmt" type="const char*">
+  Format string for the value (printf-style)
+</ParamField>
+
+```cpp
+// Example
+ImGui::LabelText("Position", "X: %.2f, Y: %.2f", x, y);
+```
+
+### BulletText
+
+```cpp
+void ImGui::BulletText(const char* fmt, ...)
+```
+
+Shortcut for `Bullet() + Text()`.
+
+<ParamField path="fmt" type="const char*">
+  Format string (printf-style)
+</ParamField>
+
+```cpp
+// Example
+ImGui::BulletText("Item 1");
+ImGui::BulletText("Item 2");
+ImGui::BulletText("Item 3");
+```
+
+### SeparatorText
+
+```cpp
+void ImGui::SeparatorText(const char* label)
+```
+
+Currently: formatted text with a horizontal line.
+
+<ParamField path="label" type="const char*">
+  Text to display in the separator
+</ParamField>
+
+```cpp
+// Example
+ImGui::SeparatorText("Settings");
+```
+
+## Helper Functions
+
+### Bullet
+
+```cpp
+void ImGui::Bullet()
+```
+
+Draw a small circle and keep the cursor on the same line. Advance cursor x position by `GetTreeNodeToLabelSpacing()`, same distance that `TreeNode()` uses.
+
+```cpp
+// Example
+ImGui::Bullet(); ImGui::Text("Manual bullet point");
+```
+
+### CalcTextSize
+
+```cpp
+ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f)
+```
+
+Calculate text size. Returns size in pixels.
+
+<ParamField path="text" type="const char*">
+  Text to measure
+</ParamField>
+
+<ParamField path="text_end" type="const char*" default="NULL">
+  Optional end pointer
+</ParamField>
+
+<ParamField path="hide_text_after_double_hash" type="bool" default="false">
+  Hide text after ##
+</ParamField>
+
+<ParamField path="wrap_width" type="float" default="-1.0f">
+  Wrap width (-1.0f = no wrapping)
+</ParamField>
+
+<ResponseField name="return" type="ImVec2">
+  Size of the text in pixels
+</ResponseField>
+
+```cpp
+// Example
+ImVec2 size = ImGui::CalcTextSize("Hello");
+ImGui::Text("Text size: %.0f x %.0f", size.x, size.y);
+```

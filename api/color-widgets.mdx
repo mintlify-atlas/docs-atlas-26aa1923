@@ -1,0 +1,265 @@
+---
+title: 'Color Widgets'
+description: 'Color editor and picker widgets for Dear ImGui'
+---
+
+## Color Edit
+
+Color editor/picker widgets have a little color square that can be left-clicked to open a picker, and right-clicked to open an option menu.
+
+### ColorEdit3
+
+```cpp
+bool ImGui::ColorEdit3(const char* label, float col[3], ImGuiColorEditFlags flags = 0)
+```
+
+Edit RGB color (without alpha).
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="col" type="float[3]">
+  Array of 3 floats (RGB, 0.0f to 1.0f)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiColorEditFlags" default="0">
+  Color edit flags (see ImGuiColorEditFlags_)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when color has been modified
+</ResponseField>
+
+```cpp
+// Example
+static float color[3] = { 1.0f, 0.0f, 0.0f };
+ImGui::ColorEdit3("Color", color);
+```
+
+### ColorEdit4
+
+```cpp
+bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags = 0)
+```
+
+Edit RGBA color (with alpha).
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="col" type="float[4]">
+  Array of 4 floats (RGBA, 0.0f to 1.0f)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiColorEditFlags" default="0">
+  Color edit flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when color has been modified
+</ResponseField>
+
+```cpp
+// Example
+static float color[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+ImGui::ColorEdit4("Color", color);
+```
+
+## Color Picker
+
+### ColorPicker3
+
+```cpp
+bool ImGui::ColorPicker3(const char* label, float col[3], ImGuiColorEditFlags flags = 0)
+```
+
+Color picker widget for RGB.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="col" type="float[3]">
+  Array of 3 floats (RGB)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiColorEditFlags" default="0">
+  Color edit flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when color has been modified
+</ResponseField>
+
+```cpp
+// Example
+static float color[3] = { 1.0f, 1.0f, 1.0f };
+ImGui::ColorPicker3("MyColor", color);
+```
+
+### ColorPicker4
+
+```cpp
+bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags flags = 0, const float* ref_col = NULL)
+```
+
+Color picker widget for RGBA.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="col" type="float[4]">
+  Array of 4 floats (RGBA)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiColorEditFlags" default="0">
+  Color edit flags
+</ParamField>
+
+<ParamField path="ref_col" type="const float*" default="NULL">
+  Optional reference color to display for comparison
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when color has been modified
+</ResponseField>
+
+```cpp
+// Example
+static float color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
+ImGui::ColorPicker4("MyColor##4", color);
+
+// With reference color
+float ref_color[4] = { 0.5f, 0.5f, 0.5f, 1.0f };
+ImGui::ColorPicker4("MyColor##5", color, 0, ref_color);
+```
+
+## Color Button
+
+### ColorButton
+
+```cpp
+bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFlags flags = 0, const ImVec2& size = ImVec2(0, 0))
+```
+
+Display a color square/button. Hover for details, return true when pressed.
+
+<ParamField path="desc_id" type="const char*">
+  Unique identifier
+</ParamField>
+
+<ParamField path="col" type="const ImVec4&">
+  RGBA color
+</ParamField>
+
+<ParamField path="flags" type="ImGuiColorEditFlags" default="0">
+  Color edit flags
+</ParamField>
+
+<ParamField path="size" type="const ImVec2&" default="ImVec2(0, 0)">
+  Button size (0 = default size)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when clicked
+</ResponseField>
+
+```cpp
+// Example
+ImVec4 color = ImVec4(1.0f, 0.0f, 0.0f, 1.0f);
+if (ImGui::ColorButton("MyColorBtn", color)) {
+    // Button was clicked
+}
+```
+
+### SetColorEditOptions
+
+```cpp
+void ImGui::SetColorEditOptions(ImGuiColorEditFlags flags)
+```
+
+Initialize current options (generally on application startup) if you want to select a default format, picker type, etc. User will be able to change many settings, unless you pass the `_NoOptions` flag to your calls.
+
+<ParamField path="flags" type="ImGuiColorEditFlags">
+  Default color edit flags
+</ParamField>
+
+```cpp
+// Example
+ImGui::SetColorEditOptions(ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_PickerHueWheel);
+```
+
+## Color Edit Flags
+
+### ImGuiColorEditFlags_
+
+Flags for `ColorEdit3()`, `ColorEdit4()`, `ColorPicker3()`, `ColorPicker4()`, `ColorButton()`.
+
+#### Main Options
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiColorEditFlags_None` | Default |
+| `ImGuiColorEditFlags_NoAlpha` | Ignore Alpha component (read only 3 components) |
+| `ImGuiColorEditFlags_NoPicker` | Disable picker when clicking on color square |
+| `ImGuiColorEditFlags_NoOptions` | Disable toggling options menu when right-clicking |
+| `ImGuiColorEditFlags_NoSmallPreview` | Disable color square preview next to inputs |
+| `ImGuiColorEditFlags_NoInputs` | Disable inputs sliders/text widgets |
+| `ImGuiColorEditFlags_NoTooltip` | Disable tooltip when hovering the preview |
+| `ImGuiColorEditFlags_NoLabel` | Disable display of inline text label |
+| `ImGuiColorEditFlags_NoSidePreview` | Disable bigger color preview on right side |
+| `ImGuiColorEditFlags_NoDragDrop` | Disable drag and drop target |
+| `ImGuiColorEditFlags_NoBorder` | Disable border (which is enforced by default) |
+| `ImGuiColorEditFlags_NoColorMarkers` | Disable rendering R/G/B/A color markers |
+
+#### Alpha Display
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiColorEditFlags_AlphaOpaque` | Display alpha as opaque in preview |
+| `ImGuiColorEditFlags_AlphaNoBg` | Disable checkerboard background behind transparent color |
+| `ImGuiColorEditFlags_AlphaPreviewHalf` | Display half opaque / half transparent preview |
+
+#### User Options
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiColorEditFlags_AlphaBar` | Show vertical alpha bar/gradient in picker |
+| `ImGuiColorEditFlags_HDR` | Disable 0.0f to 1.0f limits |
+| `ImGuiColorEditFlags_DisplayRGB` | Override display type: RGB |
+| `ImGuiColorEditFlags_DisplayHSV` | Override display type: HSV |
+| `ImGuiColorEditFlags_DisplayHex` | Override display type: Hex |
+| `ImGuiColorEditFlags_Uint8` | Display values formatted as 0..255 |
+| `ImGuiColorEditFlags_Float` | Display values formatted as 0.0f..1.0f floats |
+| `ImGuiColorEditFlags_PickerHueBar` | Picker: bar for Hue, rectangle for Sat/Value |
+| `ImGuiColorEditFlags_PickerHueWheel` | Picker: wheel for Hue, triangle for Sat/Value |
+| `ImGuiColorEditFlags_InputRGB` | Input and output data in RGB format |
+| `ImGuiColorEditFlags_InputHSV` | Input and output data in HSV format |
+
+#### Examples
+
+```cpp
+// No alpha channel
+static float color_rgb[3] = { 1.0f, 0.0f, 0.0f };
+ImGui::ColorEdit3("Color", color_rgb, ImGuiColorEditFlags_NoAlpha);
+
+// Float display format
+static float color[4] = { 1.0f, 0.5f, 0.0f, 1.0f };
+ImGui::ColorEdit4("Float", color, ImGuiColorEditFlags_Float);
+
+// HSV input
+ImGui::ColorEdit4("HSV", color, ImGuiColorEditFlags_DisplayHSV | ImGuiColorEditFlags_InputHSV);
+
+// HDR color
+static float hdr_color[4] = { 2.5f, 1.0f, 0.5f, 1.0f };
+ImGui::ColorEdit4("HDR", hdr_color, ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_Float);
+
+// Picker with hue wheel
+ImGui::ColorPicker4("Wheel Picker", color, ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_AlphaBar);
+
+// No options menu
+ImGui::ColorEdit4("No Options", color, ImGuiColorEditFlags_NoOptions);
+```

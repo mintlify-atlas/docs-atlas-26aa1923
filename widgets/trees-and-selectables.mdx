@@ -1,0 +1,410 @@
+---
+title: Trees and Selectables
+description: Hierarchical data display and selection widgets in Dear ImGui
+---
+
+Tree nodes and selectables are used to display hierarchical data and allow users to make selections. These widgets are essential for file browsers, scene graphs, and selection lists.
+
+## Tree Nodes
+
+### TreeNode()
+
+Create a collapsible tree node:
+
+```cpp
+IMGUI_API bool TreeNode(const char* label);
+IMGUI_API bool TreeNode(const char* str_id, const char* fmt, ...) IM_FMTARGS(2);
+IMGUI_API bool TreeNode(const void* ptr_id, const char* fmt, ...) IM_FMTARGS(2);
+```
+
+<Note>
+  `TreeNode()` returns `true` when the node is open. Always call `TreePop()` after displaying the node contents, even if you early-out.
+</Note>
+
+<CodeGroup>
+```cpp Basic Tree
+if (ImGui::TreeNode("My Tree Node")) {
+    ImGui::Text("Content inside the tree node");
+    ImGui::Text("More content...");
+    ImGui::TreePop();
+}
+```
+
+```cpp Tree with ID
+// Using PushID for unique nodes in loops
+for (int i = 0; i < 5; i++) {
+    ImGui::PushID(i);
+    if (ImGui::TreeNode("", "Child %d", i)) {
+        ImGui::Text("Content %d", i);
+        if (ImGui::SmallButton("button")) { }
+        ImGui::TreePop();
+    }
+    ImGui::PopID();
+}
+```
+</CodeGroup>
+
+### TreeNodeEx()
+
+Tree node with advanced flags:
+
+```cpp
+IMGUI_API bool TreeNodeEx(const char* label, ImGuiTreeNodeFlags flags = 0);
+IMGUI_API bool TreeNodeEx(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_FMTARGS(3);
+IMGUI_API bool TreeNodeEx(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_FMTARGS(3);
+```
+
+```cpp
+ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DefaultOpen | ImGuiTreeNodeFlags_OpenOnArrow;
+if (ImGui::TreeNodeEx("Advanced Node", flags)) {
+    ImGui::Text("Content");
+    ImGui::TreePop();
+}
+```
+
+## Tree Node Flags
+
+### Opening Behavior
+
+```cpp
+// Default open state
+ImGuiTreeNodeFlags_DefaultOpen
+
+// Open on double-click
+ImGuiTreeNodeFlags_OpenOnDoubleClick
+
+// Open on click on arrow part only
+ImGuiTreeNodeFlags_OpenOnArrow
+```
+
+### Visual Flags
+
+<CodeGroup>
+```cpp Spanning
+// Extend hit area to available width
+ImGui::TreeNodeEx("Node", ImGuiTreeNodeFlags_SpanAvailWidth);
+
+// Extend hit area to full window width
+ImGui::TreeNodeEx("Node", ImGuiTreeNodeFlags_SpanFullWidth);
+
+// Span all table columns (for use in tables)
+ImGui::TreeNodeEx("Node", ImGuiTreeNodeFlags_SpanAllColumns);
+
+// Reduce hit area to label width
+ImGui::TreeNodeEx("Node", ImGuiTreeNodeFlags_SpanLabelWidth);
+```
+
+```cpp Frame Style
+// Draw with frame and background
+ImGui::TreeNodeEx("Framed", ImGuiTreeNodeFlags_Framed);
+
+// Apply frame padding
+ImGui::TreeNodeEx("Padded", ImGuiTreeNodeFlags_FramePadding);
+```
+</CodeGroup>
+
+### Leaf Nodes
+
+```cpp
+// No collapsing arrow, display as leaf
+ImGui::TreeNodeEx("Leaf", ImGuiTreeNodeFlags_Leaf);
+
+// No collapsing, behaves like a button
+ImGui::TreeNodeEx("Bullet", ImGuiTreeNodeFlags_Bullet);
+```
+
+### Selection
+
+```cpp
+static int selected_node = -1;
+
+for (int i = 0; i < 5; i++) {
+    ImGuiTreeNodeFlags node_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+    
+    // Add selected flag if this node is selected
+    if (selected_node == i)
+        node_flags |= ImGuiTreeNodeFlags_Selected;
+    
+    bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Node %d", i);
+    
+    if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+        selected_node = i;
+    
+    if (node_open) {
+        ImGui::Text("Content for node %d", i);
+        ImGui::TreePop();
+    }
+}
+```
+
+## Hierarchy Lines
+
+Draw connecting lines between tree nodes:
+
+```cpp
+ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_DrawLinesFull;
+
+if (ImGui::TreeNodeEx("Parent", flags)) {
+    if (ImGui::TreeNodeEx("Child 1", flags)) {
+        ImGui::Button("Button");
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNodeEx("Child 2", flags)) {
+        ImGui::Button("Button");
+        ImGui::TreePop();
+    }
+    ImGui::TreePop();
+}
+```
+
+<ParamField path="ImGuiTreeNodeFlags_DrawLinesNone" type="flag">
+  No hierarchy lines
+</ParamField>
+<ParamField path="ImGuiTreeNodeFlags_DrawLinesFull" type="flag">
+  Draw lines for the full height
+</ParamField>
+<ParamField path="ImGuiTreeNodeFlags_DrawLinesToNodes" type="flag">
+  Draw lines only to node labels
+</ParamField>
+
+## Collapsing Headers
+
+### CollapsingHeader()
+
+A tree node that doesn't require TreePop():
+
+```cpp
+IMGUI_API bool CollapsingHeader(const char* label, ImGuiTreeNodeFlags flags = 0);
+IMGUI_API bool CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFlags flags = 0);
+```
+
+```cpp
+if (ImGui::CollapsingHeader("Section 1")) {
+    ImGui::Text("Content for section 1");
+    ImGui::Button("Button 1");
+}
+
+if (ImGui::CollapsingHeader("Section 2")) {
+    ImGui::Text("Content for section 2");
+    ImGui::Button("Button 2");
+}
+
+// With close button
+static bool show_section = true;
+if (ImGui::CollapsingHeader("Closeable Section", &show_section)) {
+    ImGui::Text("This section can be closed");
+}
+```
+
+## Tree Control
+
+### SetNextItemOpen()
+
+Set the open state of the next tree node:
+
+```cpp
+IMGUI_API void SetNextItemOpen(bool is_open, ImGuiCond cond = 0);
+```
+
+```cpp
+// Open on first use
+ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+if (ImGui::TreeNode("Auto-opened")) {
+    ImGui::Text("This node opens automatically once");
+    ImGui::TreePop();
+}
+
+// Always open
+ImGui::SetNextItemOpen(true, ImGuiCond_Always);
+if (ImGui::TreeNode("Always Open")) {
+    ImGui::Text("This node is always open");
+    ImGui::TreePop();
+}
+```
+
+## Selectables
+
+### Selectable()
+
+Create a selectable item:
+
+```cpp
+IMGUI_API bool Selectable(const char* label, bool selected = false,
+                          ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0, 0));
+IMGUI_API bool Selectable(const char* label, bool* p_selected,
+                          ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0, 0));
+```
+
+<ParamField path="selected" type="bool">
+  Current selection state (read-only)
+</ParamField>
+
+<ParamField path="p_selected" type="bool*">
+  Selection state pointer (read-write, automatically toggled)
+</ParamField>
+
+<Tabs>
+  <Tab title="Manual Selection">
+    ```cpp
+    static int selected = -1;
+    
+    for (int n = 0; n < 5; n++) {
+        char label[32];
+        sprintf(label, "Item %d", n);
+        
+        if (ImGui::Selectable(label, selected == n)) {
+            selected = n;
+        }
+    }
+    ```
+  </Tab>
+  <Tab title="Automatic Toggle">
+    ```cpp
+    static bool selection[5] = { false, true, false, false, false };
+    
+    ImGui::Selectable("Item 0", &selection[0]);
+    ImGui::Selectable("Item 1", &selection[1]);
+    ImGui::Selectable("Item 2", &selection[2]);
+    ImGui::Selectable("Item 3", &selection[3]);
+    ImGui::Selectable("Item 4", &selection[4]);
+    ```
+  </Tab>
+</Tabs>
+
+## Selectable Flags
+
+```cpp
+// Allow double-click
+if (ImGui::Selectable("Item", selected, ImGuiSelectableFlags_AllowDoubleClick)) {
+    if (ImGui::IsMouseDoubleClicked(0)) {
+        // Handle double-click
+    }
+}
+
+// Disabled selectable
+ImGui::Selectable("Disabled", false, ImGuiSelectableFlags_Disabled);
+
+// Allow item overlap
+ImGui::Selectable("Overlap", &selected, ImGuiSelectableFlags_AllowOverlap);
+
+// Span all table columns
+ImGui::Selectable("Row", &selected, ImGuiSelectableFlags_SpanAllColumns);
+
+// Highlight when hovered
+ImGui::Selectable("Highlight", &selected, ImGuiSelectableFlags_Highlight);
+```
+
+## Selectables with Additional Content
+
+```cpp
+// Using SetNextItemAllowOverlap
+ImGui::SetNextItemAllowOverlap();
+ImGui::Selectable("file.cpp", &selected);
+ImGui::SameLine();
+ImGui::SmallButton("Edit");
+
+// Or using the flag
+ImGui::Selectable("file.h", &selected, ImGuiSelectableFlags_AllowOverlap);
+ImGui::SameLine();
+ImGui::SmallButton("View");
+```
+
+## Selectables in Tables
+
+```cpp
+if (ImGui::BeginTable("table", 3, ImGuiTableFlags_Borders)) {
+    static bool selected[10] = {};
+    
+    for (int i = 0; i < 10; i++) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        
+        char label[32];
+        sprintf(label, "Item %d", i);
+        ImGui::Selectable(label, &selected[i], ImGuiSelectableFlags_SpanAllColumns);
+        
+        ImGui::TableNextColumn();
+        ImGui::Text("Column 2");
+        
+        ImGui::TableNextColumn();
+        ImGui::Text("Column 3");
+    }
+    ImGui::EndTable();
+}
+```
+
+## Complete Example
+
+```cpp
+void ShowTreeSelectableDemo() {
+    ImGui::Begin("Tree & Selectable Demo");
+    
+    // Tree with selection
+    ImGui::Text("Tree with selection:");
+    static int tree_selected = -1;
+    
+    for (int i = 0; i < 3; i++) {
+        ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+        if (tree_selected == i)
+            flags |= ImGuiTreeNodeFlags_Selected;
+        
+        bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, flags, "Node %d", i);
+        
+        if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+            tree_selected = i;
+        
+        if (node_open) {
+            for (int j = 0; j < 3; j++) {
+                ImGuiTreeNodeFlags child_flags = flags | ImGuiTreeNodeFlags_Leaf;
+                int child_id = i * 10 + j;
+                
+                if (tree_selected == child_id)
+                    child_flags |= ImGuiTreeNodeFlags_Selected;
+                
+                ImGui::TreeNodeEx((void*)(intptr_t)child_id, child_flags, "Child %d", j);
+                
+                if (ImGui::IsItemClicked() && !ImGui::IsItemToggledOpen())
+                    tree_selected = child_id;
+                
+                ImGui::TreePop();
+            }
+            ImGui::TreePop();
+        }
+    }
+    
+    ImGui::Separator();
+    
+    // Collapsing headers
+    if (ImGui::CollapsingHeader("Section A")) {
+        ImGui::Text("Content A");
+    }
+    if (ImGui::CollapsingHeader("Section B")) {
+        ImGui::Text("Content B");
+    }
+    
+    ImGui::Separator();
+    
+    // Selectables
+    ImGui::Text("Simple selectables:");
+    static bool selection[5] = {};
+    ImGui::Selectable("Item 0", &selection[0]);
+    ImGui::Selectable("Item 1", &selection[1]);
+    ImGui::Selectable("Item 2", &selection[2]);
+    
+    ImGui::End();
+}
+```
+
+## Best Practices
+
+<Warning>
+  Always call `TreePop()` after `TreeNode()` returns true, even if you return early from the function.
+</Warning>
+
+<Tip>
+  Use `CollapsingHeader()` instead of `TreeNode()` when you don't need to nest content and want cleaner code.
+</Tip>
+
+<Note>
+  For large trees, consider using `ImGuiListClipper` to only display visible items and improve performance.
+</Note>

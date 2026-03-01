@@ -1,0 +1,491 @@
+---
+title: 'Popups and Modals'
+description: 'Popup and modal window widgets for Dear ImGui'
+---
+
+## Popup System
+
+Popups block normal mouse hovering detection behind them. If not modal, they can be closed by clicking anywhere outside them, or by pressing ESCAPE. Their visibility state is held internally instead of being held by the programmer.
+
+## Opening Popups
+
+### OpenPopup
+
+```cpp
+void ImGui::OpenPopup(const char* str_id, ImGuiPopupFlags popup_flags = 0)
+void ImGui::OpenPopup(ImGuiID id, ImGuiPopupFlags popup_flags = 0)
+```
+
+Mark popup as open (don't call every frame!).
+
+<ParamField path="str_id" type="const char*">
+  Popup identifier string
+</ParamField>
+
+<ParamField path="id" type="ImGuiID">
+  Popup identifier ID
+</ParamField>
+
+<ParamField path="popup_flags" type="ImGuiPopupFlags" default="0">
+  Popup flags (see ImGuiPopupFlags_)
+</ParamField>
+
+```cpp
+// Example
+if (ImGui::Button("Open Popup")) {
+    ImGui::OpenPopup("my_popup");
+}
+
+if (ImGui::BeginPopup("my_popup")) {
+    ImGui::Text("Popup content");
+    if (ImGui::Button("Close")) {
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+}
+```
+
+### OpenPopupOnItemClick
+
+```cpp
+void ImGui::OpenPopupOnItemClick(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 0)
+```
+
+Helper to open popup when clicked on last item. Default to `ImGuiPopupFlags_MouseButtonRight`.
+
+<ParamField path="str_id" type="const char*" default="NULL">
+  Popup identifier (NULL = use last item's ID)
+</ParamField>
+
+<ParamField path="popup_flags" type="ImGuiPopupFlags" default="0">
+  Popup flags
+</ParamField>
+
+```cpp
+// Example
+ImGui::Button("Right-click me");
+ImGui::OpenPopupOnItemClick("item_popup");
+
+if (ImGui::BeginPopup("item_popup")) {
+    ImGui::Text("Right-clicked!");
+    ImGui::EndPopup();
+}
+
+// Left-click
+ImGui::Button("Left-click me");
+ImGui::OpenPopupOnItemClick("left_popup", ImGuiPopupFlags_MouseButtonLeft);
+```
+
+### CloseCurrentPopup
+
+```cpp
+void ImGui::CloseCurrentPopup()
+```
+
+Manually close the popup we have begin-ed into.
+
+```cpp
+// Example
+if (ImGui::BeginPopup("my_popup")) {
+    if (ImGui::Button("Close") || ImGui::IsKeyPressed(ImGuiKey_Escape)) {
+        ImGui::CloseCurrentPopup();
+    }
+    ImGui::EndPopup();
+}
+```
+
+## Regular Popups
+
+### BeginPopup
+
+```cpp
+bool ImGui::BeginPopup(const char* str_id, ImGuiWindowFlags flags = 0)
+```
+
+Return true if the popup is open, and you can start outputting to it.
+
+<ParamField path="str_id" type="const char*">
+  Popup identifier
+</ParamField>
+
+<ParamField path="flags" type="ImGuiWindowFlags" default="0">
+  Window flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if popup is open
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::Button("Show Popup")) {
+    ImGui::OpenPopup("simple_popup");
+}
+
+if (ImGui::BeginPopup("simple_popup")) {
+    ImGui::Text("This is a simple popup");
+    ImGui::Separator();
+    if (ImGui::Selectable("Option 1")) { }
+    if (ImGui::Selectable("Option 2")) { }
+    if (ImGui::Selectable("Option 3")) { }
+    ImGui::EndPopup();
+}
+```
+
+### EndPopup
+
+```cpp
+void ImGui::EndPopup()
+```
+
+Close popup. Only call `EndPopup()` if `BeginPopupXXX()` returns true.
+
+## Modal Popups
+
+### BeginPopupModal
+
+```cpp
+bool ImGui::BeginPopupModal(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0)
+```
+
+Block every interaction behind the window, cannot be closed by user, add a dimming background, has a title bar.
+
+<ParamField path="name" type="const char*">
+  Modal window name/title
+</ParamField>
+
+<ParamField path="p_open" type="bool*" default="NULL">
+  Optional pointer to bool to show close button
+</ParamField>
+
+<ParamField path="flags" type="ImGuiWindowFlags" default="0">
+  Window flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if modal is open
+</ResponseField>
+
+```cpp
+// Example
+static bool show_modal = false;
+
+if (ImGui::Button("Open Modal")) {
+    show_modal = true;
+    ImGui::OpenPopup("My Modal");
+}
+
+if (show_modal) {
+    if (ImGui::BeginPopupModal("My Modal", &show_modal)) {
+        ImGui::Text("This is a modal dialog");
+        ImGui::Separator();
+        
+        if (ImGui::Button("OK")) {
+            ImGui::CloseCurrentPopup();
+            show_modal = false;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Cancel")) {
+            ImGui::CloseCurrentPopup();
+            show_modal = false;
+        }
+        
+        ImGui::EndPopup();
+    }
+}
+```
+
+## Context Menu Popups
+
+### BeginPopupContextItem
+
+```cpp
+bool ImGui::BeginPopupContextItem(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 0)
+```
+
+Open+begin popup when clicked on last item. Use `str_id==NULL` to associate the popup to previous item.
+
+<ParamField path="str_id" type="const char*" default="NULL">
+  Popup identifier (NULL = use last item's ID)
+</ParamField>
+
+<ParamField path="popup_flags" type="ImGuiPopupFlags" default="0">
+  Popup flags (default is right mouse button)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if popup is open
+</ResponseField>
+
+```cpp
+// Example
+ImGui::Text("Right-click me for context menu");
+if (ImGui::BeginPopupContextItem()) {
+    if (ImGui::MenuItem("Copy")) { /* Do copy */ }
+    if (ImGui::MenuItem("Paste")) { /* Do paste */ }
+    if (ImGui::MenuItem("Delete")) { /* Do delete */ }
+    ImGui::EndPopup();
+}
+
+// On a button
+ImGui::Button("Button with context menu");
+if (ImGui::BeginPopupContextItem("button_context")) {
+    ImGui::MenuItem("Action 1");
+    ImGui::MenuItem("Action 2");
+    ImGui::EndPopup();
+}
+```
+
+### BeginPopupContextWindow
+
+```cpp
+bool ImGui::BeginPopupContextWindow(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 0)
+```
+
+Open+begin popup when clicked on current window.
+
+<ParamField path="str_id" type="const char*" default="NULL">
+  Popup identifier
+</ParamField>
+
+<ParamField path="popup_flags" type="ImGuiPopupFlags" default="0">
+  Popup flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if popup is open
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::BeginPopupContextWindow()) {
+    if (ImGui::MenuItem("Clear Window")) { /* Clear */ }
+    if (ImGui::MenuItem("Close Window")) { /* Close */ }
+    ImGui::EndPopup();
+}
+```
+
+### BeginPopupContextVoid
+
+```cpp
+bool ImGui::BeginPopupContextVoid(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 0)
+```
+
+Open+begin popup when clicked in void (where there are no windows).
+
+<ParamField path="str_id" type="const char*" default="NULL">
+  Popup identifier
+</ParamField>
+
+<ParamField path="popup_flags" type="ImGuiPopupFlags" default="0">
+  Popup flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if popup is open
+</ResponseField>
+
+```cpp
+// Example - Right-click in empty space
+if (ImGui::BeginPopupContextVoid("void_menu")) {
+    if (ImGui::MenuItem("Create New Window")) { /* Create */ }
+    if (ImGui::MenuItem("Settings")) { /* Open settings */ }
+    ImGui::EndPopup();
+}
+```
+
+## Popup Queries
+
+### IsPopupOpen
+
+```cpp
+bool ImGui::IsPopupOpen(const char* str_id, ImGuiPopupFlags flags = 0)
+```
+
+Return true if the popup is open.
+
+<ParamField path="str_id" type="const char*">
+  Popup identifier
+</ParamField>
+
+<ParamField path="flags" type="ImGuiPopupFlags" default="0">
+  Query flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if popup is open
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::IsPopupOpen("my_popup")) {
+    ImGui::Text("Popup is currently open");
+}
+
+// Check if any popup is open
+if (ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId)) {
+    ImGui::Text("Some popup is open");
+}
+```
+
+## Popup Flags
+
+### ImGuiPopupFlags_
+
+Flags for `OpenPopup*()`, `BeginPopupContext*()`, `IsPopupOpen()` functions.
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiPopupFlags_None` | Default |
+| `ImGuiPopupFlags_MouseButtonLeft` | For BeginPopupContext*(): open on Left Mouse release |
+| `ImGuiPopupFlags_MouseButtonRight` | For BeginPopupContext*(): open on Right Mouse release (default) |
+| `ImGuiPopupFlags_MouseButtonMiddle` | For BeginPopupContext*(): open on Middle Mouse release |
+| `ImGuiPopupFlags_NoReopen` | Don't reopen same popup if already open |
+| `ImGuiPopupFlags_NoOpenOverExistingPopup` | Don't open if there's already a popup at the same level |
+| `ImGuiPopupFlags_NoOpenOverItems` | For BeginPopupContextWindow(): don't return true when hovering items |
+| `ImGuiPopupFlags_AnyPopupId` | For IsPopupOpen(): ignore the ImGuiID parameter |
+| `ImGuiPopupFlags_AnyPopupLevel` | For IsPopupOpen(): search/test at any level of the popup stack |
+
+```cpp
+// Examples
+
+// Left mouse button popup
+ImGui::Button("Left-click popup");
+ImGui::OpenPopupOnItemClick("left_popup", ImGuiPopupFlags_MouseButtonLeft);
+
+// Don't reopen
+if (ImGui::Button("Open Once")) {
+    ImGui::OpenPopup("once_popup", ImGuiPopupFlags_NoReopen);
+}
+
+// Middle mouse button
+ImGui::Text("Middle-click me");
+if (ImGui::BeginPopupContextItem("middle", ImGuiPopupFlags_MouseButtonMiddle)) {
+    ImGui::MenuItem("Action");
+    ImGui::EndPopup();
+}
+```
+
+## Advanced Examples
+
+### Confirmation Dialog
+
+```cpp
+void ShowDeleteConfirmation() {
+    static bool show_confirm = false;
+    
+    if (ImGui::Button("Delete Item")) {
+        show_confirm = true;
+        ImGui::OpenPopup("Delete?");
+    }
+    
+    if (show_confirm) {
+        ImVec2 center = ImGui::GetMainViewport()->GetCenter();
+        ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        
+        if (ImGui::BeginPopupModal("Delete?", NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Are you sure you want to delete this item?");
+            ImGui::Text("This operation cannot be undone.\n\n");
+            ImGui::Separator();
+            
+            if (ImGui::Button("Delete", ImVec2(120, 0))) {
+                // Perform delete
+                ImGui::CloseCurrentPopup();
+                show_confirm = false;
+            }
+            ImGui::SetItemDefaultFocus();
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel", ImVec2(120, 0))) {
+                ImGui::CloseCurrentPopup();
+                show_confirm = false;
+            }
+            ImGui::EndPopup();
+        }
+    }
+}
+```
+
+### Menu Popup
+
+```cpp
+void ShowMenuPopup() {
+    if (ImGui::Button("Show Menu")) {
+        ImGui::OpenPopup("menu_popup");
+    }
+    
+    if (ImGui::BeginPopup("menu_popup")) {
+        ImGui::SeparatorText("Actions");
+        if (ImGui::MenuItem("New", "Ctrl+N")) { }
+        if (ImGui::MenuItem("Open", "Ctrl+O")) { }
+        
+        ImGui::Separator();
+        if (ImGui::BeginMenu("Recent")) {
+            ImGui::MenuItem("file1.txt");
+            ImGui::MenuItem("file2.txt");
+            ImGui::EndMenu();
+        }
+        
+        ImGui::Separator();
+        if (ImGui::MenuItem("Quit", "Alt+F4")) { }
+        
+        ImGui::EndPopup();
+    }
+}
+```
+
+### Custom Positioned Popup
+
+```cpp
+if (ImGui::Button("Positioned Popup")) {
+    ImGui::OpenPopup("positioned");
+}
+
+ImVec2 button_pos = ImGui::GetItemRectMin();
+ImVec2 button_size = ImGui::GetItemRectSize();
+
+if (ImGui::BeginPopup("positioned")) {
+    // Popup appears below the button
+    ImGui::SetWindowPos(ImVec2(button_pos.x, button_pos.y + button_size.y));
+    ImGui::Text("Positioned below button");
+    ImGui::EndPopup();
+}
+```
+
+### Input Dialog Modal
+
+```cpp
+void ShowInputDialog() {
+    static bool show = false;
+    static char input_buf[128] = "";
+    
+    if (ImGui::Button("Enter Name")) {
+        show = true;
+        ImGui::OpenPopup("Input Name");
+    }
+    
+    if (show) {
+        ImGui::SetNextWindowSize(ImVec2(300, 0));
+        if (ImGui::BeginPopupModal("Input Name", &show, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("Please enter your name:");
+            ImGui::Separator();
+            
+            ImGui::SetKeyboardFocusHere();
+            bool enter_pressed = ImGui::InputText("##name", input_buf, IM_COUNTOF(input_buf), ImGuiInputTextFlags_EnterReturnsTrue);
+            
+            ImGui::Separator();
+            if (ImGui::Button("OK") || enter_pressed) {
+                // Process input
+                ImGui::CloseCurrentPopup();
+                show = false;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Cancel")) {
+                ImGui::CloseCurrentPopup();
+                show = false;
+            }
+            
+            ImGui::EndPopup();
+        }
+    }
+}
+```

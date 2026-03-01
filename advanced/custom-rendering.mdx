@@ -1,0 +1,376 @@
+---
+title: Custom Rendering
+description: Advanced techniques for custom rendering, channels, and low-level draw primitives in Dear ImGui.
+---
+
+# Custom Rendering
+
+This guide covers advanced custom rendering techniques including render channels, primitive allocation, and draw callbacks.
+
+## Render Channels
+
+Channels allow you to split rendering into layers that can be drawn out of order and then merged back together. This is useful for:
+
+- Rendering background elements after foreground elements
+- Minimizing draw calls when switching between different clipping rectangles
+- Creating complex layered UIs
+
+### Basic Channel Usage
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Split into 3 channels
+draw_list->ChannelsSplit(3);
+
+// Draw to channel 2 (will appear on top)
+draw_list->ChannelsSetCurrent(2);
+draw_list->AddRectFilled(ImVec2(100, 100), ImVec2(200, 200), 
+                         IM_COL32(255, 0, 0, 255));
+
+// Draw to channel 0 (will appear on bottom)
+draw_list->ChannelsSetCurrent(0);
+draw_list->AddRectFilled(ImVec2(120, 120), ImVec2(220, 220), 
+                         IM_COL32(0, 255, 0, 255));
+
+// Draw to channel 1
+draw_list->ChannelsSetCurrent(1);
+draw_list->AddRectFilled(ImVec2(140, 140), ImVec2(240, 240), 
+                         IM_COL32(0, 0, 255, 255));
+
+// Merge channels back (in order 0, 1, 2)
+draw_list->ChannelsMerge();
+```
+
+### Using ImDrawListSplitter
+
+For more complex scenarios, use `ImDrawListSplitter` directly. This allows you to stack splitters:
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+ImDrawListSplitter splitter;
+
+// Split into layers
+splitter.Split(draw_list, 3);
+
+// Draw to different channels
+splitter.SetCurrentChannel(draw_list, 0);
+// ... draw background ...
+
+splitter.SetCurrentChannel(draw_list, 1);
+// ... draw middle layer ...
+
+splitter.SetCurrentChannel(draw_list, 2);
+// ... draw foreground ...
+
+// Merge back
+splitter.Merge(draw_list);
+```
+
+<Note>
+Prefer using your own persistent `ImDrawListSplitter` instance as you can stack them. Using `ImDrawList::ChannelsXXXX()` doesn't support stacking.
+</Note>
+
+## Low-Level Primitive Allocation
+
+For maximum performance, you can manually allocate vertex and index buffers:
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Reserve space for 4 vertices and 6 indices (2 triangles)
+draw_list->PrimReserve(6, 4);
+
+// Define vertices
+ImVec2 p0(100, 100);
+ImVec2 p1(200, 100);
+ImVec2 p2(200, 200);
+ImVec2 p3(100, 200);
+
+ImU32 col = IM_COL32(255, 255, 0, 255);
+
+// Write vertices with UV coordinates
+draw_list->PrimWriteVtx(p0, ImVec2(0, 0), col);
+draw_list->PrimWriteVtx(p1, ImVec2(1, 0), col);
+draw_list->PrimWriteVtx(p2, ImVec2(1, 1), col);
+draw_list->PrimWriteVtx(p3, ImVec2(0, 1), col);
+
+// Write indices for two triangles
+ImDrawIdx vtx_idx = (ImDrawIdx)draw_list->_VtxCurrentIdx - 4;
+draw_list->PrimWriteIdx(vtx_idx + 0);
+draw_list->PrimWriteIdx(vtx_idx + 1);
+draw_list->PrimWriteIdx(vtx_idx + 2);
+draw_list->PrimWriteIdx(vtx_idx + 0);
+draw_list->PrimWriteIdx(vtx_idx + 2);
+draw_list->PrimWriteIdx(vtx_idx + 3);
+```
+
+### Primitive Helper Functions
+
+```cpp
+// Reserve space
+void PrimReserve(int idx_count, int vtx_count);
+
+// Unreserve if you reserved too much
+void PrimUnreserve(int idx_count, int vtx_count);
+
+// Draw axis-aligned rectangle (2 triangles)
+void PrimRect(const ImVec2& a, const ImVec2& b, ImU32 col);
+
+// Rectangle with UV coordinates
+void PrimRectUV(const ImVec2& a, const ImVec2& b, 
+                const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col);
+
+// Quad with UV coordinates  
+void PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& d,
+                const ImVec2& uv_a, const ImVec2& uv_b, 
+                const ImVec2& uv_c, const ImVec2& uv_d, ImU32 col);
+```
+
+## Draw Callbacks
+
+Draw callbacks allow you to execute custom code during rendering, useful for:
+
+- Changing render state (shaders, blend modes, etc.)
+- Emitting custom GPU commands
+- Integrating with external rendering systems
+
+```cpp
+void MyDrawCallback(const ImDrawList* parent_list, const ImDrawCmd* cmd)
+{
+    // Access custom data if provided
+    MyData* data = (MyData*)cmd->UserCallbackData;
+    
+    // Change GPU state, execute custom commands, etc.
+    // ...
+}
+
+// Usage
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+MyData my_data;
+draw_list->AddCallback(MyDrawCallback, &my_data);
+
+// Draw something that uses the custom render state
+draw_list->AddCircle(/* ... */);
+
+// Reset render state
+draw_list->AddCallback(ImDrawCallback_ResetRenderState, nullptr);
+```
+
+### Callback with Data Copy
+
+```cpp
+struct MyCallbackData {
+    float value;
+    int mode;
+};
+
+MyCallbackData data = { 1.5f, 2 };
+
+// Copy data into the draw list (will be available during render)
+draw_list->AddCallback(MyDrawCallback, &data, sizeof(MyCallbackData));
+```
+
+<Warning>
+**Important callback considerations:**
+- If `userdata_size == 0`: the `userdata` pointer is stored as-is
+- If `userdata_size > 0`: the data is copied into an internal buffer, and `ImDrawCmd::UserCallbackData` will point to that copy
+- All standard backends honor draw callbacks
+- Use `ImDrawCallback_ResetRenderState` to reset to default state
+</Warning>
+
+## Texture Management
+
+### Switching Textures
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Push a new texture
+ImTextureRef my_texture = /* your texture */;
+draw_list->PushTexture(my_texture);
+
+// All subsequent draw calls will use this texture
+draw_list->AddImage(my_texture, /* ... */);
+draw_list->AddImageRounded(my_texture, /* ... */);
+
+// Restore previous texture
+draw_list->PopTexture();
+```
+
+### Getting UV Coordinates for White Pixel
+
+```cpp
+// Useful for drawing colored shapes when texture is required
+ImVec2 white_uv = ImGui::GetFontTexUvWhitePixel();
+```
+
+## Polylines and Polygons
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Define points
+ImVec2 points[] = {
+    ImVec2(100, 100),
+    ImVec2(200, 150),
+    ImVec2(150, 250),
+    ImVec2(50, 200)
+};
+int num_points = IM_COUNTOF(points);
+
+// Draw polyline (connected lines)
+draw_list->AddPolyline(points, num_points, IM_COL32(255, 255, 0, 255),
+                       ImDrawFlags_Closed, 2.0f);
+
+// Fill convex polygon (fast)
+draw_list->AddConvexPolyFilled(points, num_points, IM_COL32(255, 0, 0, 128));
+
+// Fill concave polygon (slower, O(N^2) complexity)
+draw_list->AddConcavePolyFilled(points, num_points, IM_COL32(0, 255, 0, 128));
+```
+
+<Note>
+**Polygon filling notes:**
+- Only simple polygons are supported (no self-intersections, no holes)
+- Convex polygon fill is faster than concave
+- Concave polygon fill has O(N²) complexity but is provided for convenience
+</Note>
+
+## Advanced Clipping
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Clip to intersection with current clip rect
+ImVec2 clip_min(100, 100);
+ImVec2 clip_max(400, 300);
+draw_list->PushClipRect(clip_min, clip_max, true); // true = intersect
+
+// Draw clipped content
+draw_list->AddRectFilled(ImVec2(0, 0), ImVec2(500, 500), 
+                         IM_COL32(255, 0, 0, 128));
+
+draw_list->PopClipRect();
+
+// Clip to full screen (ignores current clip rect)
+draw_list->PushClipRectFullScreen();
+draw_list->AddCircle(ImVec2(250, 250), 100.0f, IM_COL32(0, 255, 0, 255));
+draw_list->PopClipRect();
+```
+
+<Note>
+**Clipping behavior:**
+- `ImGui::PushClipRect()` affects both rendering AND hit-testing
+- `ImDrawList::PushClipRect()` affects rendering only
+- Always pair `PushClipRect()` with `PopClipRect()`
+</Note>
+
+## Drawing Flags
+
+Use `ImDrawFlags` to customize shape rendering:
+
+```cpp
+// Round specific corners
+ImDrawFlags corners_tl_br = ImDrawFlags_RoundCornersTopLeft | 
+                            ImDrawFlags_RoundCornersBottomRight;
+draw_list->AddRect(p_min, p_max, col, 10.0f, corners_tl_br, 2.0f);
+
+// Disable rounding on all corners
+draw_list->AddRect(p_min, p_max, col, 10.0f, ImDrawFlags_RoundCornersNone);
+
+// Close polyline
+draw_list->AddPolyline(points, count, col, ImDrawFlags_Closed, 2.0f);
+```
+
+**Available flags:**
+- `ImDrawFlags_None`
+- `ImDrawFlags_Closed` - For AddPolyline(): connect last and first point
+- `ImDrawFlags_RoundCornersTopLeft` - Rounded corners
+- `ImDrawFlags_RoundCornersTopRight`
+- `ImDrawFlags_RoundCornersBottomLeft`
+- `ImDrawFlags_RoundCornersBottomRight`
+- `ImDrawFlags_RoundCornersNone` - Disable rounding
+- `ImDrawFlags_RoundCornersTop` - Top corners
+- `ImDrawFlags_RoundCornersBottom` - Bottom corners
+- `ImDrawFlags_RoundCornersLeft` - Left corners  
+- `ImDrawFlags_RoundCornersRight` - Right corners
+- `ImDrawFlags_RoundCornersAll` - All corners (default when rounding > 0)
+
+## Complete Example: Custom Widget
+
+```cpp
+void DrawCustomSlider(const char* label, float* value, float min, float max)
+{
+    ImGui::PushID(label);
+    
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImVec2 pos = ImGui::GetCursorScreenPos();
+    ImVec2 size(200, 20);
+    
+    // Handle interaction
+    ImGui::InvisibleButton("##slider", size);
+    bool active = ImGui::IsItemActive();
+    bool hovered = ImGui::IsItemHovered();
+    
+    if (active && ImGui::IsMouseDragging(0))
+    {
+        float mouse_x = ImGui::GetMousePos().x - pos.x;
+        *value = ImClamp(mouse_x / size.x * (max - min) + min, min, max);
+    }
+    
+    // Draw background
+    ImU32 bg_col = hovered ? IM_COL32(70, 70, 70, 255) : IM_COL32(50, 50, 50, 255);
+    draw_list->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), 
+                             bg_col, 3.0f);
+    
+    // Draw filled portion
+    float ratio = (*value - min) / (max - min);
+    float fill_width = size.x * ratio;
+    if (fill_width > 0)
+        draw_list->AddRectFilled(pos, 
+            ImVec2(pos.x + fill_width, pos.y + size.y),
+            IM_COL32(0, 130, 216, 255), 3.0f);
+    
+    // Draw handle
+    float handle_x = pos.x + fill_width;
+    draw_list->AddCircleFilled(ImVec2(handle_x, pos.y + size.y * 0.5f), 
+                               8.0f, 
+                               active ? IM_COL32(255, 255, 255, 255) : 
+                                        IM_COL32(200, 200, 200, 255));
+    
+    // Draw label
+    ImGui::SetCursorScreenPos(ImVec2(pos.x + size.x + 10, pos.y));
+    ImGui::Text("%s: %.2f", label, *value);
+    
+    ImGui::PopID();
+}
+```
+
+## Performance Tips
+
+<Steps>
+
+### Minimize Draw Calls
+
+Batch similar primitives together and avoid texture switches.
+
+### Use Channels Strategically
+
+Use channels to reduce draw calls when alternating between clipping regions.
+
+### Prefer High-Level Functions
+
+Use `AddRect()`, `AddCircle()` etc. instead of manual primitive allocation unless you need maximum performance.
+
+### Avoid Unnecessary Clipping
+
+Only use clipping when necessary; it adds overhead.
+
+</Steps>
+
+## Reference
+
+- [ImDrawList API](https://github.com/ocornut/imgui/blob/master/imgui.h) (line 3268)
+- See `imgui_demo.cpp` under "Examples->Custom Rendering" for more examples

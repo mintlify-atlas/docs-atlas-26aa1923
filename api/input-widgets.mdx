@@ -1,0 +1,418 @@
+---
+title: 'Input Widgets'
+description: 'Text and numeric input widgets for Dear ImGui'
+---
+
+## Text Input
+
+### InputText
+
+```cpp
+bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL)
+```
+
+Single-line text input.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="buf" type="char*">
+  Text buffer
+</ParamField>
+
+<ParamField path="buf_size" type="size_t">
+  Buffer size including null terminator
+</ParamField>
+
+<ParamField path="flags" type="ImGuiInputTextFlags" default="0">
+  Input flags (see ImGuiInputTextFlags_)
+</ParamField>
+
+<ParamField path="callback" type="ImGuiInputTextCallback" default="NULL">
+  Optional callback function
+</ParamField>
+
+<ParamField path="user_data" type="void*" default="NULL">
+  Optional user data passed to callback
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+```cpp
+// Example
+static char text[128] = "Hello";
+ImGui::InputText("Label", text, IM_COUNTOF(text));
+```
+
+### InputTextMultiline
+
+```cpp
+bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL)
+```
+
+Multi-line text input.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="buf" type="char*">
+  Text buffer
+</ParamField>
+
+<ParamField path="buf_size" type="size_t">
+  Buffer size including null terminator
+</ParamField>
+
+<ParamField path="size" type="const ImVec2&" default="ImVec2(0, 0)">
+  Size of the input area
+</ParamField>
+
+<ParamField path="flags" type="ImGuiInputTextFlags" default="0">
+  Input flags
+</ParamField>
+
+<ParamField path="callback" type="ImGuiInputTextCallback" default="NULL">
+  Optional callback function
+</ParamField>
+
+<ParamField path="user_data" type="void*" default="NULL">
+  Optional user data
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+```cpp
+// Example
+static char text[1024] = "Multi-line\ntext";
+ImGui::InputTextMultiline("##source", text, IM_COUNTOF(text), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16));
+```
+
+### InputTextWithHint
+
+```cpp
+bool ImGui::InputTextWithHint(const char* label, const char* hint, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL)
+```
+
+Input with a hint/placeholder text.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="hint" type="const char*">
+  Hint text displayed when empty
+</ParamField>
+
+<ParamField path="buf" type="char*">
+  Text buffer
+</ParamField>
+
+<ParamField path="buf_size" type="size_t">
+  Buffer size
+</ParamField>
+
+<ParamField path="flags" type="ImGuiInputTextFlags" default="0">
+  Input flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+```cpp
+// Example
+static char str[128] = "";
+ImGui::InputTextWithHint("Search", "Enter search term...", str, IM_COUNTOF(str));
+```
+
+## Numeric Input
+
+### InputFloat
+
+```cpp
+bool ImGui::InputFloat(const char* label, float* v, float step = 0.0f, float step_fast = 0.0f, const char* format = "%.3f", ImGuiInputTextFlags flags = 0)
+```
+
+Input a float value.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="v" type="float*">
+  Pointer to float value
+</ParamField>
+
+<ParamField path="step" type="float" default="0.0f">
+  Step size for +/- buttons
+</ParamField>
+
+<ParamField path="step_fast" type="float" default="0.0f">
+  Fast step size (when holding Shift)
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%.3f">
+  Display format
+</ParamField>
+
+<ParamField path="flags" type="ImGuiInputTextFlags" default="0">
+  Input flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+```cpp
+// Example
+static float f = 0.001f;
+ImGui::InputFloat("Float", &f, 0.01f, 1.0f, "%.3f");
+```
+
+### InputFloat2
+
+```cpp
+bool ImGui::InputFloat2(const char* label, float v[2], const char* format = "%.3f", ImGuiInputTextFlags flags = 0)
+```
+
+Input 2 float values.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="v" type="float[2]">
+  Array of 2 floats
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%.3f">
+  Display format
+</ParamField>
+
+<ParamField path="flags" type="ImGuiInputTextFlags" default="0">
+  Input flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+```cpp
+// Example
+static float vec2[2] = { 0.0f, 0.0f };
+ImGui::InputFloat2("Position", vec2);
+```
+
+### InputFloat3
+
+```cpp
+bool ImGui::InputFloat3(const char* label, float v[3], const char* format = "%.3f", ImGuiInputTextFlags flags = 0)
+```
+
+Input 3 float values.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="v" type="float[3]">
+  Array of 3 floats
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%.3f">
+  Display format
+</ParamField>
+
+<ParamField path="flags" type="ImGuiInputTextFlags" default="0">
+  Input flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+```cpp
+// Example
+static float vec3[3] = { 0.0f, 0.0f, 0.0f };
+ImGui::InputFloat3("Position", vec3);
+```
+
+### InputFloat4
+
+```cpp
+bool ImGui::InputFloat4(const char* label, float v[4], const char* format = "%.3f", ImGuiInputTextFlags flags = 0)
+```
+
+Input 4 float values.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="v" type="float[4]">
+  Array of 4 floats
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%.3f">
+  Display format
+</ParamField>
+
+<ParamField path="flags" type="ImGuiInputTextFlags" default="0">
+  Input flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+### InputInt
+
+```cpp
+bool ImGui::InputInt(const char* label, int* v, int step = 1, int step_fast = 100, ImGuiInputTextFlags flags = 0)
+```
+
+Input an integer value.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="v" type="int*">
+  Pointer to int value
+</ParamField>
+
+<ParamField path="step" type="int" default="1">
+  Step size for +/- buttons
+</ParamField>
+
+<ParamField path="step_fast" type="int" default="100">
+  Fast step size (when holding Shift)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiInputTextFlags" default="0">
+  Input flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+```cpp
+// Example
+static int i = 0;
+ImGui::InputInt("Integer", &i);
+```
+
+### InputInt2
+
+```cpp
+bool ImGui::InputInt2(const char* label, int v[2], ImGuiInputTextFlags flags = 0)
+```
+
+Input 2 integer values.
+
+### InputInt3
+
+```cpp
+bool ImGui::InputInt3(const char* label, int v[3], ImGuiInputTextFlags flags = 0)
+```
+
+Input 3 integer values.
+
+### InputInt4
+
+```cpp
+bool ImGui::InputInt4(const char* label, int v[4], ImGuiInputTextFlags flags = 0)
+```
+
+Input 4 integer values.
+
+### InputDouble
+
+```cpp
+bool ImGui::InputDouble(const char* label, double* v, double step = 0.0, double step_fast = 0.0, const char* format = "%.6f", ImGuiInputTextFlags flags = 0)
+```
+
+Input a double value.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="v" type="double*">
+  Pointer to double value
+</ParamField>
+
+<ParamField path="step" type="double" default="0.0">
+  Step size for +/- buttons
+</ParamField>
+
+<ParamField path="step_fast" type="double" default="0.0">
+  Fast step size
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%.6f">
+  Display format
+</ParamField>
+
+<ParamField path="flags" type="ImGuiInputTextFlags" default="0">
+  Input flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+## Input Text Flags
+
+### ImGuiInputTextFlags_
+
+Flags for `InputText()`, `InputTextMultiline()` functions.
+
+#### Basic Filters
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiInputTextFlags_CharsDecimal` | Allow 0123456789.+-*/ |
+| `ImGuiInputTextFlags_CharsHexadecimal` | Allow 0123456789ABCDEFabcdef |
+| `ImGuiInputTextFlags_CharsScientific` | Allow 0123456789.+-*/eE |
+| `ImGuiInputTextFlags_CharsUppercase` | Turn a..z into A..Z |
+| `ImGuiInputTextFlags_CharsNoBlank` | Filter out spaces, tabs |
+
+#### Input Behavior
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiInputTextFlags_AllowTabInput` | Pressing TAB inputs a '\t' character |
+| `ImGuiInputTextFlags_EnterReturnsTrue` | Return true when Enter is pressed |
+| `ImGuiInputTextFlags_EscapeClearsAll` | Escape key clears content |
+| `ImGuiInputTextFlags_CtrlEnterForNewLine` | In multi-line mode: validate with Enter, add new line with Ctrl+Enter |
+
+#### Options
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiInputTextFlags_ReadOnly` | Read-only mode |
+| `ImGuiInputTextFlags_Password` | Display all characters as '*' |
+| `ImGuiInputTextFlags_AlwaysOverwrite` | Overwrite mode |
+| `ImGuiInputTextFlags_AutoSelectAll` | Select entire text when first taking focus |
+| `ImGuiInputTextFlags_NoHorizontalScroll` | Disable following cursor horizontally |
+| `ImGuiInputTextFlags_NoUndoRedo` | Disable undo/redo |
+| `ImGuiInputTextFlags_ElideLeft` | Elide left side when text doesn't fit |
+
+#### Callbacks
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiInputTextFlags_CallbackCompletion` | Callback on pressing TAB |
+| `ImGuiInputTextFlags_CallbackHistory` | Callback on pressing Up/Down arrows |
+| `ImGuiInputTextFlags_CallbackAlways` | Callback on each iteration |
+| `ImGuiInputTextFlags_CallbackCharFilter` | Callback on character inputs |
+| `ImGuiInputTextFlags_CallbackResize` | Callback on buffer capacity changes |
+| `ImGuiInputTextFlags_CallbackEdit` | Callback on any edit |

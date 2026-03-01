@@ -1,0 +1,213 @@
+---
+title: Dear ImGui
+description: A bloat-free graphical user interface library for C++
+---
+
+<img
+  className="block dark:hidden"
+  src="/images/hero-light.svg"
+  alt="Dear ImGui Hero Light"
+/>
+<img
+  className="hidden dark:block"
+  src="/images/hero-dark.svg"
+  alt="Dear ImGui Hero Dark"
+/>
+
+## What is Dear ImGui?
+
+Dear ImGui is a **bloat-free graphical user interface library for C++**. It outputs optimized vertex buffers that you can render anytime in your 3D-pipeline-enabled application. It is fast, portable, renderer agnostic, and self-contained with no external dependencies.
+
+Dear ImGui is designed to **enable fast iterations** and to **empower programmers** to create **content creation tools and visualization/debug tools** (as opposed to UI for the average end-user). It favors simplicity and productivity toward this goal and lacks certain features commonly found in more high-level libraries.
+
+<CardGroup cols={2}>
+  <Card
+    title="Get started"
+    icon="rocket"
+    href="/quickstart"
+  >
+    Create your first Dear ImGui application in minutes
+  </Card>
+  <Card
+    title="Integration guide"
+    icon="puzzle-piece"
+    href="/integration"
+  >
+    Add Dear ImGui to your existing project
+  </Card>
+  <Card
+    title="API reference"
+    icon="book"
+    href="/api-reference"
+  >
+    Explore the complete Dear ImGui API
+  </Card>
+  <Card
+    title="Examples"
+    icon="code"
+    href="https://github.com/ocornut/imgui/tree/master/examples"
+  >
+    Browse 20+ working example applications
+  </Card>
+</CardGroup>
+
+## Key features
+
+### Immediate mode paradigm
+
+The IMGUI paradigm minimizes state synchronization, state duplication, and state retention from the user's point of view. It is less error-prone than traditional retained-mode interfaces and lends itself to creating dynamic user interfaces.
+
+```cpp
+ImGui::Text("Hello, world %d", 123);
+if (ImGui::Button("Save")) {
+    MySaveFunction();
+}
+ImGui::InputText("string", buf, IM_COUNTOF(buf));
+ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+```
+
+### Portable and self-contained
+
+- **No external dependencies** - all files in the root folder compile together
+- **Platform agnostic** - runs anywhere you can render textured triangles
+- **Renderer agnostic** - works with DirectX, OpenGL, Vulkan, Metal, WebGPU, and more
+- **Battle-tested** - used by major game studios and tools worldwide
+
+### Simple integration
+
+Dear ImGui outputs vertex buffers and command lists that you render in your application. The library doesn't touch graphics state directly - you maintain full control.
+
+<CodeGroup>
+```cpp Integration example
+// Setup Dear ImGui context
+IMGUI_CHECKVERSION();
+ImGui::CreateContext();
+ImGuiIO& io = ImGui::GetIO();
+
+// Setup Platform/Renderer backends
+ImGui_ImplGlfw_InitForOpenGL(window, true);
+ImGui_ImplOpenGL3_Init(glsl_version);
+
+// Main loop
+while (!glfwWindowShouldClose(window)) {
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+
+    // Your UI code here
+    ImGui::ShowDemoWindow();
+
+    ImGui::Render();
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    glfwSwapBuffers(window);
+}
+```
+
+```cpp Hello World
+ImGui::Begin("Hello, world!");
+ImGui::Text("This is some useful text.");
+ImGui::Checkbox("Demo Window", &show_demo_window);
+ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+ImGui::ColorEdit3("clear color", (float*)&clear_color);
+
+if (ImGui::Button("Button")) {
+    counter++;
+}
+ImGui::SameLine();
+ImGui::Text("counter = %d", counter);
+ImGui::End();
+```
+</CodeGroup>
+
+## Use cases
+
+Dear ImGui is particularly suited to:
+
+<CardGroup cols={2}>
+  <Card icon="gamepad">
+    **Game engine tools** - Level editors, asset browsers, debugging overlays
+  </Card>
+  <Card icon="chart-line">
+    **Data visualization** - Real-time graphs, profilers, metrics dashboards
+  </Card>
+  <Card icon="wrench">
+    **Development tools** - Debuggers, memory editors, console interfaces
+  </Card>
+  <Card icon="cube">
+    **3D applications** - CAD tools, animation software, simulation controls
+  </Card>
+</CardGroup>
+
+<Note>
+Dear ImGui is designed for **programmers** and **tools**, not for end-user applications. Full internationalization and advanced accessibility features are not supported.
+</Note>
+
+## Design philosophy
+
+Dear ImGui follows several core principles:
+
+- **Minimize state synchronization** - Reduce the need to keep UI state in sync with application state
+- **Minimize setup and maintenance** - Get running quickly without complex initialization
+- **Easy to use for dynamic UI** - Reflection of dynamic data sets and runtime conditions
+- **Easy to hack and improve** - Simple, readable C++ code
+- **Efficient** - Optimized runtime performance and memory consumption
+- **Portable** - Runs on desktop, mobile, consoles, and embedded systems
+
+## Community and support
+
+<CardGroup cols={3}>
+  <Card
+    title="GitHub Discussions"
+    icon="github"
+    href="https://github.com/ocornut/imgui/discussions"
+  >
+    Get help from the community
+  </Card>
+  <Card
+    title="Demo & Examples"
+    icon="play"
+    href="https://pthom.github.io/imgui_manual_online/manual/imgui_manual.html"
+  >
+    Try the interactive demo online
+  </Card>
+  <Card
+    title="Gallery"
+    icon="images"
+    href="https://github.com/ocornut/imgui/issues?q=label%3Agallery"
+  >
+    See what others are building
+  </Card>
+</CardGroup>
+
+## Production ready
+
+Dear ImGui is used by hundreds of major projects including:
+
+- **Tracy Profiler** - Real-time CPU/GPU profiler
+- **ImHex** - Hex editor and data analysis tool
+- **RemedyBG** - High-performance debugger
+- **Game engines** - Unreal Engine, Unity (via plugins), custom engines
+- **AAA game studios** - Used in shipped titles across all platforms
+
+<Info>
+Dear ImGui is free and open source under the MIT license, but relies on community support for continued development. Consider [sponsoring the project](https://github.com/ocornut/imgui/wiki/Funding) if you use it commercially.
+</Info>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card
+    title="Quickstart guide"
+    icon="bolt"
+    href="/quickstart"
+  >
+    Build your first Dear ImGui application
+  </Card>
+  <Card
+    title="Integration guide"
+    icon="layer-group"
+    href="/integration"
+  >
+    Add Dear ImGui to an existing project
+  </Card>
+</CardGroup>

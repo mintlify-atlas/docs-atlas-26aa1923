@@ -1,0 +1,354 @@
+---
+title: Child Windows
+description: Functions for creating child windows with independent scrolling regions
+---
+
+Child windows are self-contained scrolling/clipping regions within a parent window. They're useful for creating complex layouts with independent scroll areas, embedding panels, and organizing content.
+
+## BeginChild (String ID)
+
+Creates a child window with a string identifier.
+
+```cpp
+bool BeginChild(const char* str_id, const ImVec2& size = ImVec2(0, 0), 
+                ImGuiChildFlags child_flags = 0, ImGuiWindowFlags window_flags = 0);
+```
+
+### Parameters
+
+<ParamField path="str_id" type="const char*" required>
+  Unique identifier for the child window within the parent.
+</ParamField>
+
+<ParamField path="size" type="const ImVec2&" default="ImVec2(0, 0)">
+  Child window size. Per axis: `0.0f` = use remaining parent size, `>0.0f` = specified size, `<0.0f` = use remaining minus specified value.
+</ParamField>
+
+<ParamField path="child_flags" type="ImGuiChildFlags" default="0">
+  Child-specific flags (borders, auto-resize, etc.). Before v1.90, this was a `bool border` parameter.
+</ParamField>
+
+<ParamField path="window_flags" type="ImGuiWindowFlags" default="0">
+  Standard window flags (scrollbars, input handling, etc.).
+</ParamField>
+
+### Returns
+
+<ResponseField name="return" type="bool">
+  Returns false if the child window is collapsed or fully clipped. You must still call `EndChild()` regardless.
+</ResponseField>
+
+### Description
+
+Child windows:
+- Create independent scrolling/clipping regions
+- Can contain any widgets including other child windows
+- Inherit parent window's font and style
+- Can have borders, auto-resize, and custom backgrounds
+
+### Example
+
+```cpp
+// Simple scrollable region
+ImGui::BeginChild("ScrollingRegion", ImVec2(0, 300));
+for (int i = 0; i < 100; i++) {
+    ImGui::Text("Line %d", i);
+}
+ImGui::EndChild();
+
+// Child with border
+ImGui::BeginChild("BorderedChild", ImVec2(200, 200), ImGuiChildFlags_Borders);
+ImGui::Text("Content with border");
+ImGui::EndChild();
+
+// Auto-resizing child
+ImGui::BeginChild("AutoResize", ImVec2(0, 0), 
+    ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+ImGui::Text("This child");
+ImGui::Text("auto-resizes");
+ImGui::Text("to content");
+ImGui::EndChild();
+```
+
+<Warning>
+**Before v1.90**: The third parameter was `bool border`. This API is backward compatible:
+- `BeginChild("Name", size, false)` → `BeginChild("Name", size, 0)`
+- `BeginChild("Name", size, true)` → `BeginChild("Name", size, ImGuiChildFlags_Borders)`
+
+Update your old code for clarity.
+</Warning>
+
+## BeginChild (ImGuiID)
+
+Creates a child window with a numeric identifier.
+
+```cpp
+bool BeginChild(ImGuiID id, const ImVec2& size = ImVec2(0, 0), 
+                ImGuiChildFlags child_flags = 0, ImGuiWindowFlags window_flags = 0);
+```
+
+### Parameters
+
+<ParamField path="id" type="ImGuiID" required>
+  Unique numeric identifier for the child window. Useful when generating children in loops.
+</ParamField>
+
+<ParamField path="size" type="const ImVec2&" default="ImVec2(0, 0)">
+  Child window size.
+</ParamField>
+
+<ParamField path="child_flags" type="ImGuiChildFlags" default="0">
+  Child-specific flags.
+</ParamField>
+
+<ParamField path="window_flags" type="ImGuiWindowFlags" default="0">
+  Standard window flags.
+</ParamField>
+
+### Example
+
+```cpp
+// Generate multiple child windows in a loop
+for (int i = 0; i < 3; i++) {
+    ImGui::PushID(i);
+    ImGuiID child_id = ImGui::GetID("child");
+    
+    ImGui::BeginChild(child_id, ImVec2(150, 150), ImGuiChildFlags_Borders);
+    ImGui::Text("Child %d", i);
+    ImGui::Button("Button");
+    ImGui::EndChild();
+    
+    ImGui::PopID();
+    ImGui::SameLine();
+}
+```
+
+## EndChild
+
+Ends the current child window.
+
+```cpp
+void EndChild();
+```
+
+### Description
+
+Must be called for every `BeginChild()`, regardless of return value.
+
+### Example
+
+```cpp
+if (ImGui::BeginChild("MyChild")) {
+    ImGui::Text("Content");
+}
+ImGui::EndChild(); // Always called
+```
+
+<Warning>
+Like `Begin/End`, you must always call `EndChild()` even if `BeginChild()` returns false. This inconsistency exists for legacy reasons and will be fixed in a future update.
+</Warning>
+
+## Child Window Sizing
+
+### Manual Sizing
+
+```cpp
+// Fixed size
+ImGui::BeginChild("Fixed", ImVec2(400, 300));
+
+// Use all remaining width, fixed height
+ImGui::BeginChild("FullWidth", ImVec2(0, 300));
+
+// Use all remaining height, fixed width
+ImGui::BeginChild("FullHeight", ImVec2(400, 0));
+
+// Use all remaining space
+ImGui::BeginChild("FullSize", ImVec2(0, 0));
+
+// Right-align: use remaining width minus 200px
+ImGui::BeginChild("RightAlign", ImVec2(-200, 0));
+
+// Bottom-align: use remaining height minus 100px
+ImGui::BeginChild("BottomAlign", ImVec2(0, -100));
+```
+
+### Auto-Resize
+
+```cpp
+// Auto-resize X axis based on content
+ImGui::BeginChild("AutoX", ImVec2(0, 200), ImGuiChildFlags_AutoResizeX);
+
+// Auto-resize Y axis based on content
+ImGui::BeginChild("AutoY", ImVec2(200, 0), ImGuiChildFlags_AutoResizeY);
+
+// Auto-resize both axes (defeats purpose of scrolling - not recommended)
+ImGui::BeginChild("AutoBoth", ImVec2(0, 0), 
+    ImGuiChildFlags_AutoResizeX | ImGuiChildFlags_AutoResizeY);
+```
+
+<Note>
+Combining `ImGuiChildFlags_AutoResizeX` and `ImGuiChildFlags_AutoResizeY` defeats the purpose of a scrolling region and is not recommended. The child will grow infinitely with content.
+</Note>
+
+## Common Use Cases
+
+### Split Panels
+
+```cpp
+ImGui::Begin("Split View");
+
+// Left panel
+ImGui::BeginChild("LeftPanel", ImVec2(200, 0), ImGuiChildFlags_Borders);
+ImGui::Text("Left Panel");
+ImGui::Button("Item 1");
+ImGui::Button("Item 2");
+ImGui::Button("Item 3");
+ImGui::EndChild();
+
+ImGui::SameLine();
+
+// Right panel (takes remaining space)
+ImGui::BeginChild("RightPanel", ImVec2(0, 0), ImGuiChildFlags_Borders);
+ImGui::Text("Right Panel");
+ImGui::TextWrapped("This panel takes up the remaining space.");
+ImGui::EndChild();
+
+ImGui::End();
+```
+
+### Scrollable Content Area
+
+```cpp
+ImGui::Begin("Document Viewer");
+
+// Header (not scrolling)
+ImGui::Text("Document Header");
+ImGui::Separator();
+
+// Scrollable content
+ImGui::BeginChild("Content", ImVec2(0, -50), ImGuiChildFlags_Borders);
+for (int i = 0; i < 100; i++) {
+    ImGui::Text("Document line %d", i);
+}
+ImGui::EndChild();
+
+// Footer (not scrolling)
+ImGui::Separator();
+ImGui::Text("Document Footer");
+
+ImGui::End();
+```
+
+### Game Inventory
+
+```cpp
+ImGui::Begin("Inventory");
+
+// Equipment slots (fixed)
+ImGui::Text("Equipment");
+ImGui::Button("Head");
+ImGui::Button("Body");
+ImGui::Button("Legs");
+ImGui::Separator();
+
+// Scrollable inventory
+ImGui::Text("Items");
+ImGui::BeginChild("ItemList", ImVec2(0, 0), 
+    ImGuiChildFlags_Borders, ImGuiWindowFlags_HorizontalScrollbar);
+
+// Grid of items
+for (int i = 0; i < 50; i++) {
+    ImGui::PushID(i);
+    ImGui::Button("Item", ImVec2(64, 64));
+    if ((i + 1) % 4 != 0) {
+        ImGui::SameLine();
+    }
+    ImGui::PopID();
+}
+
+ImGui::EndChild();
+ImGui::End();
+```
+
+### Console/Log Window
+
+```cpp
+static std::vector<std::string> log_lines;
+
+ImGui::Begin("Console");
+
+// Input area
+static char input_buf[256] = "";
+if (ImGui::InputText("Command", input_buf, sizeof(input_buf), 
+    ImGuiInputTextFlags_EnterReturnsTrue)) {
+    log_lines.push_back(input_buf);
+    input_buf[0] = '\0';
+}
+
+ImGui::Separator();
+
+// Scrollable log
+ImGui::BeginChild("LogArea", ImVec2(0, 0), ImGuiChildFlags_Borders);
+
+for (const auto& line : log_lines) {
+    ImGui::TextUnformatted(line.c_str());
+}
+
+// Auto-scroll to bottom when new content added
+if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY()) {
+    ImGui::SetScrollHereY(1.0f);
+}
+
+ImGui::EndChild();
+ImGui::End();
+```
+
+### Nested Children
+
+```cpp
+ImGui::Begin("Nested Layout");
+
+ImGui::BeginChild("Outer", ImVec2(0, 0), ImGuiChildFlags_Borders);
+
+ImGui::Text("Outer child");
+ImGui::Separator();
+
+// Nested child
+ImGui::BeginChild("Inner", ImVec2(0, 100), ImGuiChildFlags_Borders);
+ImGui::Text("Inner child with independent scrolling");
+for (int i = 0; i < 20; i++) {
+    ImGui::Text("Line %d", i);
+}
+ImGui::EndChild();
+
+ImGui::Text("Back to outer child");
+
+ImGui::EndChild();
+ImGui::End();
+```
+
+## Performance Considerations
+
+```cpp
+// Skip expensive rendering when child is not visible
+if (ImGui::BeginChild("Expensive", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
+    // Only render when visible
+    for (int i = 0; i < 10000; i++) {
+        ImGui::Text("Expensive item %d", i);
+    }
+}
+ImGui::EndChild();
+
+// Use ImGuiListClipper for very long lists
+ImGui::BeginChild("HugeList", ImVec2(0, 0), ImGuiChildFlags_Borders);
+
+ImGuiListClipper clipper;
+clipper.Begin(100000);
+while (clipper.Step()) {
+    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+        ImGui::Text("Item %d", i);
+    }
+}
+
+ImGui::EndChild();
+```

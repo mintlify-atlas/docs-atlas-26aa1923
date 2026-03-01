@@ -1,0 +1,578 @@
+---
+title: Integration guide
+description: Add Dear ImGui to your existing application or game engine
+---
+
+## Overview
+
+Integrating Dear ImGui into an existing application typically involves:
+
+1. Adding the core Dear ImGui files to your project
+2. Choosing and integrating platform and renderer backends
+3. Initializing Dear ImGui in your application startup
+4. Calling Dear ImGui functions in your main loop
+5. Rendering the Dear ImGui draw data
+
+<Info>
+Most integrations take **less than an hour** when using existing backends. Custom backends require more time but are straightforward to implement.
+</Info>
+
+## Core files
+
+The core Dear ImGui library is self-contained in these files (from the repository root):
+
+<CodeGroup>
+```txt Required files
+imgui.cpp          // Main implementation
+imgui.h            // Public API
+imgui_draw.cpp     // Rendering
+imgui_tables.cpp   // Tables functionality
+imgui_widgets.cpp  // Widget implementations
+```
+
+```txt Configuration (optional)
+imconfig.h         // Compile-time configuration
+```
+
+```txt Helpful additions
+imgui_demo.cpp     // Demo window (highly recommended for learning)
+imgui_internal.h   // Internal API (only if you need it)
+```
+</CodeGroup>
+
+<Note>
+**No build process required** - just add these files to your existing project and compile them.
+</Note>
+
+## Choosing backends
+
+Dear ImGui needs two types of backends:
+
+### Platform backends
+
+Handle windowing, input (mouse/keyboard/gamepad), and OS features:
+
+- **imgui_impl_glfw.cpp** - GLFW (cross-platform, recommended)
+- **imgui_impl_sdl2.cpp** / **imgui_impl_sdl3.cpp** - SDL2/SDL3 (cross-platform)
+- **imgui_impl_win32.cpp** - Win32 native API (Windows only)
+- **imgui_impl_osx.mm** - macOS native API
+- **imgui_impl_android.cpp** - Android native
+- **imgui_impl_glut.cpp** - GLUT/FreeGLUT (legacy, not recommended)
+
+### Renderer backends
+
+Handle texture creation and rendering Dear ImGui draw commands:
+
+- **imgui_impl_opengl3.cpp** - OpenGL 3/4, OpenGL ES 2/3, WebGL
+- **imgui_impl_opengl2.cpp** - OpenGL 2 (legacy fixed pipeline)
+- **imgui_impl_dx11.cpp** - DirectX 11
+- **imgui_impl_dx12.cpp** - DirectX 12
+- **imgui_impl_dx9.cpp** - DirectX 9
+- **imgui_impl_vulkan.cpp** - Vulkan
+- **imgui_impl_metal.mm** - Metal (macOS/iOS)
+- **imgui_impl_wgpu.cpp** - WebGPU
+- **imgui_impl_sdlrenderer3.cpp** - SDL_Renderer
+
+<Tabs>
+  <Tab title="Recommended combos">
+    | Platform | Renderer | Use case |
+    |----------|----------|----------|
+    | GLFW | OpenGL3 | Desktop cross-platform |
+    | SDL3 | OpenGL3 | Games, cross-platform |
+    | SDL3 | Vulkan | Modern graphics |
+    | Win32 | DX11 | Windows native |
+    | Win32 | DX12 | Windows, modern graphics |
+  </Tab>
+  <Tab title="All backends">
+    See the complete list in the [backends/](https://github.com/ocornut/imgui/tree/master/backends) folder. All backends are officially maintained.
+  </Tab>
+</Tabs>
+
+## Integration steps
+
+<Steps>
+  <Step title="Add files to your project">
+    Copy the core files and your chosen backends:
+
+    ```bash
+    # Core library
+    imgui/imgui.cpp
+    imgui/imgui_draw.cpp
+    imgui/imgui_tables.cpp
+    imgui/imgui_widgets.cpp
+    imgui/imgui_demo.cpp
+    
+    # Backends (example: GLFW + OpenGL3)
+    imgui/backends/imgui_impl_glfw.cpp
+    imgui/backends/imgui_impl_opengl3.cpp
+    ```
+
+    Add these files to your build system (CMake, Make, Visual Studio project, etc.).
+  </Step>
+
+  <Step title="Include headers">
+    In your application code:
+
+    ```cpp
+    #include "imgui.h"
+    #include "imgui_impl_glfw.h"   // Your platform backend
+    #include "imgui_impl_opengl3.h" // Your renderer backend
+    ```
+  </Step>
+
+  <Step title="Initialize at startup">
+    After creating your window and graphics context:
+
+    ```cpp
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // Optional: enable keyboard/gamepad controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    
+    // Setup style
+    ImGui::StyleColorsDark();
+    // or: ImGui::StyleColorsLight();
+    // or: ImGui::StyleColorsClassic();
+    
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 130");
+    ```
+  </Step>
+
+  <Step title="Per-frame updates">
+    At the start of your frame, before UI code:
+
+    ```cpp
+    // Poll events (platform-specific)
+    glfwPollEvents();
+    
+    // Start the Dear ImGui frame
+    ImGui_ImplOpenGL3_NewFrame();
+    ImGui_ImplGlfw_NewFrame();
+    ImGui::NewFrame();
+    ```
+  </Step>
+
+  <Step title="Submit UI code">
+    Anywhere in your main loop after `NewFrame()`:
+
+    ```cpp
+    // Your UI code here
+    ImGui::Begin("Debug Window");
+    ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+    ImGui::End();
+    
+    // Optional: show demo for learning
+    ImGui::ShowDemoWindow();
+    ```
+  </Step>
+
+  <Step title="Render Dear ImGui">
+    At the end of your frame, after your rendering:
+
+    ```cpp
+    // Finalize Dear ImGui frame
+    ImGui::Render();
+    
+    // Render your application
+    glClear(GL_COLOR_BUFFER_BIT);
+    RenderYourApplication();
+    
+    // Render Dear ImGui on top
+    ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+    
+    // Swap buffers
+    glfwSwapBuffers(window);
+    ```
+  </Step>
+
+  <Step title="Cleanup at shutdown">
+    Before destroying your window:
+
+    ```cpp
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    ```
+  </Step>
+</Steps>
+
+## Platform-specific examples
+
+<Tabs>
+  <Tab title="GLFW + OpenGL3">
+    ```cpp
+    // Initialization
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "App", NULL, NULL);
+    glfwMakeContextCurrent(window);
+    
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 130");
+    
+    // Main loop
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+        
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        
+        // Your UI code
+        
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        
+        glfwSwapBuffers(window);
+    }
+    
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    ```
+  </Tab>
+
+  <Tab title="SDL2 + OpenGL3">
+    ```cpp
+    // Initialization
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
+    SDL_Window* window = SDL_CreateWindow("App", SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL);
+    SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+    SDL_GL_MakeCurrent(window, gl_context);
+    SDL_GL_SetSwapInterval(1);
+    
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
+    ImGui_ImplOpenGL3_Init("#version 130");
+    
+    // Main loop
+    bool done = false;
+    while (!done) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+            if (event.type == SDL_QUIT)
+                done = true;
+        }
+        
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+        
+        // Your UI code
+        
+        ImGui::Render();
+        glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
+        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        SDL_GL_SwapWindow(window);
+    }
+    
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+    ```
+  </Tab>
+
+  <Tab title="Win32 + DirectX11">
+    ```cpp
+    // After creating D3D11 device and window
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplWin32_Init(hwnd);
+    ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
+    
+    // Main loop
+    MSG msg;
+    while (msg.message != WM_QUIT) {
+        if (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE)) {
+            ::TranslateMessage(&msg);
+            ::DispatchMessage(&msg);
+            continue;
+        }
+        
+        ImGui_ImplDX11_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
+        
+        // Your UI code
+        
+        ImGui::Render();
+        const float clear_color[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+        g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color);
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+        g_pSwapChain->Present(1, 0);
+    }
+    
+    // Cleanup
+    ImGui_ImplDX11_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
+    ```
+  </Tab>
+
+  <Tab title="Win32 + DirectX12">
+    ```cpp
+    // After creating D3D12 device and command queue
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGui_ImplWin32_Init(hwnd);
+    ImGui_ImplDX12_Init(g_pd3dDevice, NUM_FRAMES_IN_FLIGHT,
+        DXGI_FORMAT_R8G8B8A8_UNORM, g_pd3dSrvDescHeap,
+        g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
+        g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
+    
+    // Main loop - similar to DX11 but with command lists
+    // See examples/example_win32_directx12/ for full code
+    
+    // Cleanup
+    ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
+    ```
+  </Tab>
+</Tabs>
+
+## Handling input
+
+Dear ImGui needs to know when to capture input. Use these flags:
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Check if Dear ImGui wants keyboard input
+if (!io.WantCaptureKeyboard) {
+    // Pass keyboard events to your application
+}
+
+// Check if Dear ImGui wants mouse input
+if (!io.WantCaptureMouse) {
+    // Pass mouse events to your application
+}
+
+// Check if Dear ImGui wants text input
+if (!io.WantTextInput) {
+    // Your application logic
+}
+```
+
+<Warning>
+**Important:** When `io.WantCaptureMouse` is true, don't dispatch mouse input to your application. Similarly for keyboard. This prevents UI interactions from "falling through" to your application.
+</Warning>
+
+## Configuration options
+
+Set these flags on `ImGuiIO` after creating the context:
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Enable keyboard navigation
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+// Enable gamepad navigation
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+
+// Enable docking (docking branch only)
+io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+
+// Enable multi-viewport / platform windows (docking branch only)
+io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
+
+// Disable .ini file save/load
+io.IniFilename = NULL;
+
+// Set custom .ini path
+io.IniFilename = "my_app.ini";
+```
+
+## Loading fonts
+
+Dear ImGui embeds a default font, but you can load custom fonts:
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Add default font at different size
+io.Fonts->AddFontDefault();
+
+// Load TTF font from file
+ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/Roboto-Regular.ttf", 16.0f);
+
+// Load with custom glyph ranges (for international text)
+ImFontConfig config;
+config.MergeMode = true;
+io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0f, &config,
+    io.Fonts->GetGlyphRangesJapanese());
+
+// Use the font
+ImGui::PushFont(font);
+ImGui::Text("Custom font text");
+ImGui::PopFont();
+```
+
+<Note>
+Load fonts **before** the first frame. After adding fonts, they're automatically uploaded to the GPU by the renderer backend.
+</Note>
+
+## Integration with game engines
+
+### Unreal Engine
+
+Use the [ImGui for Unreal Engine](https://github.com/benui-dev/UnrealImGui) plugin.
+
+### Unity
+
+Use [Dear ImGui for Unity](https://github.com/realgamessoftware/dear-imgui-unity) package.
+
+### Custom engines
+
+For custom engines with their own abstraction layers:
+
+<Steps>
+  <Step title="Start with standard backends">
+    Use `imgui_impl_glfw.cpp` + your graphics API backend to get running quickly.
+  </Step>
+  
+  <Step title="Evaluate if custom backend needed">
+    In most cases, standard backends work fine even with engine abstractions.
+  </Step>
+  
+  <Step title="Write custom backend if necessary">
+    See the [Backends documentation](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md) for implementation details.
+  </Step>
+</Steps>
+
+## Build system integration
+
+<Tabs>
+  <Tab title="CMake">
+    ```cmake
+    set(IMGUI_DIR ${CMAKE_CURRENT_SOURCE_DIR}/imgui)
+    
+    add_library(imgui STATIC
+        ${IMGUI_DIR}/imgui.cpp
+        ${IMGUI_DIR}/imgui_draw.cpp
+        ${IMGUI_DIR}/imgui_tables.cpp
+        ${IMGUI_DIR}/imgui_widgets.cpp
+        ${IMGUI_DIR}/imgui_demo.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_glfw.cpp
+        ${IMGUI_DIR}/backends/imgui_impl_opengl3.cpp
+    )
+    
+    target_include_directories(imgui PUBLIC ${IMGUI_DIR} ${IMGUI_DIR}/backends)
+    target_link_libraries(imgui PUBLIC glfw OpenGL::GL)
+    
+    # Link to your executable
+    target_link_libraries(your_app PRIVATE imgui)
+    ```
+  </Tab>
+
+  <Tab title="Makefile">
+    ```makefile
+    IMGUI_DIR = imgui
+    SOURCES = main.cpp
+    SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_draw.cpp
+    SOURCES += $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
+    SOURCES += $(IMGUI_DIR)/imgui_demo.cpp
+    SOURCES += $(IMGUI_DIR)/backends/imgui_impl_glfw.cpp
+    SOURCES += $(IMGUI_DIR)/backends/imgui_impl_opengl3.cpp
+    
+    CXXFLAGS = -std=c++11 -I$(IMGUI_DIR) -I$(IMGUI_DIR)/backends
+    LIBS = -lglfw -lGL -ldl
+    
+    $(CXX) $(CXXFLAGS) $(SOURCES) -o app $(LIBS)
+    ```
+  </Tab>
+
+  <Tab title="Visual Studio">
+    1. Add all `.cpp` files to your project
+    2. Right-click project → Properties → C/C++ → General
+    3. Add to Additional Include Directories:
+       - `$(ProjectDir)imgui`
+       - `$(ProjectDir)imgui\backends`
+    4. Link required libraries (opengl32.lib, etc.)
+  </Tab>
+</Tabs>
+
+## Common issues
+
+<AccordionGroup>
+  <Accordion title="Nothing renders / blank screen">
+    - Verify you're calling `ImGui_ImplXXX_NewFrame()` for both backends
+    - Verify you're calling `ImGui::NewFrame()` before UI code
+    - Verify you're calling `ImGui::Render()` before `RenderDrawData()`
+    - Check that your viewport/scissor state is correct
+    - Try calling `ImGui::ShowDemoWindow()` to test
+  </Accordion>
+
+  <Accordion title="Widgets show squares instead of text">
+    Font atlas texture wasn't uploaded to GPU. The renderer backend should handle this automatically after the first frame.
+  </Accordion>
+
+  <Accordion title="Clipping issues / disappearing elements">
+    Your renderer may not be handling scissor rectangles correctly. Check that you're applying the scissor rect from `ImDrawCmd`.
+  </Accordion>
+
+  <Accordion title="Input not working">
+    - Verify platform backend `NewFrame()` is called before `ImGui::NewFrame()`
+    - For SDL, ensure you're calling `ImGui_ImplSDL2_ProcessEvent(&event)`
+    - For Win32, ensure your WndProc calls `ImGui_ImplWin32_WndProcHandler()`
+  </Accordion>
+
+  <Accordion title="Crashes or asserts">
+    - Run `IMGUI_CHECKVERSION()` at startup
+    - Ensure you're not mixing Debug/Release builds
+    - Check that all required backends are initialized
+    - Verify you're not calling UI code before `NewFrame()`
+  </Accordion>
+</AccordionGroup>
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card
+    title="API reference"
+    icon="book"
+    href="/api-reference"
+  >
+    Explore all available widgets and functions
+  </Card>
+  <Card
+    title="Examples"
+    icon="folder-open"
+    href="https://github.com/ocornut/imgui/tree/master/examples"
+  >
+    See complete example applications
+  </Card>
+  <Card
+    title="Custom backends"
+    icon="wrench"
+    href="https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md"
+  >
+    Learn to write your own platform/renderer backend
+  </Card>
+  <Card
+    title="FAQ"
+    icon="circle-question"
+    href="https://github.com/ocornut/imgui/blob/master/docs/FAQ.md"
+  >
+    Find answers to common questions
+  </Card>
+</CardGroup>

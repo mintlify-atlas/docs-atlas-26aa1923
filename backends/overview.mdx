@@ -1,0 +1,256 @@
+---
+title: Backends Overview
+description: Understanding Dear ImGui's backend system for platform and renderer integration
+---
+
+## What are Backends?
+
+Dear ImGui is highly portable and only requires a few things to run and render. The backend system separates platform-specific code from the core library, making it easy to integrate Dear ImGui into any application.
+
+### Core Requirements
+
+Dear ImGui backends handle these essential tasks:
+
+- **Input handling**: Mouse, keyboard, gamepad, and touch events
+- **Texture management**: Creating, updating, and destroying textures
+- **Rendering**: Drawing indexed textured triangles with clipping rectangles
+
+### Optional Features
+
+Backends can also support advanced features:
+
+- Custom texture binding
+- Clipboard support
+- Gamepad support
+- Mouse cursor shapes
+- IME (Input Method Editor) support
+- Multi-viewport support
+
+## Backend Architecture
+
+Dear ImGui uses a two-backend system that separates concerns:
+
+<CardGroup cols={2}>
+  <Card title="Platform Backend" icon="window-maximize">
+    Handles windowing, input events, timing, and OS integration
+  </Card>
+  <Card title="Renderer Backend" icon="paintbrush">
+    Handles graphics API calls, texture management, and drawing
+  </Card>
+</CardGroup>
+
+### Why Two Backends?
+
+This separation provides flexibility:
+
+- Mix and match platforms with renderers (e.g., GLFW + OpenGL, SDL2 + Vulkan, Win32 + DirectX11)
+- Reuse platform code across different graphics APIs
+- Easier to maintain and debug
+- Better portability across systems
+
+<Note>
+  An application typically combines **one Platform backend** + **one Renderer backend** + the main Dear ImGui library.
+</Note>
+
+## Available Backends
+
+### Platform Backends
+
+These handle windowing and input:
+
+| Backend | Platform | Features |
+|---------|----------|----------|
+| `imgui_impl_glfw.cpp` | Windows, macOS, Linux | Cross-platform, modern, recommended |
+| `imgui_impl_sdl2.cpp` | Windows, macOS, Linux, iOS, Android | Cross-platform, stable |
+| `imgui_impl_sdl3.cpp` | Windows, macOS, Linux, iOS, Android | Latest SDL, recommended for new projects |
+| `imgui_impl_win32.cpp` | Windows | Native Windows API, best for Windows-only apps |
+| `imgui_impl_osx.mm` | macOS | Native macOS API |
+| `imgui_impl_android.cpp` | Android | Android native app API |
+| `imgui_impl_glut.cpp` | Cross-platform | Legacy, not recommended |
+
+### Renderer Backends
+
+These handle graphics API calls:
+
+| Backend | Graphics API | Features |
+|---------|--------------|----------|
+| `imgui_impl_opengl3.cpp` | OpenGL 3/4, OpenGL ES 2/3, WebGL | Modern OpenGL with shaders |
+| `imgui_impl_opengl2.cpp` | OpenGL 2 | Legacy fixed pipeline, not recommended |
+| `imgui_impl_vulkan.cpp` | Vulkan | Modern, explicit graphics API |
+| `imgui_impl_dx9.cpp` | DirectX 9 | Legacy DirectX |
+| `imgui_impl_dx10.cpp` | DirectX 10 | DirectX 10 |
+| `imgui_impl_dx11.cpp` | DirectX 11 | Modern DirectX, widely used |
+| `imgui_impl_dx12.cpp` | DirectX 12 | Modern, explicit DirectX API |
+| `imgui_impl_metal.mm` | Metal | Apple's modern graphics API |
+| `imgui_impl_wgpu.cpp` | WebGPU | Web + desktop, next-gen graphics API |
+| `imgui_impl_sdlgpu3.cpp` | SDL_GPU | SDL3's portable 3D graphics API |
+| `imgui_impl_sdlrenderer2.cpp` | SDL_Renderer | SDL2's 2D renderer |
+| `imgui_impl_sdlrenderer3.cpp` | SDL_Renderer | SDL3's 2D renderer |
+
+### High-Level Framework Backends
+
+Some backends combine platform and renderer:
+
+- `imgui_impl_allegro5.cpp` - Allegro 5 game library
+- `imgui_impl_null.cpp` - Null backend for testing
+
+## Recommended Backends
+
+For new cross-platform projects:
+
+<CardGroup cols={2}>
+  <Card title="SDL3 + OpenGL3" icon="trophy">
+    **Best for most projects**
+    
+    Modern, stable, cross-platform
+    ```cpp
+    ImGui_ImplSDL3_InitForOpenGL(window);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+    ```
+  </Card>
+  <Card title="GLFW + Vulkan" icon="rocket">
+    **Best for high-performance apps**
+    
+    Modern, explicit control
+    ```cpp
+    ImGui_ImplGlfw_InitForVulkan(window, true);
+    ImGui_ImplVulkan_Init(&init_info);
+    ```
+  </Card>
+</CardGroup>
+
+For Windows-only applications:
+
+<Card title="Win32 + DirectX11" icon="windows">
+  The Win32 backend handles Windows-specific features better than cross-platform alternatives, including multi-viewport support.
+  
+  ```cpp
+  ImGui_ImplWin32_Init(hwnd);
+  ImGui_ImplDX11_Init(device, device_context);
+  ```
+</Card>
+
+## Basic Integration Pattern
+
+Here's the typical flow for integrating Dear ImGui:
+
+<Steps>
+  <Step title="Initialize Platform Backend">
+    Create your window and initialize the platform backend:
+    
+    ```cpp
+    // Create window (platform-specific)
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "App", NULL, NULL);
+    
+    // Initialize Dear ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // Initialize platform backend
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ```
+  </Step>
+  
+  <Step title="Initialize Renderer Backend">
+    Initialize the renderer backend with graphics API context:
+    
+    ```cpp
+    // Initialize renderer backend
+    ImGui_ImplOpenGL3_Init("#version 330");
+    ```
+  </Step>
+  
+  <Step title="Main Loop">
+    In your render loop, call NewFrame for both backends:
+    
+    ```cpp
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+        
+        // Start Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        
+        // Your Dear ImGui code here
+        ImGui::ShowDemoWindow();
+        
+        // Rendering
+        ImGui::Render();
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        glfwSwapBuffers(window);
+    }
+    ```
+  </Step>
+  
+  <Step title="Cleanup">
+    Shutdown backends in reverse order:
+    
+    ```cpp
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    ```
+  </Step>
+</Steps>
+
+## Backend Flags
+
+Backends advertise their capabilities through `ImGuiBackendFlags`:
+
+```cpp
+struct ImGuiIO {
+    ImGuiBackendFlags BackendFlags; // Set by backend
+    // ...
+};
+```
+
+### Platform Backend Flags
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiBackendFlags_HasGamepad` | Supports gamepad input |
+| `ImGuiBackendFlags_HasMouseCursors` | Can change OS cursor shape |
+| `ImGuiBackendFlags_HasSetMousePos` | Can reposition OS mouse |
+| `ImGuiBackendFlags_PlatformHasViewports` | Supports multi-viewports |
+| `ImGuiBackendFlags_HasMouseHoveredViewport` | Can detect viewport under mouse |
+
+### Renderer Backend Flags
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiBackendFlags_RendererHasVtxOffset` | Supports large meshes (64k+ vertices) |
+| `ImGuiBackendFlags_RendererHasTextures` | Supports dynamic texture updates |
+
+<Warning>
+  Starting with Dear ImGui 1.92.0 (June 2025), support for `ImGuiBackendFlags_RendererHasTextures` is **required** for all backends to enable dynamic font scaling and other new features.
+</Warning>
+
+## Emscripten / WebAssembly Support
+
+Several backends support compiling to WebAssembly:
+
+- SDL2/SDL3 + OpenGL3
+- GLFW + OpenGL3
+- GLFW + WebGPU
+
+These examples are ready to build and run with Emscripten.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Platform Backends" icon="desktop" href="/backends/platform-backends">
+    Learn about platform backends for windowing and input
+  </Card>
+  <Card title="Renderer Backends" icon="paintbrush" href="/backends/renderer-backends">
+    Learn about renderer backends for graphics APIs
+  </Card>
+  <Card title="Custom Backend" icon="code" href="/backends/custom-backend">
+    Create your own custom backend
+  </Card>
+  <Card title="Examples" icon="book-open" href="/examples">
+    See complete integration examples
+  </Card>
+</CardGroup>

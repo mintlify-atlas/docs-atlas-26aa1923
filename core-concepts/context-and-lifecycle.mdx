@@ -1,0 +1,463 @@
+---
+title: Context and Lifecycle
+description: Understanding Dear ImGui's context system and the frame lifecycle from initialization to rendering
+---
+
+## The ImGui Context
+
+Dear ImGui uses a **context** to store all internal state. The context (`ImGuiContext`) is an opaque structure that contains:
+
+- Window data and layout state
+- Input state and event queues
+- Font atlas and rendering data
+- ID stack and widget state
+- Navigation and focus state
+- All temporary frame data
+
+<Info>
+The context is intentionally opaque. You don't need to understand its internals - just know that it exists and must be properly managed.
+</Info>
+
+## Context Creation and Destruction
+
+### Basic Setup
+
+Every Dear ImGui application must create a context before using any ImGui functions:
+
+```cpp
+// Application initialization
+ImGui::CreateContext();
+ImGuiIO& io = ImGui::GetIO();
+
+// Configure the context
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+
+// Your application loop here
+
+// Application shutdown
+ImGui::DestroyContext();
+```
+
+### Multiple Contexts
+
+You can create multiple contexts, but only one can be current at a time:
+
+```cpp
+// Create two separate contexts
+ImGuiContext* context1 = ImGui::CreateContext();
+ImGuiContext* context2 = ImGui::CreateContext();
+
+// Switch between contexts
+ImGui::SetCurrentContext(context1);
+ImGui::NewFrame();
+// ... render UI for context1 ...
+ImGui::Render();
+
+ImGui::SetCurrentContext(context2);
+ImGui::NewFrame();
+// ... render UI for context2 ...
+ImGui::Render();
+
+// Cleanup
+ImGui::DestroyContext(context1);
+ImGui::DestroyContext(context2);
+```
+
+<Note>
+Most applications only need a single context. Multiple contexts are useful for advanced scenarios like multi-threaded rendering or isolated UI instances.
+</Note>
+
+### Shared Font Atlas
+
+You can share a font atlas between contexts:
+
+```cpp
+ImFontAtlas* shared_atlas = new ImFontAtlas();
+shared_atlas->AddFontDefault();
+
+ImGuiContext* ctx1 = ImGui::CreateContext(shared_atlas);
+ImGuiContext* ctx2 = ImGui::CreateContext(shared_atlas);
+
+// Both contexts use the same fonts, saving memory
+```
+
+## The Frame Lifecycle
+
+Each frame in Dear ImGui follows a strict lifecycle:
+
+```
+┌─────────────────────────────────────────┐
+│  NewFrame()                             │  Start new frame
+│    - Process inputs                      │
+│    - Update time delta                   │
+│    - Update mouse/keyboard state         │
+└─────────────┬───────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────┐
+│  Your UI Code                            │  Submit UI commands
+│    Begin(), Button(), Text(), etc.       │
+│    - Widgets read/write your data        │
+│    - Layout is calculated                │
+│    - Draw commands are generated         │
+└─────────────┬───────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────┐
+│  Render() / EndFrame()                   │  Finalize frame
+│    - Finalize windows                    │
+│    - Build draw data                     │
+│    - Prepare for rendering               │
+└─────────────┬───────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────┐
+│  GetDrawData()                           │  Retrieve draw data
+│    - Returns ImDrawData*                 │
+│    - Ready for GPU rendering             │
+└─────────────┬───────────────────────────┘
+              │
+              ▼
+┌─────────────────────────────────────────┐
+│  Backend RenderDrawData()                │  Render to screen
+│    - Upload vertex/index buffers         │
+│    - Execute draw commands               │
+│    - Present to screen                   │
+└─────────────────────────────────────────┘
+```
+
+## NewFrame() - Starting a Frame
+
+`ImGui::NewFrame()` begins a new Dear ImGui frame. Call this as early as possible in your main loop.
+
+```cpp
+void MainLoop()
+{
+    // Update application state
+    UpdateGame();
+    
+    // Start Dear ImGui frame
+    ImGui::NewFrame();
+    
+    // Now you can call any ImGui functions
+    ImGui::ShowDemoWindow();
+    
+    // End frame and render
+    ImGui::Render();
+    RenderDrawData(ImGui::GetDrawData());
+}
+```
+
+### What NewFrame() Does
+
+1. **Validates state** - Checks that the previous frame was properly ended
+2. **Updates time** - Processes `io.DeltaTime` for animations
+3. **Processes inputs** - Consumes events from `io.AddMouseXXX()`, `io.AddKeyEvent()`, etc.
+4. **Updates navigation** - Handles keyboard/gamepad navigation
+5. **Begins layout** - Resets layout state for the new frame
+6. **Initializes draw data** - Prepares internal buffers
+
+<Warning>
+You must call `NewFrame()` before calling any widget functions. Calling widgets without `NewFrame()` will trigger an assert.
+</Warning>
+
+## Submitting UI Commands
+
+Between `NewFrame()` and `Render()`, you can call any Dear ImGui functions:
+
+```cpp
+ImGui::NewFrame();
+
+// Main window with menu bar
+ImGui::Begin("My Application", nullptr, ImGuiWindowFlags_MenuBar);
+
+if (ImGui::BeginMenuBar())
+{
+    if (ImGui::BeginMenu("File"))
+    {
+        if (ImGui::MenuItem("Open", "Ctrl+O")) { OpenFile(); }
+        if (ImGui::MenuItem("Save", "Ctrl+S")) { SaveFile(); }
+        ImGui::EndMenu();
+    }
+    ImGui::EndMenuBar();
+}
+
+// UI content
+ImGui::Text("Frame time: %.3f ms", 1000.0f / ImGui::GetIO().Framerate);
+ImGui::SliderFloat("Float", &my_float, 0.0f, 1.0f);
+
+if (ImGui::Button("Click Me"))
+    DoSomething();
+
+ImGui::End();
+
+// Another window
+ImGui::Begin("Debug Info");
+ImGui::Text("Mouse Position: (%.1f, %.1f)", io.MousePos.x, io.MousePos.y);
+ImGui::End();
+
+ImGui::Render();
+```
+
+## Render() and EndFrame()
+
+`ImGui::Render()` finalizes the frame and builds the draw data.
+
+```cpp
+ImGui::Render();
+ImDrawData* draw_data = ImGui::GetDrawData();
+MyRenderFunction(draw_data);
+```
+
+### What Render() Does
+
+1. **Calls EndFrame()** internally (you can also call `EndFrame()` manually)
+2. **Finalizes windows** - Completes all Begin/End pairs
+3. **Sorts draw data** - Optimizes draw call order
+4. **Builds draw lists** - Finalizes vertex and index buffers
+5. **Prepares ImDrawData** - Creates the structure for rendering
+
+<Note>
+`Render()` automatically calls `EndFrame()`. You only need to call `EndFrame()` manually if you're skipping rendering for some reason.
+</Note>
+
+### EndFrame() Without Rendering
+
+You can finalize the frame without rendering:
+
+```cpp
+ImGui::NewFrame();
+// ... UI code ...
+ImGui::EndFrame();
+// Don't call Render() - UI state updated but not rendered
+```
+
+This is useful if you need Dear ImGui to process inputs but don't want to render the UI.
+
+## GetDrawData() - Retrieving Draw Commands
+
+`ImGui::GetDrawData()` returns the finalized draw data after `Render()`:
+
+```cpp
+ImGui::Render();
+ImDrawData* draw_data = ImGui::GetDrawData();
+
+if (draw_data->CmdListsCount > 0)
+{
+    // Valid draw data - render it
+    ImGui_ImplDX11_RenderDrawData(draw_data);
+}
+```
+
+### ImDrawData Structure
+
+```cpp
+struct ImDrawData
+{
+    bool            Valid;              // Valid after Render(), invalid after next NewFrame()
+    ImDrawList**    CmdLists;           // Array of ImDrawList* to render
+    int             CmdListsCount;      // Number of ImDrawList* in array
+    int             TotalVtxCount;      // Total vertex count
+    int             TotalIdxCount;      // Total index count
+    ImVec2          DisplayPos;         // Top-left position of viewport
+    ImVec2          DisplaySize;        // Size of viewport
+    ImVec2          FramebufferScale;   // Scale for Retina displays
+};
+```
+
+## Complete Application Skeleton
+
+Here's a complete minimal application:
+
+```cpp
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include <GLFW/glfw3.h>
+
+int main()
+{
+    // Initialize GLFW and create window
+    glfwInit();
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui App", NULL, NULL);
+    glfwMakeContextCurrent(window);
+    
+    // Create Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // Configure Dear ImGui
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    
+    // Initialize backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init("#version 130");
+    
+    // Main loop
+    while (!glfwWindowShouldClose(window))
+    {
+        // Poll events
+        glfwPollEvents();
+        
+        // Start new Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        
+        // Your UI code here
+        ImGui::ShowDemoWindow();
+        
+        // Render Dear ImGui
+        ImGui::Render();
+        
+        // Clear screen and render Dear ImGui draw data
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        
+        glfwSwapBuffers(window);
+    }
+    
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    
+    glfwDestroyWindow(window);
+    glfwTerminate();
+    
+    return 0;
+}
+```
+
+## Using Custom Backends
+
+If you're implementing a custom backend, the core lifecycle remains the same:
+
+```cpp
+// Application init
+ImGui::CreateContext();
+ImGuiIO& io = ImGui::GetIO();
+
+// Main loop
+while (running)
+{
+    // Setup inputs (your custom code)
+    io.DeltaTime = 1.0f/60.0f;
+    io.DisplaySize = ImVec2(1920, 1080);
+    io.AddMousePosEvent(mouse_x, mouse_y);
+    io.AddMouseButtonEvent(0, mouse_button_down);
+    
+    // Start frame
+    ImGui::NewFrame();
+    
+    // Your UI code
+    ImGui::ShowDemoWindow();
+    
+    // Finalize frame
+    ImGui::Render();
+    
+    // Render (your custom rendering code)
+    MyCustomRenderDrawData(ImGui::GetDrawData());
+}
+
+// Shutdown
+ImGui::DestroyContext();
+```
+
+## Common Lifecycle Errors
+
+<Warning>
+**Calling End() without Begin():**
+```cpp
+// WRONG - will assert!
+ImGui::Text("Hello");
+ImGui::End();
+```
+
+Always pair `Begin()` with `End()`.
+</Warning>
+
+<Warning>
+**Calling NewFrame() twice:**
+```cpp
+// WRONG - will assert!
+ImGui::NewFrame();
+ImGui::NewFrame(); // Error: previous frame not ended
+```
+
+Each `NewFrame()` must be paired with `Render()` or `EndFrame()`.
+</Warning>
+
+<Warning>
+**Using draw data after NewFrame():**
+```cpp
+ImGui::Render();
+ImDrawData* data = ImGui::GetDrawData();
+ImGui::NewFrame(); // Draw data is now invalid!
+RenderData(data);  // WRONG - data is stale
+```
+
+Draw data is only valid between `Render()` and the next `NewFrame()`.
+</Warning>
+
+## Performance Considerations
+
+### Frame Budget
+
+Dear ImGui is designed to be fast, but you should still be mindful:
+
+```cpp
+// Good: Only create UI when window is open
+if (show_expensive_window)
+{
+    ImGui::Begin("Expensive Window", &show_expensive_window);
+    // ... lots of widgets ...
+    ImGui::End();
+}
+
+// Good: Early out when collapsed
+if (ImGui::Begin("My Window"))
+{
+    // Window is visible - do expensive work
+    for (int i = 0; i < 10000; i++)
+        ImGui::Text("Item %d", i);
+}
+ImGui::End();
+```
+
+### Memory Allocations
+
+A well-designed Dear ImGui application should:
+
+- **Never call malloc/free in a typical idle frame**
+- Preallocate buffers during initialization
+- Reuse temporary buffers across frames
+
+## DLL/Shared Library Considerations
+
+<Warning>
+DLL users: Heaps and globals are not shared across DLL boundaries!
+</Warning>
+
+If using Dear ImGui across DLL boundaries:
+
+```cpp
+// In your DLL:
+void MyDLLFunction()
+{
+    ImGui::SetCurrentContext(g_SharedContext);
+    ImGui::SetAllocatorFunctions(MyMalloc, MyFree);
+    
+    // Now safe to use Dear ImGui
+    ImGui::Text("From DLL");
+}
+```
+
+You must call `SetCurrentContext()` and `SetAllocatorFunctions()` for each DLL boundary.
+
+## Next Steps
+
+- Learn about [Windows and Layout](/core-concepts/windows-and-layout)
+- Understand [The ID Stack System](/core-concepts/id-stack)
+- Read about [Input Handling](/core-concepts/input-handling)

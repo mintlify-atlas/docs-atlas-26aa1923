@@ -1,0 +1,365 @@
+---
+title: 'ImGuiStyle'
+description: 'Style configuration for colors, sizes, and visual appearance'
+---
+
+## Overview
+
+`ImGuiStyle` contains all the style configuration for Dear ImGui, including colors, sizes, padding, rounding, and spacing. You can modify the style during initialization or between frames.
+
+<Warning>
+During the frame, use `PushStyleColor()`/`PopStyleColor()` and `PushStyleVar()`/`PopStyleVar()` to temporarily modify style values.
+</Warning>
+
+## Getting Style
+
+### GetStyle
+
+```cpp
+ImGuiStyle& GetStyle();
+```
+
+Access the Style structure.
+
+<ParamField path="Returns" type="ImGuiStyle&">
+  Reference to the current style
+</ParamField>
+
+**Example:**
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+style.WindowRounding = 0.0f;
+style.Colors[ImGuiCol_WindowBg] = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
+```
+
+## Style Presets
+
+### StyleColorsDark
+
+```cpp
+void StyleColorsDark(ImGuiStyle* dst = NULL);
+```
+
+New, recommended dark style (default).
+
+### StyleColorsLight
+
+```cpp
+void StyleColorsLight(ImGuiStyle* dst = NULL);
+```
+
+Light style, best used with borders and a custom thicker font.
+
+### StyleColorsClassic
+
+```cpp
+void StyleColorsClassic(ImGuiStyle* dst = NULL);
+```
+
+Classic Dear ImGui style.
+
+**Example:**
+```cpp
+ImGui::StyleColorsDark();
+// or
+ImGui::StyleColorsLight();
+```
+
+## ImGuiStyle Structure
+
+```cpp
+struct ImGuiStyle
+{
+    // Font scaling
+    float       FontSizeBase;           // Base font size
+    float       FontScaleMain;          // Main global scale factor
+    float       FontScaleDpi;           // DPI scale factor
+    
+    // Main
+    float       Alpha;                  // Global alpha
+    float       DisabledAlpha;          // Additional alpha for disabled items
+    
+    // Window
+    ImVec2      WindowPadding;          // Padding within a window
+    float       WindowRounding;         // Window corner rounding
+    float       WindowBorderSize;       // Window border thickness
+    ImVec2      WindowMinSize;          // Minimum window size
+    ImVec2      WindowTitleAlign;       // Title bar text alignment
+    ImGuiDir    WindowMenuButtonPosition; // Side of collapse button
+    
+    // Child windows
+    float       ChildRounding;          // Child window corner rounding
+    float       ChildBorderSize;        // Child window border thickness
+    
+    // Popups
+    float       PopupRounding;          // Popup corner rounding
+    float       PopupBorderSize;        // Popup border thickness
+    
+    // Frames
+    ImVec2      FramePadding;           // Padding within framed rectangle
+    float       FrameRounding;          // Frame corner rounding
+    float       FrameBorderSize;        // Frame border thickness
+    
+    // Spacing
+    ImVec2      ItemSpacing;            // Horizontal and vertical spacing
+    ImVec2      ItemInnerSpacing;       // Spacing within elements
+    ImVec2      CellPadding;            // Table cell padding
+    float       IndentSpacing;          // Horizontal indentation
+    
+    // Scrollbars
+    float       ScrollbarSize;          // Width of scrollbar
+    float       ScrollbarRounding;      // Scrollbar grab corner rounding
+    float       ScrollbarPadding;       // Padding of scrollbar grab
+    float       GrabMinSize;            // Minimum grab box size
+    float       GrabRounding;           // Grab corner rounding
+    
+    // Images
+    float       ImageRounding;          // Image corner rounding
+    float       ImageBorderSize;        // Image border thickness
+    
+    // Tabs
+    float       TabRounding;            // Tab corner rounding
+    float       TabBorderSize;          // Tab border thickness
+    float       TabBarBorderSize;       // Tab bar separator thickness
+    float       TabBarOverlineSize;     // Tab bar overline thickness
+    
+    // Misc
+    float       LogSliderDeadzone;      // Dead-zone for log sliders
+    float       ColorMarkerSize;        // Size of R/G/B/A color markers
+    float       SeparatorSize;          // Separator thickness
+    
+    // Alignment
+    ImVec2      ButtonTextAlign;        // Button text alignment
+    ImVec2      SelectableTextAlign;    // Selectable text alignment
+    ImVec2      SeparatorTextAlign;     // Separator text alignment
+    
+    // Colors
+    ImVec4      Colors[ImGuiCol_COUNT]; // All color values
+    
+    // Behaviors
+    float       HoverStationaryDelay;   // Delay for stationary hover
+    float       HoverDelayShort;        // Short hover delay
+    float       HoverDelayNormal;       // Normal hover delay
+    
+    // ... more fields ...
+};
+```
+
+## Common Style Fields
+
+### Padding and Spacing
+
+<ResponseField name="WindowPadding" type="ImVec2" default="(8, 8)">
+  Padding within a window.
+</ResponseField>
+
+<ResponseField name="FramePadding" type="ImVec2" default="(4, 3)">
+  Padding within a framed rectangle (used by most widgets).
+</ResponseField>
+
+<ResponseField name="ItemSpacing" type="ImVec2" default="(8, 4)">
+  Horizontal and vertical spacing between widgets/lines.
+</ResponseField>
+
+<ResponseField name="ItemInnerSpacing" type="ImVec2" default="(4, 4)">
+  Horizontal and vertical spacing between within elements of a composed widget.
+</ResponseField>
+
+<ResponseField name="IndentSpacing" type="float" default="21.0f">
+  Horizontal indentation when entering a tree node. Generally equals `(FontSize + FramePadding.x*2)`.
+</ResponseField>
+
+**Example:**
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+style.WindowPadding = ImVec2(15, 15);
+style.FramePadding = ImVec2(5, 5);
+style.ItemSpacing = ImVec2(12, 8);
+```
+
+### Rounding
+
+<ResponseField name="WindowRounding" type="float" default="0.0f">
+  Radius of window corners. Set to 0.0f for rectangular windows.
+</ResponseField>
+
+<ResponseField name="FrameRounding" type="float" default="0.0f">
+  Radius of frame corners.
+</ResponseField>
+
+<ResponseField name="ScrollbarRounding" type="float" default="9.0f">
+  Radius of scrollbar grab corners.
+</ResponseField>
+
+<ResponseField name="GrabRounding" type="float" default="0.0f">
+  Radius of grab corners for sliders.
+</ResponseField>
+
+<ResponseField name="TabRounding" type="float" default="4.0f">
+  Radius of upper tab corners.
+</ResponseField>
+
+**Example:**
+```cpp
+style.WindowRounding = 5.0f;
+style.FrameRounding = 3.0f;
+style.GrabRounding = 3.0f;
+```
+
+### Border Sizes
+
+<ResponseField name="WindowBorderSize" type="float" default="1.0f">
+  Thickness of border around windows. Generally set to 0.0f or 1.0f.
+</ResponseField>
+
+<ResponseField name="FrameBorderSize" type="float" default="0.0f">
+  Thickness of border around frames. Generally set to 0.0f or 1.0f.
+</ResponseField>
+
+<ResponseField name="PopupBorderSize" type="float" default="1.0f">
+  Thickness of border around popups/tooltips.
+</ResponseField>
+
+### Anti-Aliasing
+
+<ResponseField name="AntiAliasedLines" type="bool" default="true">
+  Enable anti-aliased lines/borders. Disable if you are really tight on CPU/GPU.
+</ResponseField>
+
+<ResponseField name="AntiAliasedLinesUseTex" type="bool" default="true">
+  Enable anti-aliased lines/borders using textures where possible. Requires backend to render with bilinear filtering.
+</ResponseField>
+
+<ResponseField name="AntiAliasedFill" type="bool" default="true">
+  Enable anti-aliased edges around filled shapes (rounded rectangles, circles).
+</ResponseField>
+
+**Example:**
+```cpp
+style.AntiAliasedLines = true;
+style.AntiAliasedLinesUseTex = true;
+style.AntiAliasedFill = true;
+```
+
+## Scaling
+
+### ScaleAllSizes
+
+```cpp
+void ImGuiStyle::ScaleAllSizes(float scale_factor);
+```
+
+Scale all spacing/padding/thickness values. Does not scale fonts.
+
+<ParamField path="scale_factor" type="float">
+  Scale multiplier
+</ParamField>
+
+**Example:**
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+style.ScaleAllSizes(1.5f); // Make everything 50% larger
+```
+
+<Note>
+For DPI scaling, also consider adjusting font size.
+</Note>
+
+## Style Editor
+
+### ShowStyleEditor
+
+```cpp
+void ShowStyleEditor(ImGuiStyle* ref = NULL);
+```
+
+Add style editor block (not a window). You can pass in a reference ImGuiStyle structure to compare to, revert to and save to.
+
+<ParamField path="ref" type="ImGuiStyle*" default="NULL">
+  Reference style for comparison
+</ParamField>
+
+**Example:**
+```cpp
+ImGui::Begin("Style Editor");
+ImGui::ShowStyleEditor();
+ImGui::End();
+```
+
+### ShowStyleSelector
+
+```cpp
+bool ShowStyleSelector(const char* label);
+```
+
+Add style selector block (not a window), essentially a combo listing the default styles.
+
+<ParamField path="label" type="const char*">
+  Label for the selector
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if style was changed
+</ParamField>
+
+**Example:**
+```cpp
+ImGui::ShowStyleSelector("Style");
+```
+
+## Temporary Style Changes
+
+See [Colors](/api/colors) for `PushStyleColor()`/`PopStyleColor()` and style variable functions.
+
+## Common Style Customizations
+
+### Flat Style
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+style.WindowRounding = 0.0f;
+style.ChildRounding = 0.0f;
+style.FrameRounding = 0.0f;
+style.GrabRounding = 0.0f;
+style.PopupRounding = 0.0f;
+style.ScrollbarRounding = 0.0f;
+style.TabRounding = 0.0f;
+```
+
+### Rounded Style
+
+```cpp
+style.WindowRounding = 6.0f;
+style.ChildRounding = 6.0f;
+style.FrameRounding = 4.0f;
+style.GrabRounding = 4.0f;
+style.PopupRounding = 4.0f;
+style.ScrollbarRounding = 9.0f;
+style.TabRounding = 4.0f;
+```
+
+### Compact Style
+
+```cpp
+style.WindowPadding = ImVec2(4, 4);
+style.FramePadding = ImVec2(4, 2);
+style.ItemSpacing = ImVec2(4, 4);
+style.ItemInnerSpacing = ImVec2(4, 4);
+style.IndentSpacing = 12.0f;
+```
+
+### Spacious Style
+
+```cpp
+style.WindowPadding = ImVec2(15, 15);
+style.FramePadding = ImVec2(8, 6);
+style.ItemSpacing = ImVec2(12, 8);
+style.ItemInnerSpacing = ImVec2(8, 6);
+style.IndentSpacing = 25.0f;
+```
+
+## See Also
+
+- [Colors](/api/colors) - Color configuration and style colors
+- [Fonts](/api/fonts) - Font configuration
+- [ImGuiStyle](/api/imgui-style) - Complete style structure reference

@@ -1,0 +1,446 @@
+---
+title: Troubleshooting
+description: Common issues and solutions when working with Dear ImGui
+---
+
+## Getting Help
+
+For first-time users having issues compiling, linking, running, or loading fonts:
+- Use [GitHub Discussions](https://github.com/ocornut/imgui/discussions)
+- Search [Issues](https://github.com/ocornut/imgui/issues) for similar problems
+- Read the [FAQ](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md)
+
+<Warning>
+  Post in **Discussions** for compilation/setup issues. Use **Issues** for bugs, feature requests, and building a knowledge database.
+</Warning>
+
+## Integration Issues
+
+### Little Squares Instead of Text
+
+Your renderer backend is not using the font texture correctly or it hasn't been uploaded to the GPU.
+
+**Symptoms:**
+- Text appears as white rectangles
+- All characters show as empty squares
+
+**Common causes:**
+
+<Accordion title="Font atlas not uploaded (Pre-1.92)">
+  Before v1.92: Did you modify the font atlas after `ImGui_ImplXXX_NewFrame()`?
+  
+  The texture atlas may be too large for your graphics API. This happens with many fonts or large glyph ranges.
+  
+  **Solutions:**
+  - Reduce oversampling: `font_config.OversampleH = 1`
+  - Load fewer glyph ranges
+  - Set `io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight`
+</Accordion>
+
+<Accordion title="Font atlas not uploaded (1.92+)">
+  Since v1.92 with updated backends: This should be rare. Please report if it happens.
+</Accordion>
+
+<Accordion title="Custom backend texture issues">
+  If using a custom backend:
+  - Verify texture is uploaded to GPU
+  - Check that shaders and rendering states are correct
+  - Ensure texture is bound during rendering
+  - Use a graphics debugger like [RenderDoc](https://renderdoc.org)
+  - Compare your code to existing backends
+</Accordion>
+
+### Clipping Issues
+
+**Symptoms:**
+- Elements disappear when moving windows
+- UI clips incorrectly at window boundaries
+- Widgets render outside expected bounds
+
+**Cause:** Mishandling clipping rectangles in render function.
+
+<Note>
+  Dear ImGui clipping rectangles are defined as `(x1=left, y1=top, x2=right, y2=bottom)` **NOT** as `(x1, y1, width, height)`.
+</Note>
+
+**Solution:**
+
+```cpp
+// Correct clipping implementation (from DirectX11 backend)
+ImVec2 clip_off = draw_data->DisplayPos;
+ImVec2 clip_min(pcmd->ClipRect.x - clip_off.x, pcmd->ClipRect.y - clip_off.y);
+ImVec2 clip_max(pcmd->ClipRect.z - clip_off.x, pcmd->ClipRect.w - clip_off.y);
+
+if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
+    continue;
+
+// Apply scissor/clipping rectangle
+const D3D11_RECT r = { (LONG)clip_min.x, (LONG)clip_min.y, (LONG)clip_max.x, (LONG)clip_max.y };
+ctx->RSSetScissorRects(1, &r);
+```
+
+Refer to rendering backends in the `backends/` folder for correct implementations.
+
+### Widget Not Reacting to Clicks
+
+**Most common mistake:** Using the same ID for multiple widgets.
+
+<Accordion title="Understanding the ID Stack System">
+  Dear ImGui needs unique IDs for interactive widgets. IDs are built from:
+  - Window name
+  - Widget labels
+  - ID stack (PushID/PopID)
+  
+  **Wrong:**
+  ```cpp
+  ImGui::DragFloat2("My value", &objects[0]->pos.x);
+  ImGui::DragFloat2("My value", &objects[1]->pos.x);  // ERROR: Same ID!
+  ImGui::DragFloat2("My value", &objects[2]->pos.x);  // ERROR: Same ID!
+  ```
+  
+  **Correct - Using ## suffix:**
+  ```cpp
+  ImGui::DragFloat2("My value##1", &objects[0]->pos.x);
+  ImGui::DragFloat2("My value##2", &objects[1]->pos.x);
+  ImGui::DragFloat2("My value##3", &objects[2]->pos.x);
+  ```
+  
+  **Correct - Using PushID:**
+  ```cpp
+  for (int n = 0; n < 3; n++) {
+      ImGui::PushID(n);
+      ImGui::DragFloat2("My value", &objects[n]->pos.x);
+      ImGui::PopID();
+  }
+  ```
+</Accordion>
+
+<Note>
+  Use `Demo > Tools > ID Stack Tool` or call `ImGui::ShowIDStackToolWindow()` to debug ID issues.
+</Note>
+
+## Input Handling
+
+### When to Dispatch Input to ImGui vs Application
+
+Use the `io.WantCaptureMouse` and `io.WantCaptureKeyboard` flags:
+
+```cpp
+void MyLowLevelMouseButtonHandler(int button, bool down)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // (1) ALWAYS forward mouse data to ImGui
+    io.AddMouseButtonEvent(button, down);
+    
+    // (2) ONLY forward to your app if ImGui doesn't want it
+    if (!io.WantCaptureMouse)
+        my_game->HandleMouseData(button, down);
+}
+```
+
+<Warning>
+  **Always** pass mouse/keyboard inputs to Dear ImGui, regardless of `WantCapture` flags. ImGui needs input to detect clicks in empty areas to unfocus windows.
+</Warning>
+
+**Available flags:**
+- `io.WantCaptureMouse` - ImGui wants mouse input (hovering window, etc.)
+- `io.WantCaptureKeyboard` - ImGui wants keyboard input (typing in InputText, etc.)
+- `io.WantTextInput` - Notify OS to show on-screen keyboard (mobile/console)
+
+### Keyboard/Gamepad Navigation
+
+Enable navigation in configuration:
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable keyboard navigation
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable gamepad navigation
+```
+
+See `USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS` section in `imgui.cpp` for details.
+
+## Font Issues
+
+### Missing Glyphs
+
+<Note>
+  **Since v1.92 with updated backend:** Specifying glyph ranges is unnecessary! Missing glyph issues should be rare.
+</Note>
+
+**Pre-1.92 or without updated backend:**
+
+If you see squares for non-ASCII characters, you need to load fonts with explicit glyph ranges:
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Load Japanese font with Japanese glyph ranges
+io.Fonts->AddFontFromFileTTF(
+    "NotoSansCJKjp-Medium.otf",
+    20.0f,
+    nullptr,
+    io.Fonts->GetGlyphRangesJapanese()
+);
+```
+
+### Font Loading Fails
+
+**Symptom:** Assert "Could not load font file!"
+
+**Cause:** Incorrect filename or wrong working directory.
+
+<Accordion title="File Path Issues">
+  **Remember:** In C/C++, backslashes must be escaped:
+  
+  ```cpp
+  // WRONG
+  io.Fonts->AddFontFromFileTTF("MyFiles\MyFont.ttf", 20.0f);
+  
+  // CORRECT
+  io.Fonts->AddFontFromFileTTF("MyFiles\\MyFont.ttf", 20.0f);
+  
+  // ALSO CORRECT (forward slashes work on Windows)
+  io.Fonts->AddFontFromFileTTF("MyFiles/MyFont.ttf", 20.0f);
+  ```
+  
+  **Working directory:** Make sure your IDE runs your executable from the correct directory.
+  
+  In Visual Studio: `Project Properties > Debugging > Working Directory`
+</Accordion>
+
+### UTF-8 Encoding Issues
+
+**Symptom:** Non-ASCII characters display incorrectly
+
+**Cause:** Source code not encoded as UTF-8
+
+<Accordion title="Verify UTF-8 Encoding">
+  Use the built-in encoding viewer:
+  
+  ```cpp
+  ImGui::DebugTextEncoding(u8"こんにちは");  // Correct
+  ImGui::DebugTextEncoding("こんにちは");    // May be incorrect
+  ```
+  
+  Or use `Metrics/Debugger > Tools > UTF-8 Encoding viewer`
+</Accordion>
+
+<Accordion title="Fix Encoding in Your Code">
+  **Use u8 prefix (C++11):**
+  ```cpp
+  ImGui::Text(u8"こんにちは");  // Always UTF-8
+  ```
+  
+  **Visual Studio compiler flags:**
+  - Add `/utf-8` command-line flag
+  - Or use `#pragma execution_character_set("utf-8")`
+  
+  **C++20 note:** `u8""` returns `const char8_t*`, requiring cast:
+  ```cpp
+  ImGui::Text((const char*)u8"こんにちは");
+  ```
+  
+  Disable this with `/Zc:char8_t-` (MSVC) or `-fno-char8_t` (Clang/GCC).
+</Accordion>
+
+## Display Issues
+
+### DPI Scaling
+
+**Symptom:** Blurry text on high-DPI displays
+
+**Cause:** Application not marked as DPI-aware
+
+<Accordion title="Windows DPI Awareness">
+  You must inform Windows that your app is DPI-aware:
+  
+  **SDL2:**
+  ```cpp
+  SDL_CreateWindow("App", x, y, w, h, SDL_WINDOW_ALLOW_HIGHDPI);
+  ::SetProcessDPIAware();
+  ```
+  
+  **SDL3:**
+  ```cpp
+  SDL_CreateWindow("App", w, h, SDL_WINDOW_HIGH_PIXEL_DENSITY);
+  ```
+  
+  **GLFW:** Automatic
+  
+  **Other Windows projects:**
+  ```cpp
+  #include "imgui_impl_win32.h"
+  ImGui_ImplWin32_EnableDpiAwareness();
+  ```
+  
+  Or use an [application manifest](https://learn.microsoft.com/en-us/windows/win32/hidpi/setting-the-default-dpi-awareness-for-a-process).
+</Accordion>
+
+<Accordion title="Font DPI Scaling">
+  Since v1.92:
+  ```cpp
+  ImGuiStyle& style = ImGui::GetStyle();
+  style.FontScaleDpi = 2.0f;  // Scale fonts for high-DPI
+  ```
+</Accordion>
+
+### Layout Issues
+
+**Overlapping widgets:**
+
+```cpp
+// Use SameLine() for horizontal layout
+ImGui::Button("Button 1");
+ImGui::SameLine();
+ImGui::Button("Button 2");
+
+// Adjust spacing
+ImGui::SameLine(0.0f, 20.0f);  // 20 pixels spacing
+```
+
+**Widgets not visible:**
+
+```cpp
+// Reserve space with Dummy or check window size
+if (ImGui::GetContentRegionAvail().x < 200) {
+    // Not enough space
+}
+```
+
+## Debug Tools
+
+### Metrics/Debugger Window
+
+```cpp
+ImGui::ShowMetricsWindow();
+```
+
+Displays:
+- Window information
+- Draw command details
+- Font atlas visualization
+- Internal state
+
+### Demo Window
+
+```cpp
+ImGui::ShowDemoWindow();
+```
+
+The demo is the best learning resource. Study its code in `imgui_demo.cpp`.
+
+### ID Stack Tool
+
+```cpp
+ImGui::ShowIDStackToolWindow();
+```
+
+Debug ID conflicts by hovering over widgets to see their ID path.
+
+### Style Editor
+
+```cpp
+ImGui::ShowStyleEditor();
+```
+
+Live-edit all style properties.
+
+## Performance Issues
+
+<Accordion title="Too Many Draw Calls">
+  - Minimize window count
+  - Use less rounded corners
+  - Reduce anti-aliasing
+  - Batch similar items
+</Accordion>
+
+<Accordion title="CPU Usage High">
+  - Don't call `ImGui::Begin()` for collapsed windows
+  - Use `ImGuiWindowFlags_NoBackground` when appropriate
+  - Reduce transparency
+  - Simplify layouts
+</Accordion>
+
+<Accordion title="GPU Usage High">
+  - Reduce texture atlas size
+  - Lower oversampling
+  - Disable anti-aliasing on low-end hardware
+  - Reduce window count
+</Accordion>
+
+See [Performance Guide](/guides/performance) for detailed optimization.
+
+## Platform-Specific Issues
+
+### Windows
+
+<Accordion title="Console Window Appears">
+  **Visual Studio:** Set project type to "Windows Application" instead of "Console Application"
+  
+  Or use:
+  ```cpp
+  #pragma comment(linker, "/SUBSYSTEM:windows /ENTRY:mainCRTStartup")
+  ```
+</Accordion>
+
+<Accordion title="Linker Errors">
+  Make sure you're linking against:
+  - Graphics API libraries (OpenGL32.lib, d3d11.lib, etc.)
+  - Platform libraries (user32.lib, gdi32.lib, etc.)
+  - ImGui .cpp files are compiled and linked
+</Accordion>
+
+### Linux
+
+<Accordion title="OpenGL Loader Issues">
+  Use glad, glew, or gl3w. Make sure loader is initialized before ImGui_ImplOpenGL3_Init().
+  
+  ```cpp
+  gladLoadGL();  // or glewInit(), etc.
+  ImGui_ImplOpenGL3_Init("#version 130");
+  ```
+</Accordion>
+
+### macOS
+
+<Accordion title="Retina Display Issues">
+  Handle display scale properly:
+  ```cpp
+  float scale = [[window backingScaleFactor] floatValue];
+  ```
+  
+  Since v1.92: macOS pixel/backing scale is automatically handled.
+</Accordion>
+
+### Web (Emscripten)
+
+<Accordion title="Compilation Flags">
+  Required flags:
+  ```bash
+  -s USE_WEBGL2=1
+  -s FULL_ES3=1
+  -s WASM=1
+  ```
+</Accordion>
+
+## Common Misconceptions
+
+<Warning>
+  **Don't** check if mouse is hovering a window manually. Use `io.WantCaptureMouse` instead.
+</Warning>
+
+<Warning>
+  **Don't** skip calling ImGui::Begin() even if it returns false. Always call matching ImGui::End().
+</Warning>
+
+<Warning>
+  **Don't** modify `ImGuiStyle` mid-frame. Use PushStyleVar/PushStyleColor or modify between frames.
+</Warning>
+
+## See Also
+
+- [FAQ](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md) - Comprehensive FAQ
+- [Examples](/guides/examples) - Working example applications
+- [Best Practices](/guides/best-practices) - Recommended patterns
+- [GitHub Discussions](https://github.com/ocornut/imgui/discussions) - Community help

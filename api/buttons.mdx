@@ -1,0 +1,366 @@
+---
+title: 'Buttons'
+description: 'Button widgets for Dear ImGui'
+---
+
+## Button Functions
+
+Most widgets return true when the value has been changed or when pressed/selected.
+
+### Button
+
+```cpp
+bool ImGui::Button(const char* label, const ImVec2& size = ImVec2(0, 0))
+```
+
+Standard button widget.
+
+<ParamField path="label" type="const char*">
+  Button label text
+</ParamField>
+
+<ParamField path="size" type="const ImVec2&" default="ImVec2(0, 0)">
+  Button size. Use 0 for auto-sizing
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when clicked
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::Button("Click Me")) {
+    // Button was clicked
+}
+
+if (ImGui::Button("Wide Button", ImVec2(200, 0))) {
+    // Custom width
+}
+```
+
+### SmallButton
+
+```cpp
+bool ImGui::SmallButton(const char* label)
+```
+
+Button with `FramePadding.y == 0` to easily embed within text.
+
+<ParamField path="label" type="const char*">
+  Button label text
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when clicked
+</ResponseField>
+
+```cpp
+// Example
+ImGui::Text("Some text ");
+ImGui::SameLine();
+if (ImGui::SmallButton("x")) {
+    // Small button clicked
+}
+```
+
+### InvisibleButton
+
+```cpp
+bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size, ImGuiButtonFlags flags = 0)
+```
+
+Flexible button behavior without the visuals. Frequently useful to build custom behaviors using the public API (along with `IsItemActive`, `IsItemHovered`, etc.).
+
+<ParamField path="str_id" type="const char*">
+  Unique identifier (not displayed)
+</ParamField>
+
+<ParamField path="size" type="const ImVec2&">
+  Button size
+</ParamField>
+
+<ParamField path="flags" type="ImGuiButtonFlags" default="0">
+  Button flags (see ImGuiButtonFlags_)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when clicked
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::InvisibleButton("##clickarea", ImVec2(100, 100))) {
+    // Invisible button clicked
+}
+if (ImGui::IsItemHovered()) {
+    ImGui::SetTooltip("Click me!");
+}
+```
+
+### ArrowButton
+
+```cpp
+bool ImGui::ArrowButton(const char* str_id, ImGuiDir dir)
+```
+
+Square button with an arrow shape.
+
+<ParamField path="str_id" type="const char*">
+  Unique identifier
+</ParamField>
+
+<ParamField path="dir" type="ImGuiDir">
+  Arrow direction: ImGuiDir_Left, ImGuiDir_Right, ImGuiDir_Up, ImGuiDir_Down
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when clicked
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::ArrowButton("left", ImGuiDir_Left)) {
+    // Left arrow clicked
+}
+ImGui::SameLine();
+if (ImGui::ArrowButton("right", ImGuiDir_Right)) {
+    // Right arrow clicked
+}
+```
+
+## Checkbox & Radio
+
+### Checkbox
+
+```cpp
+bool ImGui::Checkbox(const char* label, bool* v)
+```
+
+Checkbox widget.
+
+<ParamField path="label" type="const char*">
+  Checkbox label
+</ParamField>
+
+<ParamField path="v" type="bool*">
+  Pointer to boolean value
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when the value changes
+</ResponseField>
+
+```cpp
+// Example
+static bool show_demo = true;
+ImGui::Checkbox("Show Demo Window", &show_demo);
+```
+
+### CheckboxFlags (int)
+
+```cpp
+bool ImGui::CheckboxFlags(const char* label, int* flags, int flags_value)
+```
+
+Checkbox for bitflags (int).
+
+<ParamField path="label" type="const char*">
+  Checkbox label
+</ParamField>
+
+<ParamField path="flags" type="int*">
+  Pointer to flags variable
+</ParamField>
+
+<ParamField path="flags_value" type="int">
+  Flag bit to toggle
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when the value changes
+</ResponseField>
+
+```cpp
+// Example
+static int my_flags = 0;
+ImGui::CheckboxFlags("Flag 1", &my_flags, 1 << 0);
+ImGui::CheckboxFlags("Flag 2", &my_flags, 1 << 1);
+```
+
+### CheckboxFlags (unsigned int)
+
+```cpp
+bool ImGui::CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value)
+```
+
+Checkbox for bitflags (unsigned int).
+
+<ParamField path="label" type="const char*">
+  Checkbox label
+</ParamField>
+
+<ParamField path="flags" type="unsigned int*">
+  Pointer to flags variable
+</ParamField>
+
+<ParamField path="flags_value" type="unsigned int">
+  Flag bit to toggle
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when the value changes
+</ResponseField>
+
+### RadioButton (bool)
+
+```cpp
+bool ImGui::RadioButton(const char* label, bool active)
+```
+
+Use with e.g. `if (RadioButton("one", my_value==1)) { my_value = 1; }`
+
+<ParamField path="label" type="const char*">
+  Radio button label
+</ParamField>
+
+<ParamField path="active" type="bool">
+  Whether this option is currently selected
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when clicked
+</ResponseField>
+
+```cpp
+// Example
+static int selected = 0;
+if (ImGui::RadioButton("Option 1", selected == 0)) selected = 0;
+if (ImGui::RadioButton("Option 2", selected == 1)) selected = 1;
+if (ImGui::RadioButton("Option 3", selected == 2)) selected = 2;
+```
+
+### RadioButton (int)
+
+```cpp
+bool ImGui::RadioButton(const char* label, int* v, int v_button)
+```
+
+Shortcut to handle the radio button pattern when value is an integer.
+
+<ParamField path="label" type="const char*">
+  Radio button label
+</ParamField>
+
+<ParamField path="v" type="int*">
+  Pointer to current value
+</ParamField>
+
+<ParamField path="v_button" type="int">
+  Value for this button
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when the value changes
+</ResponseField>
+
+```cpp
+// Example
+static int selected = 0;
+ImGui::RadioButton("Option 1", &selected, 0);
+ImGui::RadioButton("Option 2", &selected, 1);
+ImGui::RadioButton("Option 3", &selected, 2);
+```
+
+## Other Widgets
+
+### ProgressBar
+
+```cpp
+void ImGui::ProgressBar(float fraction, const ImVec2& size_arg = ImVec2(-FLT_MIN, 0), const char* overlay = NULL)
+```
+
+Display a progress bar.
+
+<ParamField path="fraction" type="float">
+  Progress value (0.0f to 1.0f)
+</ParamField>
+
+<ParamField path="size_arg" type="const ImVec2&" default="ImVec2(-FLT_MIN, 0)">
+  Size of the progress bar
+</ParamField>
+
+<ParamField path="overlay" type="const char*" default="NULL">
+  Optional text overlay
+</ParamField>
+
+```cpp
+// Example
+static float progress = 0.0f;
+ImGui::ProgressBar(progress);
+progress += 0.01f;
+if (progress > 1.0f) progress = 0.0f;
+
+ImGui::ProgressBar(0.65f, ImVec2(0.0f, 0.0f), "65%");
+```
+
+### TextLink
+
+```cpp
+bool ImGui::TextLink(const char* label)
+```
+
+Hyperlink text button, return true when clicked.
+
+<ParamField path="label" type="const char*">
+  Link text
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when clicked
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::TextLink("Click here")) {
+    // Link clicked
+}
+```
+
+### TextLinkOpenURL
+
+```cpp
+bool ImGui::TextLinkOpenURL(const char* label, const char* url = NULL)
+```
+
+Hyperlink text button, automatically open file/url when clicked.
+
+<ParamField path="label" type="const char*">
+  Link text
+</ParamField>
+
+<ParamField path="url" type="const char*" default="NULL">
+  URL to open (uses label if NULL)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when clicked
+</ResponseField>
+
+```cpp
+// Example
+ImGui::TextLinkOpenURL("Visit Website", "https://github.com/ocornut/imgui");
+```
+
+## Button Flags
+
+### ImGuiButtonFlags_
+
+Flags for `InvisibleButton()`.
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiButtonFlags_None` | Default |
+| `ImGuiButtonFlags_MouseButtonLeft` | React on left mouse button (default) |
+| `ImGuiButtonFlags_MouseButtonRight` | React on right mouse button |
+| `ImGuiButtonFlags_MouseButtonMiddle` | React on center mouse button |
+| `ImGuiButtonFlags_EnableNav` | Do not disable navigation/tabbing |

@@ -1,0 +1,603 @@
+---
+title: Writing Custom Backends
+description: Guide to implementing your own platform or renderer backend for Dear ImGui
+---
+
+## Should You Write a Custom Backend?
+
+<Warning>
+  **Think twice before writing a custom backend!** Standard backends are battle-tested and handle subtle edge cases that you're likely to implement incorrectly. Consider using existing backends first.
+</Warning>
+
+### When to Use Standard Backends
+
+In most cases, you should use the standard backends:
+
+- **Custom engine on Windows + DirectX11**: Use `imgui_impl_win32.cpp` + `imgui_impl_dx11.cpp`
+- **Cross-platform engine**: Use multiple standard backends (e.g., GLFW on desktop, SDL on mobile)
+- **High-level rendering system**: Use standard platform backend + implement only a thin renderer wrapper
+
+### When Custom Backends Make Sense
+
+- Your platform isn't supported (e.g., game consoles, embedded systems)
+- You need to integrate with a proprietary engine
+- You're using a completely custom windowing/rendering system
+
+<Note>
+  **Recommended approach**: Get one standard backend working first to understand how Dear ImGui works, then adapt it to your needs.
+</Note>
+
+## Backend Architecture
+
+Dear ImGui backends consist of two types:
+
+<CardGroup cols={2}>
+  <Card title="Platform Backend" icon="window">
+    Handles OS interaction: windows, input events, clipboard, timing
+  </Card>
+  <Card title="Renderer Backend" icon="paintbrush">
+    Handles graphics: texture management, shader compilation, drawing triangles
+  </Card>
+</CardGroup>
+
+### Complexity Comparison
+
+- **Writing a Renderer Backend**: Relatively easy, ~200-500 lines of code
+- **Writing a Platform Backend**: More complex, higher chance of introducing bugs
+
+## Writing a Renderer Backend
+
+### Required Functionality
+
+A renderer backend must:
+
+1. Create and update textures
+2. Set up render state (blending, scissor, viewport)
+3. Render indexed triangle lists with clipping
+
+### Step-by-Step Implementation
+
+<Steps>
+  <Step title="Backend Structure">
+    Create the backend state structure:
+    
+    ```cpp
+    // imgui_impl_mygraphics.h
+    #pragma once
+    #include "imgui.h"
+    
+    IMGUI_IMPL_API bool ImGui_ImplMyGraphics_Init();
+    IMGUI_IMPL_API void ImGui_ImplMyGraphics_Shutdown();
+    IMGUI_IMPL_API void ImGui_ImplMyGraphics_NewFrame();
+    IMGUI_IMPL_API void ImGui_ImplMyGraphics_RenderDrawData(ImDrawData* draw_data);
+    IMGUI_IMPL_API void ImGui_ImplMyGraphics_UpdateTexture(ImTextureData* tex);
+    ```
+    
+    ```cpp
+    // imgui_impl_mygraphics.cpp
+    #include "imgui_impl_mygraphics.h"
+    
+    struct ImGui_ImplMyGraphics_Data {
+        MyShader*           Shader;
+        MyBuffer*           VertexBuffer;
+        MyBuffer*           IndexBuffer;
+        // ... other resources
+    };
+    
+    // Get backend data from ImGui context
+    static ImGui_ImplMyGraphics_Data* ImGui_ImplMyGraphics_GetBackendData() {
+        return ImGui::GetCurrentContext() ?
+            (ImGui_ImplMyGraphics_Data*)ImGui::GetIO().BackendRendererUserData : nullptr;
+    }
+    ```
+  </Step>
+  
+  <Step title="Initialization">
+    Set up the backend and advertise capabilities:
+    
+    ```cpp
+    bool ImGui_ImplMyGraphics_Init() {
+        ImGuiIO& io = ImGui::GetIO();
+        IM_ASSERT(io.BackendRendererUserData == nullptr && "Already initialized!");
+        
+        // Setup backend data
+        ImGui_ImplMyGraphics_Data* bd = IM_NEW(ImGui_ImplMyGraphics_Data)();
+        io.BackendRendererUserData = (void*)bd;
+        io.BackendRendererName = "imgui_impl_mygraphics";
+        
+        // Advertise capabilities
+        io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // Support large meshes
+        io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // Support texture updates
+        
+        // Create shader
+        bd->Shader = CreateMyShader();
+        
+        // Create vertex/index buffers
+        bd->VertexBuffer = CreateDynamicBuffer(sizeof(ImDrawVert) * 5000);
+        bd->IndexBuffer = CreateDynamicBuffer(sizeof(ImDrawIdx) * 10000);
+        
+        return true;
+    }
+    ```
+  </Step>
+  
+  <Step title="Texture Management">
+    Implement texture creation and updates:
+    
+    ```cpp
+    void ImGui_ImplMyGraphics_UpdateTexture(ImTextureData* tex) {
+        if (tex->Status == ImTextureStatus_WantCreate) {
+            // Create texture
+            MyTexture* my_tex = new MyTexture();
+            my_tex->width = tex->Width;
+            my_tex->height = tex->Height;
+            
+            // Upload pixels
+            if (tex->Format == ImTextureFormat_RGBA32) {
+                // Most backends support RGBA32
+                my_tex->Create(tex->Width, tex->Height, RGBA32_FORMAT);
+                my_tex->Upload(tex->GetPixels(), tex->GetPitch());
+            }
+            else if (tex->Format == ImTextureFormat_Alpha8) {
+                // Memory-constrained backends can use Alpha8
+                my_tex->Create(tex->Width, tex->Height, ALPHA8_FORMAT);
+                my_tex->Upload(tex->GetPixels(), tex->GetPitch());
+            }
+            
+            // Store backend texture
+            tex->SetTexID((ImTextureID)my_tex);
+            tex->BackendUserData = my_tex;
+            tex->SetStatus(ImTextureStatus_OK);
+        }
+        else if (tex->Status == ImTextureStatus_WantUpdates) {
+            // Update existing texture region
+            MyTexture* my_tex = (MyTexture*)tex->BackendUserData;
+            
+            // Update only the region specified by tex->UpdateRect
+            int x = tex->UpdateRect.x;
+            int y = tex->UpdateRect.y;
+            int w = tex->UpdateRect.w;
+            int h = tex->UpdateRect.h;
+            
+            // Get pixels for the update region
+            const void* pixels = tex->GetPixelsAt(x, y);
+            my_tex->UpdateRegion(x, y, w, h, pixels, tex->GetPitch());
+            
+            tex->SetStatus(ImTextureStatus_OK);
+        }
+        else if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0) {
+            // Destroy texture (wait for in-flight renders if needed)
+            MyTexture* my_tex = (MyTexture*)tex->BackendUserData;
+            delete my_tex;
+            
+            tex->SetTexID(ImTextureID_Invalid);
+            tex->SetStatus(ImTextureStatus_Destroyed);
+        }
+    }
+    ```
+  </Step>
+  
+  <Step title="Render Setup">
+    Configure render state for Dear ImGui:
+    
+    ```cpp
+    static void ImGui_ImplMyGraphics_SetupRenderState(ImDrawData* draw_data) {
+        ImGui_ImplMyGraphics_Data* bd = ImGui_ImplMyGraphics_GetBackendData();
+        
+        // Setup viewport
+        MySetViewport(0, 0, draw_data->DisplaySize.x, draw_data->DisplaySize.y);
+        
+        // Setup orthographic projection matrix
+        float L = draw_data->DisplayPos.x;
+        float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
+        float T = draw_data->DisplayPos.y;
+        float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
+        float ortho_projection[4][4] = {
+            { 2.0f/(R-L),   0.0f,         0.0f,   0.0f },
+            { 0.0f,         2.0f/(T-B),   0.0f,   0.0f },
+            { 0.0f,         0.0f,        -1.0f,   0.0f },
+            { (R+L)/(L-R),  (T+B)/(B-T),  0.0f,   1.0f },
+        };
+        
+        // Bind shader and set uniforms
+        MyBindShader(bd->Shader);
+        MySetShaderMatrix(bd->Shader, "ProjectionMatrix", ortho_projection);
+        
+        // Setup render state
+        MyEnableBlend();
+        MySetBlendFunc(SRC_ALPHA, ONE_MINUS_SRC_ALPHA);
+        MyDisableCulling();
+        MyDisableDepthTest();
+        MyEnableScissorTest();
+        
+        // Setup texture sampling (bilinear filtering)
+        MySetTextureSampling(LINEAR_FILTER);
+    }
+    ```
+  </Step>
+  
+  <Step title="Rendering">
+    Implement the main rendering function:
+    
+    ```cpp
+    void ImGui_ImplMyGraphics_RenderDrawData(ImDrawData* draw_data) {
+        // Avoid rendering when minimized
+        if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
+            return;
+        
+        ImGui_ImplMyGraphics_Data* bd = ImGui_ImplMyGraphics_GetBackendData();
+        
+        // Update textures if needed
+        if (draw_data->Textures != nullptr) {
+            for (ImTextureData* tex : *draw_data->Textures) {
+                if (tex->Status != ImTextureStatus_OK)
+                    ImGui_ImplMyGraphics_UpdateTexture(tex);
+            }
+        }
+        
+        // Setup render state
+        ImGui_ImplMyGraphics_SetupRenderState(draw_data);
+        
+        // Render command lists
+        ImVec2 clip_off = draw_data->DisplayPos;
+        ImVec2 clip_scale = draw_data->FramebufferScale;
+        
+        for (int n = 0; n < draw_data->CmdListsCount; n++) {
+            const ImDrawList* cmd_list = draw_data->CmdLists[n];
+            
+            // Upload vertex/index buffers
+            MyUpdateBuffer(bd->VertexBuffer, cmd_list->VtxBuffer.Data,
+                          cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+            MyUpdateBuffer(bd->IndexBuffer, cmd_list->IdxBuffer.Data,
+                          cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+            
+            for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++) {
+                const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
+                
+                if (pcmd->UserCallback != nullptr) {
+                    // Handle user callbacks
+                    if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                        ImGui_ImplMyGraphics_SetupRenderState(draw_data);
+                    else
+                        pcmd->UserCallback(cmd_list, pcmd);
+                }
+                else {
+                    // Project scissor/clipping rectangles into framebuffer space
+                    ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x,
+                                   (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);
+                    ImVec2 clip_max((pcmd->ClipRect.z - clip_off.x) * clip_scale.x,
+                                   (pcmd->ClipRect.w - clip_off.y) * clip_scale.y);
+                    
+                    // Clipping is inverted
+                    if (clip_max.x <= clip_min.x || clip_max.y <= clip_min.y)
+                        continue;
+                    
+                    // Apply scissor/clipping rectangle
+                    MySetScissor((int)clip_min.x, (int)clip_min.y,
+                               (int)(clip_max.x - clip_min.x),
+                               (int)(clip_max.y - clip_min.y));
+                    
+                    // Bind texture
+                    MyTexture* texture = (MyTexture*)pcmd->GetTexID();
+                    MyBindTexture(texture);
+                    
+                    // Draw
+                    MyDrawIndexedTriangles(
+                        pcmd->ElemCount,                    // index count
+                        pcmd->IdxOffset * sizeof(ImDrawIdx), // index buffer offset
+                        pcmd->VtxOffset                     // vertex buffer offset
+                    );
+                }
+            }
+        }
+    }
+    ```
+  </Step>
+  
+  <Step title="Shutdown">
+    Clean up resources:
+    
+    ```cpp
+    void ImGui_ImplMyGraphics_Shutdown() {
+        ImGui_ImplMyGraphics_Data* bd = ImGui_ImplMyGraphics_GetBackendData();
+        IM_ASSERT(bd != nullptr && "Already shutdown!");
+        ImGuiIO& io = ImGui::GetIO();
+        
+        // Destroy all textures
+        for (ImTextureData* tex : ImGui::GetPlatformIO().Textures) {
+            if (tex->BackendUserData) {
+                MyTexture* my_tex = (MyTexture*)tex->BackendUserData;
+                delete my_tex;
+                tex->BackendUserData = nullptr;
+            }
+        }
+        
+        // Destroy resources
+        delete bd->Shader;
+        delete bd->VertexBuffer;
+        delete bd->IndexBuffer;
+        
+        io.BackendRendererName = nullptr;
+        io.BackendRendererUserData = nullptr;
+        io.BackendFlags &= ~(ImGuiBackendFlags_RendererHasVtxOffset |
+                            ImGuiBackendFlags_RendererHasTextures);
+        IM_DELETE(bd);
+    }
+    ```
+  </Step>
+</Steps>
+
+### Shader Requirements
+
+Your vertex shader needs:
+
+```glsl
+// Vertex shader (GLSL example)
+#version 330
+uniform mat4 ProjectionMatrix;
+layout(location = 0) in vec2 Position;
+layout(location = 1) in vec2 UV;
+layout(location = 2) in vec4 Color;
+out vec2 Frag_UV;
+out vec4 Frag_Color;
+
+void main() {
+    Frag_UV = UV;
+    Frag_Color = Color;
+    gl_Position = ProjectionMatrix * vec4(Position.xy, 0, 1);
+}
+```
+
+Your fragment shader needs:
+
+```glsl
+// Fragment shader (GLSL example)
+#version 330
+uniform sampler2D Texture;
+in vec2 Frag_UV;
+in vec4 Frag_Color;
+out vec4 Out_Color;
+
+void main() {
+    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);
+}
+```
+
+### Vertex Format
+
+Dear ImGui uses this vertex format:
+
+```cpp
+struct ImDrawVert {
+    ImVec2  pos;    // Position (2D)
+    ImVec2  uv;     // Texture coordinates
+    ImU32   col;    // Color (RGBA packed as 0xAABBGGRR)
+};
+```
+
+---
+
+## Writing a Platform Backend
+
+### Required Functionality
+
+A platform backend must:
+
+1. Initialize and manage windows
+2. Process input events (mouse, keyboard, gamepad)
+3. Handle clipboard operations
+4. Update timing information
+5. Optionally: manage cursor shapes, IME, multi-viewports
+
+### Step-by-Step Implementation
+
+<Steps>
+  <Step title="Backend Structure">
+    ```cpp
+    // imgui_impl_myplatform.h
+    #pragma once
+    #include "imgui.h"
+    
+    IMGUI_IMPL_API bool ImGui_ImplMyPlatform_Init(MyWindow* window);
+    IMGUI_IMPL_API void ImGui_ImplMyPlatform_Shutdown();
+    IMGUI_IMPL_API void ImGui_ImplMyPlatform_NewFrame();
+    ```
+    
+    ```cpp
+    // imgui_impl_myplatform.cpp
+    struct ImGui_ImplMyPlatform_Data {
+        MyWindow*   Window;
+        double      Time;
+        bool        MousePressed[5];
+        // ... other state
+    };
+    
+    static ImGui_ImplMyPlatform_Data* ImGui_ImplMyPlatform_GetBackendData() {
+        return ImGui::GetCurrentContext() ?
+            (ImGui_ImplMyPlatform_Data*)ImGui::GetIO().BackendPlatformUserData : nullptr;
+    }
+    ```
+  </Step>
+  
+  <Step title="Initialization">
+    ```cpp
+    bool ImGui_ImplMyPlatform_Init(MyWindow* window) {
+        ImGuiIO& io = ImGui::GetIO();
+        IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized!");
+        
+        // Setup backend data
+        ImGui_ImplMyPlatform_Data* bd = IM_NEW(ImGui_ImplMyPlatform_Data)();
+        io.BackendPlatformUserData = (void*)bd;
+        io.BackendPlatformName = "imgui_impl_myplatform";
+        bd->Window = window;
+        
+        // Advertise capabilities
+        io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
+        io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;
+        io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
+        
+        // Setup clipboard
+        ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+        platform_io.Platform_SetClipboardTextFn = ImGui_ImplMyPlatform_SetClipboardText;
+        platform_io.Platform_GetClipboardTextFn = ImGui_ImplMyPlatform_GetClipboardText;
+        
+        // Initialize time
+        bd->Time = MyGetCurrentTime();
+        
+        return true;
+    }
+    ```
+  </Step>
+  
+  <Step title="Input Processing">
+    ```cpp
+    void ImGui_ImplMyPlatform_NewFrame() {
+        ImGui_ImplMyPlatform_Data* bd = ImGui_ImplMyPlatform_GetBackendData();
+        ImGuiIO& io = ImGui::GetIO();
+        
+        // Setup display size
+        int w, h;
+        MyGetWindowSize(bd->Window, &w, &h);
+        io.DisplaySize = ImVec2((float)w, (float)h);
+        
+        // Setup display framebuffer size (for HiDPI)
+        int display_w, display_h;
+        MyGetFramebufferSize(bd->Window, &display_w, &display_h);
+        if (w > 0 && h > 0)
+            io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
+        
+        // Setup time step
+        double current_time = MyGetCurrentTime();
+        io.DeltaTime = bd->Time > 0.0 ? (float)(current_time - bd->Time) : (float)(1.0f/60.0f);
+        bd->Time = current_time;
+        
+        // Update mouse position
+        double mouse_x, mouse_y;
+        MyGetMousePos(bd->Window, &mouse_x, &mouse_y);
+        io.AddMousePosEvent((float)mouse_x, (float)mouse_y);
+        
+        // Update mouse buttons
+        for (int i = 0; i < 5; i++) {
+            bool pressed = MyIsMouseButtonPressed(bd->Window, i);
+            if (pressed != bd->MousePressed[i]) {
+                io.AddMouseButtonEvent(i, pressed);
+                bd->MousePressed[i] = pressed;
+            }
+        }
+        
+        // Update mouse cursor
+        if (!(io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)) {
+            ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+            if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor)
+                MyHideCursor();
+            else
+                MySetCursor(TranslateImGuiCursor(imgui_cursor));
+        }
+    }
+    ```
+  </Step>
+  
+  <Step title="Event Callbacks">
+    Forward events to Dear ImGui:
+    
+    ```cpp
+    void ImGui_ImplMyPlatform_KeyCallback(int key, int scancode, int action, int mods) {
+        ImGuiIO& io = ImGui::GetIO();
+        
+        // Translate platform key to ImGuiKey
+        ImGuiKey imgui_key = ImGui_ImplMyPlatform_KeyToImGuiKey(key);
+        if (imgui_key != ImGuiKey_None)
+            io.AddKeyEvent(imgui_key, action != RELEASE);
+        
+        // Update modifiers
+        io.AddKeyEvent(ImGuiMod_Ctrl, (mods & MOD_CONTROL) != 0);
+        io.AddKeyEvent(ImGuiMod_Shift, (mods & MOD_SHIFT) != 0);
+        io.AddKeyEvent(ImGuiMod_Alt, (mods & MOD_ALT) != 0);
+        io.AddKeyEvent(ImGuiMod_Super, (mods & MOD_SUPER) != 0);
+    }
+    
+    void ImGui_ImplMyPlatform_CharCallback(unsigned int c) {
+        ImGuiIO& io = ImGui::GetIO();
+        io.AddInputCharacter(c);
+    }
+    
+    void ImGui_ImplMyPlatform_MouseWheelCallback(double xoffset, double yoffset) {
+        ImGuiIO& io = ImGui::GetIO();
+        io.AddMouseWheelEvent((float)xoffset, (float)yoffset);
+    }
+    ```
+  </Step>
+</Steps>
+
+### Key Mapping
+
+Map platform keys to `ImGuiKey` enum:
+
+```cpp
+static ImGuiKey ImGui_ImplMyPlatform_KeyToImGuiKey(int key) {
+    switch (key) {
+        case MY_KEY_TAB: return ImGuiKey_Tab;
+        case MY_KEY_LEFT: return ImGuiKey_LeftArrow;
+        case MY_KEY_RIGHT: return ImGuiKey_RightArrow;
+        case MY_KEY_UP: return ImGuiKey_UpArrow;
+        case MY_KEY_DOWN: return ImGuiKey_DownArrow;
+        case MY_KEY_PAGE_UP: return ImGuiKey_PageUp;
+        case MY_KEY_PAGE_DOWN: return ImGuiKey_PageDown;
+        case MY_KEY_HOME: return ImGuiKey_Home;
+        case MY_KEY_END: return ImGuiKey_End;
+        case MY_KEY_INSERT: return ImGuiKey_Insert;
+        case MY_KEY_DELETE: return ImGuiKey_Delete;
+        case MY_KEY_BACKSPACE: return ImGuiKey_Backspace;
+        case MY_KEY_SPACE: return ImGuiKey_Space;
+        case MY_KEY_ENTER: return ImGuiKey_Enter;
+        case MY_KEY_ESCAPE: return ImGuiKey_Escape;
+        // ... map all keys ...
+        default: return ImGuiKey_None;
+    }
+}
+```
+
+---
+
+## Testing Your Backend
+
+1. **Start with the demo window**: `ImGui::ShowDemoWindow()` exercises most features
+2. **Test input**: Verify mouse, keyboard, and gamepad input work correctly
+3. **Test rendering**: Check that text, shapes, and images render correctly
+4. **Test edge cases**: Try resizing windows, HiDPI displays, minimizing
+5. **Test performance**: Profile with large UIs (many windows, long lists)
+
+## Reference Implementations
+
+Study these well-written backends:
+
+- **Simple renderer**: `imgui_impl_opengl3.cpp` (~500 lines)
+- **Complex renderer**: `imgui_impl_vulkan.cpp` (~2000 lines)
+- **Simple platform**: `imgui_impl_glfw.cpp` (~800 lines)
+- **Complex platform**: `imgui_impl_win32.cpp` (~1000 lines)
+
+## Common Pitfalls
+
+<Warning>
+  **Don't forget**:
+  - Set `ImGuiBackendFlags_RendererHasTextures` and implement texture updates
+  - Handle `ImDrawCallback_ResetRenderState` in custom callbacks
+  - Support vertex offset (`ImGuiBackendFlags_RendererHasVtxOffset`) for large meshes
+  - Map all keyboard keys to `ImGuiKey` enum
+  - Update `io.DeltaTime` every frame
+  - Handle window resize and DPI scaling
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Examples" icon="book-open" href="/examples">
+    Study complete integration examples
+  </Card>
+  <Card title="GitHub Repository" icon="github" href="https://github.com/ocornut/imgui">
+    Browse official backend implementations
+  </Card>
+  <Card title="Community Support" icon="comments" href="https://github.com/ocornut/imgui/discussions">
+    Ask questions and get help
+  </Card>
+</CardGroup>

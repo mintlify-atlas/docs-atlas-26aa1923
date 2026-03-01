@@ -1,0 +1,455 @@
+---
+title: The ID Stack System
+description: Understanding how Dear ImGui generates unique IDs for widgets and how to avoid ID conflicts
+---
+
+## Why IDs Matter
+
+Dear ImGui needs to uniquely identify UI elements internally to:
+
+- Track **active widgets** (which slider is being dragged)
+- Track **focus state** (which input field has keyboard focus)
+- Remember **window state** (position, size, collapsed state)
+- Remember **tree node state** (which nodes are open/closed)
+- Associate **temporary state** with widgets
+
+<Note>
+Non-interactive widgets like `Text()` don't need IDs. Interactive widgets like `Button()`, `SliderFloat()`, `InputText()` etc. all need unique IDs.
+</Note>
+
+## How IDs Are Generated
+
+IDs are **hashed from a stack of identifiers** that forms a "path" to each widget:
+
+```cpp
+ImGui::Begin("MyWindow");              // Push "MyWindow" to ID stack
+    ImGui::Button("OK");                // ID = hash("MyWindow", "OK")
+    ImGui::Button("Cancel");            // ID = hash("MyWindow", "Cancel")
+ImGui::End();                           // Pop "MyWindow" from ID stack
+
+ImGui::Begin("OtherWindow");           // Push "OtherWindow" to ID stack  
+    ImGui::Button("OK");                // ID = hash("OtherWindow", "OK") - Different!
+ImGui::End();
+```
+
+The same label in different windows produces **different IDs** because the window name is part of the ID path.
+
+## The Most Common Mistake
+
+<Warning>
+**Using the same label multiple times in the same scope is the #1 beginner mistake!**
+</Warning>
+
+```cpp
+// WRONG - ID collision!
+ImGui::Begin("Incorrect");
+ImGui::DragFloat2("My value", &objects[0]->pos.x);
+ImGui::DragFloat2("My value", &objects[1]->pos.x);  // Same ID!
+ImGui::DragFloat2("My value", &objects[2]->pos.x);  // Same ID!
+ImGui::End();
+```
+
+**What happens:** Only the first widget responds to input. The others are broken.
+
+## Solution 1: Unique Labels
+
+Use different labels:
+
+```cpp
+ImGui::Begin("Correct");
+ImGui::DragFloat2("Object 1", &objects[0]->pos.x);
+ImGui::DragFloat2("Object 2", &objects[1]->pos.x);
+ImGui::DragFloat2("Object 3", &objects[2]->pos.x);
+ImGui::End();
+```
+
+## Solution 2: The ## Operator
+
+Use `##` to add a hidden unique suffix:
+
+```cpp
+ImGui::Begin("Also Correct");
+ImGui::DragFloat2("My value##1", &objects[0]->pos.x);  // Label: "My value", ID includes "##1"
+ImGui::DragFloat2("My value##2", &objects[1]->pos.x);  // Label: "My value", ID includes "##2"
+ImGui::DragFloat2("My value##3", &objects[2]->pos.x);  // Label: "My value", ID includes "##3"
+ImGui::End();
+```
+
+The `##` and everything after it is **used for the ID but not displayed**.
+
+### Creating Hidden Widgets
+
+```cpp
+// Checkbox with no visible label, just a checkbox
+ImGui::Checkbox("##hidden_checkbox", &my_bool);
+
+// Button with no label
+ImGui::Button("##hidden_button");
+```
+
+## Solution 3: PushID() / PopID()
+
+The most powerful and flexible approach - add custom ID components to the stack:
+
+```cpp
+ImGui::Begin("Window");
+
+for (int i = 0; i < 3; i++)
+{
+    ImGui::PushID(i);                           // Push integer to ID stack
+    ImGui::DragFloat2("Position", &objects[i]->pos.x);
+    ImGui::ColorEdit3("Color", &objects[i]->color.x);
+    ImGui::PopID();                             // Pop from ID stack
+}
+
+ImGui::End();
+```
+
+Each iteration has a unique ID scope:
+- Iteration 0: `hash("Window", 0, "Position")`, `hash("Window", 0, "Color")`
+- Iteration 1: `hash("Window", 1, "Position")`, `hash("Window", 1, "Color")`
+- Iteration 2: `hash("Window", 2, "Position")`, `hash("Window", 2, "Color")`
+
+### PushID() Variants
+
+You can push different types:
+
+```cpp
+// Push integer
+ImGui::PushID(42);
+
+// Push string
+ImGui::PushID("my_unique_string");
+
+// Push pointer
+ImGui::PushID(object_ptr);
+
+// Push string with length
+ImGui::PushID("substring", "substring_end");
+```
+
+### Example: Object List
+
+```cpp
+struct GameObject {
+    char name[64];
+    ImVec2 position;
+    ImVec4 color;
+};
+
+std::vector<GameObject*> objects;
+
+// In UI code:
+ImGui::Begin("Objects");
+
+for (GameObject* obj : objects)
+{
+    ImGui::PushID(obj);  // Use pointer as unique ID
+    
+    ImGui::InputText("Name", obj->name, 64);
+    ImGui::DragFloat2("Position", &obj->position.x);
+    ImGui::ColorEdit4("Color", &obj->color.x);
+    
+    if (ImGui::Button("Delete"))
+        DeleteObject(obj);
+    
+    ImGui::PopID();
+    ImGui::Separator();
+}
+
+ImGui::End();
+```
+
+## Nested ID Scopes
+
+You can nest `PushID()` calls:
+
+```cpp
+ImGui::Button("Click");              // ID = hash(..., "Click")
+
+ImGui::PushID("section1");
+    ImGui::Button("Click");          // ID = hash(..., "section1", "Click")
+    
+    ImGui::PushID(my_ptr);
+        ImGui::Button("Click");      // ID = hash(..., "section1", my_ptr, "Click")
+    ImGui::PopID();
+ImGui::PopID();
+```
+
+## Tree Nodes and ID Stack
+
+Tree nodes **automatically push an ID** when opened:
+
+```cpp
+ImGui::Button("Click");                          // ID = hash(..., "Click")
+
+if (ImGui::TreeNode("Section"))                  // Pushes "Section" to ID stack
+{
+    ImGui::Button("Click");                      // ID = hash(..., "Section", "Click") - Different!
+    ImGui::TreePop();                            // Pops "Section" from ID stack
+}
+
+ImGui::Button("Click");                          // ID = hash(..., "Click") - Same as first
+```
+
+This is why you can have duplicate labels in different tree nodes:
+
+```cpp
+if (ImGui::TreeNode("Player"))
+{
+    ImGui::SliderInt("Health", &player.health, 0, 100);
+    ImGui::TreePop();
+}
+
+if (ImGui::TreeNode("Enemy"))
+{
+    ImGui::SliderInt("Health", &enemy.health, 0, 100);  // Same label, different ID!
+    ImGui::TreePop();
+}
+```
+
+## The ### Operator
+
+Use `###` to **change the label while keeping the same ID**:
+
+```cpp
+char buf[128];
+sprintf(buf, "My Window (%.1f FPS)###MyWindow", fps);
+ImGui::Begin(buf);  // Label changes each frame, ID stays "MyWindow"
+// ...
+ImGui::End();
+```
+
+Everything before `###` is the label. Everything after (including `###`) is used for the ID:
+
+```cpp
+ImGui::Button("Hello###ID");   // Label: "Hello",   ID: hash(..., "###ID")
+ImGui::Button("World###ID");   // Label: "World",   ID: hash(..., "###ID") - Same ID!
+```
+
+This is useful for animated or dynamic labels:
+
+```cpp
+// Window title shows current time, but window position/size persists
+char title[64];
+sprintf(title, "Game Time: %02d:%02d:%02d###GameClock", hours, minutes, seconds);
+ImGui::Begin(title);  // Title updates, but .ini file uses "GameClock"
+```
+
+## Empty Labels
+
+<Warning>
+An empty label uses the **parent's ID**, which almost always causes conflicts!
+
+```cpp
+// WRONG - empty label inherits parent ID
+ImGui::Begin("MyWindow");
+ImGui::Button("");  // ID = hash("MyWindow") - Conflicts with window!
+ImGui::End();
+
+// CORRECT - use ## for hidden labels
+ImGui::Begin("MyWindow");
+ImGui::Button("##button");  // ID = hash("MyWindow", "##button") - Unique!
+ImGui::End();
+```
+</Warning>
+
+## Debugging ID Conflicts
+
+Dear ImGui provides tools to debug ID issues:
+
+### ID Stack Tool Window
+
+```cpp
+// Show the ID Stack Tool
+ImGui::ShowIDStackToolWindow();
+```
+
+This window shows:
+- The current ID stack path
+- The hash value at each level
+- Which widget corresponds to which ID
+
+Hover over widgets to see their ID path!
+
+### Using the Demo
+
+```cpp
+ImGui::ShowDemoWindow();
+// Navigate to: Demo > Tools > ID Stack Tool
+```
+
+## Common Patterns
+
+### Pattern 1: Dynamic Lists
+
+```cpp
+struct Item {
+    int id;
+    char name[64];
+    float value;
+};
+
+std::vector<Item> items;
+
+for (const Item& item : items)
+{
+    ImGui::PushID(item.id);  // Use stable unique ID
+    
+    ImGui::Text("ID: %d", item.id);
+    ImGui::InputText("Name", (char*)item.name, 64);
+    ImGui::DragFloat("Value", (float*)&item.value);
+    
+    ImGui::PopID();
+}
+```
+
+### Pattern 2: Property Grids
+
+```cpp
+void ShowProperty(const char* name, float* value)
+{
+    ImGui::Text("%s:", name);
+    ImGui::SameLine();
+    
+    // Use name as unique ID component
+    ImGui::PushID(name);
+    ImGui::DragFloat("##value", value);  // Label hidden, ID derived from PushID
+    ImGui::PopID();
+}
+
+ShowProperty("Speed", &speed);
+ShowProperty("Strength", &strength);
+ShowProperty("Health", &health);
+```
+
+### Pattern 3: Tabs/Pages
+
+```cpp
+static int current_page = 0;
+
+if (ImGui::Button("Page 1")) current_page = 0;
+ImGui::SameLine();
+if (ImGui::Button("Page 2")) current_page = 1;
+
+ImGui::Separator();
+
+if (current_page == 0)
+{
+    ImGui::PushID("page1");
+    ImGui::Text("Page 1 Content");
+    ImGui::Button("Button");  // Unique due to PushID
+    ImGui::PopID();
+}
+else if (current_page == 1)
+{
+    ImGui::PushID("page2");
+    ImGui::Text("Page 2 Content");
+    ImGui::Button("Button");  // Same label, different ID!
+    ImGui::PopID();
+}
+```
+
+## Advanced: Manual ID Management
+
+### GetID() Function
+
+You can manually compute IDs:
+
+```cpp
+ImGuiID id1 = ImGui::GetID("my_widget");
+ImGuiID id2 = ImGui::GetID(my_pointer);
+ImGuiID id3 = ImGui::GetID(42);
+
+// Use with low-level functions
+if (ImGui::ButtonEx("Label", ImVec2(0,0), ImGuiButtonFlags_None))
+    printf("Clicked!");
+```
+
+### Comparing IDs
+
+```cpp
+ImGuiID button_id = ImGui::GetID("MyButton");
+
+if (ImGui::Button("MyButton"))
+    clicked_id = button_id;
+
+if (ImGui::IsItemActive())
+    active_id = ImGui::GetActiveID();
+
+if (active_id == button_id)
+    ImGui::Text("MyButton is active");
+```
+
+## ID Stack Rules Summary
+
+<Accordion title="Quick Reference">
+
+1. **Always use unique labels** in the same scope
+2. **Use `##hidden_id`** for unique IDs with same visible label
+3. **Use `###persistent_id`** for dynamic labels with stable IDs
+4. **Use `PushID()/PopID()`** when iterating or creating dynamic UI
+5. **Never use empty labels** without `##`
+6. **Windows automatically push** their name to the ID stack
+7. **Tree nodes automatically push** their label when open
+8. **Always pair** `PushID()` with `PopID()`
+
+</Accordion>
+
+## Window IDs and .ini Files
+
+Window IDs affect saved settings:
+
+```cpp
+// These are the SAME window (same position/size in .ini)
+ImGui::Begin("Config");
+ImGui::Begin("Config###UniqueID");  // Everything after ### is the ID
+
+// These are DIFFERENT windows (different .ini entries)  
+ImGui::Begin("Config###ID1");
+ImGui::Begin("Config###ID2");
+```
+
+## Performance Considerations
+
+<Info>
+ID hashing is very fast. Don't worry about performance when using `PushID()`:
+
+- Integer hash: ~1-2 CPU cycles
+- String hash: ~2-3 cycles per character
+- Pointer hash: ~1-2 CPU cycles
+
+The ID stack is optimized and has minimal overhead.
+</Info>
+
+## Common Errors and Fixes
+
+### Error: "Widget not responding to clicks"
+
+**Cause:** ID conflict - another widget has the same ID
+
+**Fix:** Use unique labels or `PushID()`
+
+### Error: "Wrong widget is activated"
+
+**Cause:** Multiple widgets share the same ID
+
+**Fix:** Add `##unique_suffix` or use `PushID()`
+
+### Error: "Tree node state not saved"
+
+**Cause:** Tree node ID changes each frame
+
+**Fix:** Use `###persistent_id` for dynamic tree labels
+
+### Error: "Window position not saved"
+
+**Cause:** Window name changes each frame
+
+**Fix:** Use `###WindowID` for dynamic window titles
+
+## Next Steps
+
+- Learn about [Input Handling](/core-concepts/input-handling) to understand how IDs relate to input routing
+- Explore [Widgets](/widgets/overview) to see ID usage in practice
+- Check the [Troubleshooting Guide](/guides/troubleshooting) for more common questions

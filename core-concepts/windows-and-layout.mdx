@@ -1,0 +1,563 @@
+---
+title: Windows and Layout
+description: How Dear ImGui's window system and layout engine work, from basic Begin/End to advanced layout techniques
+---
+
+## Windows Fundamentals
+
+In Dear ImGui, **windows** are the primary containers for UI elements. Every piece of UI must be inside a window.
+
+### Begin() and End()
+
+The most important functions are `Begin()` and `End()`:
+
+```cpp
+ImGui::Begin("My Window");
+// Your UI code here
+ImGui::Text("Hello, World!");
+ImGui::Button("Click Me");
+ImGui::End();
+```
+
+<Warning>
+**Critical Rule:** Always call `End()` to match every `Begin()` call, even if `Begin()` returns `false`!
+
+```cpp
+if (ImGui::Begin("My Window"))
+{
+    // Window is visible and not collapsed
+    ImGui::Text("Content");
+}
+ImGui::End(); // MUST call End() regardless of return value
+```
+</Warning>
+
+### Window Flags
+
+You can customize window behavior with flags:
+
+```cpp
+ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar 
+                       | ImGuiWindowFlags_NoResize
+                       | ImGuiWindowFlags_NoMove;
+                       
+ImGui::Begin("Custom Window", nullptr, flags);
+ImGui::Text("This window can't be moved or resized");
+ImGui::End();
+```
+
+Common window flags:
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiWindowFlags_NoTitleBar` | Disable title bar |
+| `ImGuiWindowFlags_NoResize` | Disable resizing |
+| `ImGuiWindowFlags_NoMove` | Disable moving |
+| `ImGuiWindowFlags_NoCollapse` | Disable collapsing |
+| `ImGuiWindowFlags_NoScrollbar` | Disable scrollbars |
+| `ImGuiWindowFlags_MenuBar` | Enable menu bar |
+| `ImGuiWindowFlags_AlwaysAutoResize` | Auto-resize to contents |
+| `ImGuiWindowFlags_NoBackground` | Transparent background |
+
+### Closable Windows
+
+Pass a `bool*` to create a window with a close button:
+
+```cpp
+bool show_window = true;
+
+if (show_window)
+{
+    ImGui::Begin("Closable Window", &show_window);
+    ImGui::Text("Click [X] to close this window");
+    ImGui::End();
+}
+
+// show_window becomes false when user clicks [X]
+```
+
+## Window States and Properties
+
+### Checking Window State
+
+```cpp
+if (ImGui::Begin("My Window"))
+{
+    // Window is expanded (not collapsed)
+    bool is_focused = ImGui::IsWindowFocused();
+    bool is_hovered = ImGui::IsWindowHovered();
+    
+    ImVec2 pos = ImGui::GetWindowPos();
+    ImVec2 size = ImGui::GetWindowSize();
+    
+    ImGui::Text("Window at (%.0f, %.0f)", pos.x, pos.y);
+    ImGui::Text("Window size: %.0fx%.0f", size.x, size.y);
+}
+ImGui::End();
+```
+
+<Note>
+`Begin()` returns `false` when the window is collapsed. This allows you to skip expensive UI code when the window isn't visible.
+</Note>
+
+### Window Appearance States
+
+```cpp
+if (ImGui::Begin("Status Window"))
+{
+    if (ImGui::IsWindowAppearing())
+        LogMessage("Window just appeared");
+    
+    if (ImGui::IsWindowCollapsed())
+        LogMessage("Window is collapsed");
+}
+ImGui::End();
+```
+
+## Controlling Windows
+
+### Setting Window Position and Size
+
+<Info>
+Prefer using `SetNextWindow*` functions **before** `Begin()` rather than `SetWindow*` functions **after** `Begin()`.
+</Info>
+
+```cpp
+// Set properties for the next Begin() call
+ImGui::SetNextWindowPos(ImVec2(100, 100), ImGuiCond_FirstUseEver);
+ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
+
+ImGui::Begin("Positioned Window");
+// ...
+ImGui::End();
+```
+
+### Window Conditions
+
+Use `ImGuiCond` to control when to apply settings:
+
+```cpp
+// Only on first use
+ImGui::SetNextWindowPos(pos, ImGuiCond_FirstUseEver);
+
+// Always
+ImGui::SetNextWindowPos(pos, ImGuiCond_Always);
+
+// Only when window appears
+ImGui::SetNextWindowPos(pos, ImGuiCond_Appearing);
+
+// Once per runtime session
+ImGui::SetNextWindowPos(pos, ImGuiCond_Once);
+```
+
+### Focusing Windows
+
+```cpp
+// Make next window focused
+ImGui::SetNextWindowFocus();
+ImGui::Begin("Focused Window");
+// ...
+ImGui::End();
+
+// Or focus a specific window by name
+ImGui::SetWindowFocus("Other Window");
+```
+
+## Child Windows
+
+Child windows create scrollable regions within parent windows:
+
+```cpp
+ImGui::Begin("Parent Window");
+
+// Create a scrollable child region
+ImGui::BeginChild("ScrollableRegion", ImVec2(0, 300), ImGuiChildFlags_Borders);
+
+for (int i = 0; i < 100; i++)
+    ImGui::Text("Line %d", i);
+
+ImGui::EndChild();
+
+// More content in parent window
+ImGui::Button("Button outside child");
+
+ImGui::End();
+```
+
+### Child Window Sizing
+
+```cpp
+// Fill remaining space (height)
+ImGui::BeginChild("Child", ImVec2(0, 0));
+
+// Fixed size
+ImGui::BeginChild("Child", ImVec2(200, 300));
+
+// Use remaining width, fixed height
+ImGui::BeginChild("Child", ImVec2(0, 300));
+
+// Negative values: align to right/bottom edge
+ImGui::BeginChild("Child", ImVec2(-100, -50)); // Leave 100px right, 50px bottom
+```
+
+### Child Window Flags
+
+```cpp
+ImGuiChildFlags flags = ImGuiChildFlags_Borders       // Draw border
+                      | ImGuiChildFlags_AutoResizeX   // Auto-resize width
+                      | ImGuiChildFlags_AutoResizeY;  // Auto-resize height
+
+ImGui::BeginChild("Child", ImVec2(0, 0), flags);
+// ...
+ImGui::EndChild();
+```
+
+## Layout System
+
+Dear ImGui uses a simple top-to-bottom, left-to-right automatic layout system.
+
+### Vertical Layout (Default)
+
+```cpp
+ImGui::Begin("Vertical Layout");
+
+// Widgets stack vertically by default
+ImGui::Text("First line");
+ImGui::Button("Button 1");
+ImGui::Button("Button 2");
+ImGui::Text("Last line");
+
+ImGui::End();
+```
+
+### Horizontal Layout
+
+Use `SameLine()` to place widgets horizontally:
+
+```cpp
+ImGui::Begin("Horizontal Layout");
+
+ImGui::Button("Button 1");
+ImGui::SameLine();
+ImGui::Button("Button 2");
+ImGui::SameLine();
+ImGui::Button("Button 3");
+
+// Back to vertical
+ImGui::Text("Next line");
+
+ImGui::End();
+```
+
+### SameLine with Spacing
+
+```cpp
+// Default spacing
+ImGui::Button("A");
+ImGui::SameLine();
+ImGui::Button("B");
+
+// Custom spacing (offset from left edge)
+ImGui::Button("C");
+ImGui::SameLine(200.0f); // 200 pixels from left
+ImGui::Button("D");
+
+// Custom spacing (additional offset)
+ImGui::Button("E");
+ImGui::SameLine(0, 20.0f); // 20 pixels extra spacing
+ImGui::Button("F");
+```
+
+### Spacing and Separators
+
+```cpp
+ImGui::Text("Section 1");
+ImGui::Spacing();        // Add vertical space
+ImGui::Text("Section 2");
+ImGui::Separator();      // Add horizontal line
+ImGui::Text("Section 3");
+```
+
+## Cursor Position
+
+The "cursor" is the position where the next widget will be placed.
+
+### Getting Cursor Position
+
+```cpp
+// Position relative to window
+ImVec2 pos = ImGui::GetCursorPos();
+
+// Position in screen coordinates
+ImVec2 screen_pos = ImGui::GetCursorScreenPos();
+
+// Start position of window contents
+ImVec2 start_pos = ImGui::GetCursorStartPos();
+```
+
+### Setting Cursor Position
+
+```cpp
+ImGui::Begin("Cursor Demo");
+
+// Move cursor 100 pixels down
+ImVec2 cursor = ImGui::GetCursorPos();
+ImGui::SetCursorPos(ImVec2(cursor.x, cursor.y + 100));
+ImGui::Text("This is 100px down");
+
+// Or use helper functions
+ImGui::SetCursorPosX(50.0f);   // Set X only
+ImGui::SetCursorPosY(200.0f);  // Set Y only
+
+ImGui::End();
+```
+
+<Warning>
+Using `SetCursorPos()` without placing an item won't extend parent boundaries! Add `Dummy(ImVec2(0,0))` to validate the position:
+
+```cpp
+ImGui::SetCursorPos(ImVec2(200, 200));
+ImGui::Dummy(ImVec2(0, 0));  // Validate position
+ImGui::Text("At 200, 200");
+```
+</Warning>
+
+### Dummy Widgets
+
+Use `Dummy()` to reserve space:
+
+```cpp
+// Reserve 200x100 pixels of space
+ImGui::Dummy(ImVec2(200, 100));
+
+// Reserve vertical space
+ImGui::Dummy(ImVec2(0, 50));
+```
+
+## Groups
+
+Groups allow you to treat multiple widgets as a single item:
+
+```cpp
+ImGui::BeginGroup();
+ImGui::Button("Button 1");
+ImGui::Button("Button 2");
+ImGui::Button("Button 3");
+ImGui::EndGroup();
+
+// Place something to the right of the entire group
+ImGui::SameLine();
+ImGui::Text("This is next to the group");
+
+// You can also check if the group is hovered
+if (ImGui::IsItemHovered())
+    ImGui::SetTooltip("Hovering the group");
+```
+
+## Indentation
+
+```cpp
+ImGui::Text("Not indented");
+
+ImGui::Indent();
+ImGui::Text("Indented once");
+
+ImGui::Indent();
+ImGui::Text("Indented twice");
+
+ImGui::Unindent();
+ImGui::Text("Indented once");
+
+ImGui::Unindent();
+ImGui::Text("Not indented");
+
+// Custom indent amount
+ImGui::Indent(40.0f);
+ImGui::Text("Custom indent");
+ImGui::Unindent(40.0f);
+```
+
+## Content Region
+
+Get available space for laying out widgets:
+
+```cpp
+// Available space in current window
+ImVec2 avail = ImGui::GetContentRegionAvail();
+
+// Use it to size a widget
+ImGui::Button("Full Width", ImVec2(avail.x, 0));
+
+// Half width buttons
+float button_width = avail.x * 0.5f - ImGui::GetStyle().ItemSpacing.x * 0.5f;
+ImGui::Button("Left", ImVec2(button_width, 0));
+ImGui::SameLine();
+ImGui::Button("Right", ImVec2(button_width, 0));
+```
+
+## Columns
+
+<Note>
+Columns are a legacy API. For new code, prefer using [Tables](/widgets/tables) which are more powerful.
+</Note>
+
+```cpp
+ImGui::Columns(3, "MyColumns");
+ImGui::Separator();
+
+ImGui::Text("Column 1");
+ImGui::NextColumn();
+
+ImGui::Text("Column 2");
+ImGui::NextColumn();
+
+ImGui::Text("Column 3");
+ImGui::NextColumn();
+
+ImGui::Separator();
+ImGui::Columns(1); // End columns
+```
+
+## Scrolling
+
+### Manual Scrolling
+
+```cpp
+// Get scroll position
+float scroll_x = ImGui::GetScrollX();
+float scroll_y = ImGui::GetScrollY();
+
+// Set scroll position
+ImGui::SetScrollX(100.0f);
+ImGui::SetScrollY(200.0f);
+
+// Get maximum scroll values
+float max_scroll_x = ImGui::GetScrollMaxX();
+float max_scroll_y = ImGui::GetScrollMaxY();
+```
+
+### Scrolling to Items
+
+```cpp
+ImGui::BeginChild("Scrolling Region", ImVec2(0, 300));
+
+for (int i = 0; i < 100; i++)
+{
+    ImGui::Text("Item %d", i);
+    
+    // Scroll to item 50 when button clicked
+    if (i == 50 && scroll_to_item)
+    {
+        ImGui::SetScrollHereY(0.5f); // 0.5f = center in window
+        scroll_to_item = false;
+    }
+}
+
+ImGui::EndChild();
+
+if (ImGui::Button("Scroll to Item 50"))
+    scroll_to_item = true;
+```
+
+## Menu Bars
+
+Windows can have menu bars:
+
+```cpp
+ImGui::Begin("My Window", nullptr, ImGuiWindowFlags_MenuBar);
+
+if (ImGui::BeginMenuBar())
+{
+    if (ImGui::BeginMenu("File"))
+    {
+        if (ImGui::MenuItem("Open", "Ctrl+O")) { OpenFile(); }
+        if (ImGui::MenuItem("Save", "Ctrl+S")) { SaveFile(); }
+        ImGui::Separator();
+        if (ImGui::MenuItem("Exit")) { exit(0); }
+        ImGui::EndMenu();
+    }
+    
+    if (ImGui::BeginMenu("Edit"))
+    {
+        if (ImGui::MenuItem("Undo", "Ctrl+Z")) { Undo(); }
+        if (ImGui::MenuItem("Redo", "Ctrl+Y")) { Redo(); }
+        ImGui::EndMenu();
+    }
+    
+    ImGui::EndMenuBar();
+}
+
+ImGui::Text("Window content");
+ImGui::End();
+```
+
+## Advanced Layout Patterns
+
+### Split Layouts
+
+```cpp
+ImGui::Begin("Split Layout");
+
+ImVec2 avail = ImGui::GetContentRegionAvail();
+
+// Left panel
+ImGui::BeginChild("LeftPanel", ImVec2(avail.x * 0.3f, 0), ImGuiChildFlags_Borders);
+ImGui::Text("Left Panel");
+ImGui::EndChild();
+
+ImGui::SameLine();
+
+// Right panel
+ImGui::BeginChild("RightPanel", ImVec2(0, 0), ImGuiChildFlags_Borders);
+ImGui::Text("Right Panel");
+ImGui::EndChild();
+
+ImGui::End();
+```
+
+### Footer Pattern
+
+```cpp
+ImGui::Begin("Footer Example");
+
+// Content with scrolling
+ImGuiStyle& style = ImGui::GetStyle();
+float footer_height = style.ItemSpacing.y 
+                    + style.SeparatorSize 
+                    + ImGui::GetFrameHeightWithSpacing();
+
+ImGui::BeginChild("Content", ImVec2(0, -footer_height));
+for (int i = 0; i < 100; i++)
+    ImGui::Text("Line %d", i);
+ImGui::EndChild();
+
+// Fixed footer at bottom
+ImGui::Separator();
+if (ImGui::Button("Save")) { Save(); }
+ImGui::SameLine();
+if (ImGui::Button("Cancel")) { Cancel(); }
+
+ImGui::End();
+```
+
+### Aligned Buttons
+
+```cpp
+// Right-aligned button
+float button_width = 100.0f;
+ImGui::SetCursorPosX(ImGui::GetCursorPosX() 
+    + ImGui::GetContentRegionAvail().x 
+    - button_width);
+ImGui::Button("Right", ImVec2(button_width, 0));
+
+// Center-aligned button
+ImGui::SetCursorPosX((ImGui::GetContentRegionAvail().x 
+    - button_width) * 0.5f);
+ImGui::Button("Center", ImVec2(button_width, 0));
+```
+
+## Next Steps
+
+- Learn about [The ID Stack](/core-concepts/id-stack) for managing widget identity
+- Understand [Input Handling](/core-concepts/input-handling) for mouse and keyboard
+- Explore [Tables](/widgets/tables) for advanced layouts

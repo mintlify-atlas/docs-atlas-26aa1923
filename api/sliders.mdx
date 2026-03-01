@@ -1,0 +1,455 @@
+---
+title: 'Sliders and Drags'
+description: 'Slider and drag widgets for Dear ImGui'
+---
+
+## Slider Widgets
+
+Ctrl+Click on any slider to turn them into an input box. Manually input values aren't clamped by default and can go off-bounds. Use `ImGuiSliderFlags_AlwaysClamp` to always clamp.
+
+### SliderFloat
+
+```cpp
+bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+```
+
+Float slider widget.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="v" type="float*">
+  Pointer to float value
+</ParamField>
+
+<ParamField path="v_min" type="float">
+  Minimum value
+</ParamField>
+
+<ParamField path="v_max" type="float">
+  Maximum value
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%.3f">
+  Display format string
+</ParamField>
+
+<ParamField path="flags" type="ImGuiSliderFlags" default="0">
+  Slider flags (see ImGuiSliderFlags_)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+```cpp
+// Example
+static float f = 0.5f;
+ImGui::SliderFloat("Float", &f, 0.0f, 1.0f);
+```
+
+### SliderFloat2
+
+```cpp
+bool ImGui::SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+```
+
+Slider for 2 float values.
+
+### SliderFloat3
+
+```cpp
+bool ImGui::SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+```
+
+Slider for 3 float values.
+
+### SliderFloat4
+
+```cpp
+bool ImGui::SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+```
+
+Slider for 4 float values.
+
+### SliderInt
+
+```cpp
+bool ImGui::SliderInt(const char* label, int* v, int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0)
+```
+
+Integer slider widget.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="v" type="int*">
+  Pointer to int value
+</ParamField>
+
+<ParamField path="v_min" type="int">
+  Minimum value
+</ParamField>
+
+<ParamField path="v_max" type="int">
+  Maximum value
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%d">
+  Display format string
+</ParamField>
+
+<ParamField path="flags" type="ImGuiSliderFlags" default="0">
+  Slider flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+```cpp
+// Example
+static int i = 50;
+ImGui::SliderInt("Integer", &i, 0, 100);
+```
+
+### SliderInt2
+
+```cpp
+bool ImGui::SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0)
+```
+
+Slider for 2 int values.
+
+### SliderInt3
+
+```cpp
+bool ImGui::SliderInt3(const char* label, int v[3], int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0)
+```
+
+Slider for 3 int values.
+
+### SliderInt4
+
+```cpp
+bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0)
+```
+
+Slider for 4 int values.
+
+### SliderAngle
+
+```cpp
+bool ImGui::SliderAngle(const char* label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f, const char* format = "%.0f deg", ImGuiSliderFlags flags = 0)
+```
+
+Slider for angles (in radians).
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="v_rad" type="float*">
+  Pointer to angle value in radians
+</ParamField>
+
+<ParamField path="v_degrees_min" type="float" default="-360.0f">
+  Minimum angle in degrees
+</ParamField>
+
+<ParamField path="v_degrees_max" type="float" default="+360.0f">
+  Maximum angle in degrees
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%.0f deg">
+  Display format
+</ParamField>
+
+<ParamField path="flags" type="ImGuiSliderFlags" default="0">
+  Slider flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+### VSliderFloat
+
+```cpp
+bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+```
+
+Vertical slider for float values.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="size" type="const ImVec2&">
+  Slider size
+</ParamField>
+
+<ParamField path="v" type="float*">
+  Pointer to float value
+</ParamField>
+
+<ParamField path="v_min" type="float">
+  Minimum value
+</ParamField>
+
+<ParamField path="v_max" type="float">
+  Maximum value
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%.3f">
+  Display format
+</ParamField>
+
+<ParamField path="flags" type="ImGuiSliderFlags" default="0">
+  Slider flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+### VSliderInt
+
+```cpp
+bool ImGui::VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0)
+```
+
+Vertical slider for int values.
+
+## Drag Widgets
+
+Ctrl+Click on any drag box to turn them into an input box. Use `ImGuiSliderFlags_AlwaysClamp` to always clamp. Speed is per-pixel of mouse movement (v_speed=0.2f: mouse needs to move by 5 pixels to increase value by 1).
+
+### DragFloat
+
+```cpp
+bool ImGui::DragFloat(const char* label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+```
+
+Drag to input float. If v_min >= v_max we have no bound.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="v" type="float*">
+  Pointer to float value
+</ParamField>
+
+<ParamField path="v_speed" type="float" default="1.0f">
+  Speed of value change per pixel of mouse movement
+</ParamField>
+
+<ParamField path="v_min" type="float" default="0.0f">
+  Minimum value (no bound if v_min >= v_max)
+</ParamField>
+
+<ParamField path="v_max" type="float" default="0.0f">
+  Maximum value
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%.3f">
+  Display format
+</ParamField>
+
+<ParamField path="flags" type="ImGuiSliderFlags" default="0">
+  Slider flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+```cpp
+// Example
+static float f = 0.0f;
+ImGui::DragFloat("Float", &f, 0.01f);
+
+// With bounds
+ImGui::DragFloat("Clamped", &f, 0.01f, 0.0f, 1.0f);
+```
+
+### DragFloat2
+
+```cpp
+bool ImGui::DragFloat2(const char* label, float v[2], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+```
+
+Drag to input 2 float values.
+
+### DragFloat3
+
+```cpp
+bool ImGui::DragFloat3(const char* label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+```
+
+Drag to input 3 float values.
+
+### DragFloat4
+
+```cpp
+bool ImGui::DragFloat4(const char* label, float v[4], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", ImGuiSliderFlags flags = 0)
+```
+
+Drag to input 4 float values.
+
+### DragFloatRange2
+
+```cpp
+bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", const char* format_max = NULL, ImGuiSliderFlags flags = 0)
+```
+
+Drag to input a range of float values.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="v_current_min" type="float*">
+  Pointer to current minimum value
+</ParamField>
+
+<ParamField path="v_current_max" type="float*">
+  Pointer to current maximum value
+</ParamField>
+
+<ParamField path="v_speed" type="float" default="1.0f">
+  Speed of value change
+</ParamField>
+
+<ParamField path="v_min" type="float" default="0.0f">
+  Absolute minimum value
+</ParamField>
+
+<ParamField path="v_max" type="float" default="0.0f">
+  Absolute maximum value
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%.3f">
+  Display format for min value
+</ParamField>
+
+<ParamField path="format_max" type="const char*" default="NULL">
+  Display format for max value (uses format if NULL)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiSliderFlags" default="0">
+  Slider flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+### DragInt
+
+```cpp
+bool ImGui::DragInt(const char* label, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", ImGuiSliderFlags flags = 0)
+```
+
+Drag to input int. If v_min >= v_max we have no bound.
+
+<ParamField path="label" type="const char*">
+  Widget label
+</ParamField>
+
+<ParamField path="v" type="int*">
+  Pointer to int value
+</ParamField>
+
+<ParamField path="v_speed" type="float" default="1.0f">
+  Speed of value change
+</ParamField>
+
+<ParamField path="v_min" type="int" default="0">
+  Minimum value
+</ParamField>
+
+<ParamField path="v_max" type="int" default="0">
+  Maximum value
+</ParamField>
+
+<ParamField path="format" type="const char*" default="%d">
+  Display format
+</ParamField>
+
+<ParamField path="flags" type="ImGuiSliderFlags" default="0">
+  Slider flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when value has been modified
+</ResponseField>
+
+```cpp
+// Example
+static int i = 0;
+ImGui::DragInt("Integer", &i, 1, 0, 100);
+```
+
+### DragInt2
+
+```cpp
+bool ImGui::DragInt2(const char* label, int v[2], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", ImGuiSliderFlags flags = 0)
+```
+
+Drag to input 2 int values.
+
+### DragInt3
+
+```cpp
+bool ImGui::DragInt3(const char* label, int v[3], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", ImGuiSliderFlags flags = 0)
+```
+
+Drag to input 3 int values.
+
+### DragInt4
+
+```cpp
+bool ImGui::DragInt4(const char* label, int v[4], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", ImGuiSliderFlags flags = 0)
+```
+
+Drag to input 4 int values.
+
+### DragIntRange2
+
+```cpp
+bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_max, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", const char* format_max = NULL, ImGuiSliderFlags flags = 0)
+```
+
+Drag to input a range of int values.
+
+## Slider Flags
+
+### ImGuiSliderFlags_
+
+Flags for `DragFloat()`, `DragInt()`, `SliderFloat()`, `SliderInt()` etc.
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiSliderFlags_None` | Default |
+| `ImGuiSliderFlags_Logarithmic` | Make the widget logarithmic (linear otherwise) |
+| `ImGuiSliderFlags_NoRoundToFormat` | Disable rounding underlying value to match precision of the display format |
+| `ImGuiSliderFlags_NoInput` | Disable Ctrl+Click or Enter key allowing to input text directly |
+| `ImGuiSliderFlags_WrapAround` | Enable wrapping around from max to min and from min to max (DragXXX only) |
+| `ImGuiSliderFlags_ClampOnInput` | Clamp value to min/max bounds when input manually with Ctrl+Click |
+| `ImGuiSliderFlags_ClampZeroRange` | Clamp even if min==max==0.0f |
+| `ImGuiSliderFlags_AlwaysClamp` | ClampOnInput + ClampZeroRange |
+| `ImGuiSliderFlags_NoSpeedTweaks` | Disable keyboard modifiers altering tweak speed |
+| `ImGuiSliderFlags_ColorMarkers` | Draw R/G/B/A color markers on each component |
+
+```cpp
+// Example
+static float f = 1.0f;
+ImGui::SliderFloat("Clamped", &f, 0.0f, 1.0f, "%.3f", ImGuiSliderFlags_AlwaysClamp);
+
+static float log_val = 1.0f;
+ImGui::SliderFloat("Logarithmic", &log_val, 0.001f, 1000.0f, "%.3f", ImGuiSliderFlags_Logarithmic);
+```

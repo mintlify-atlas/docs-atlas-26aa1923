@@ -1,0 +1,413 @@
+---
+title: Examples
+description: Explore Dear ImGui example applications showcasing integration with various platforms and graphics APIs
+---
+
+## Overview
+
+The `examples/` folder contains standalone, ready-to-build example applications for a variety of platforms and graphics APIs. These examples demonstrate how to integrate Dear ImGui with different backends and serve as starting points for your own projects.
+
+<Note>
+  Integration in a typical existing application takes fewer than 20 lines when using standard backends.
+</Note>
+
+## Getting Started
+
+All examples use standard backends from the `backends/` folder. Here's the basic integration pattern:
+
+```cpp
+// At initialization:
+call ImGui::CreateContext()
+call ImGui_ImplXXXX_Init() for each backend.
+
+// At the beginning of your frame:
+call ImGui_ImplXXXX_NewFrame() for each backend.
+call ImGui::NewFrame()
+
+// At the end of your frame:
+call ImGui::Render()
+call ImGui_ImplXXXX_RenderDrawData() for your Renderer backend.
+
+// At shutdown:
+call ImGui_ImplXXXX_Shutdown() for each backend.
+call ImGui::DestroyContext()
+```
+
+## Demo Window
+
+<Warning>
+  Once Dear ImGui is running, **run and refer to `ImGui::ShowDemoWindow()`** in `imgui_demo.cpp` for usage of the end-user API. This is the best way to learn!
+</Warning>
+
+```cpp
+// In your render loop
+ImGui::ShowDemoWindow();
+```
+
+## Available Examples
+
+### Desktop - OpenGL
+
+<CardGroup cols={2}>
+  <Card title="GLFW + OpenGL3" icon="cube">
+    **Platform:** Windows, macOS, Linux
+    
+    **Files:** `main.cpp` + `imgui_impl_glfw.cpp` + `imgui_impl_opengl3.cpp`
+    
+    Modern programmable pipeline with shader support. Supports Emscripten/WebGL compilation.
+    
+    **Recommended for:** Modern OpenGL applications
+  </Card>
+  
+  <Card title="GLFW + OpenGL2" icon="cube">
+    **Platform:** Windows, macOS, Linux
+    
+    **Files:** `main.cpp` + `imgui_impl_glfw.cpp` + `imgui_impl_opengl2.cpp`
+    
+    Legacy fixed pipeline.
+    
+    **⚠️ Not recommended** for modern GL or WebGL applications
+  </Card>
+  
+  <Card title="SDL2 + OpenGL3" icon="cube">
+    **Platform:** Windows, macOS, Linux, etc.
+    
+    **Files:** `main.cpp` + `imgui_impl_sdl2.cpp` + `imgui_impl_opengl3.cpp`
+    
+    Modern programmable pipeline. Supports Emscripten/WebGL.
+  </Card>
+  
+  <Card title="SDL3 + OpenGL3" icon="cube">
+    **Platform:** Windows, macOS, Linux, etc.
+    
+    **Files:** `main.cpp` + `imgui_impl_sdl3.cpp` + `imgui_impl_opengl3.cpp`
+    
+    Latest SDL3 with modern OpenGL.
+  </Card>
+</CardGroup>
+
+### Desktop - DirectX (Windows)
+
+<CardGroup cols={2}>
+  <Card title="Win32 + DirectX11" icon="windows">
+    **Platform:** Windows only
+    
+    **Files:** `main.cpp` + `imgui_impl_win32.cpp` + `imgui_impl_dx11.cpp`
+    
+    DirectX 11 renderer with native Win32 window.
+  </Card>
+  
+  <Card title="Win32 + DirectX12" icon="windows">
+    **Platform:** Windows only
+    
+    **Files:** `main.cpp` + `imgui_impl_win32.cpp` + `imgui_impl_dx12.cpp`
+    
+    DirectX 12 renderer (long and tedious because: DirectX12).
+  </Card>
+  
+  <Card title="SDL2 + DirectX11" icon="gamepad">
+    **Platform:** Windows only
+    
+    **Files:** `main.cpp` + `imgui_impl_sdl2.cpp` + `imgui_impl_dx11.cpp`
+    
+    Demonstrates DirectX usage with SDL2.
+  </Card>
+  
+  <Card title="Win32 + DirectX9" icon="windows">
+    **Platform:** Windows only
+    
+    **Files:** `main.cpp` + `imgui_impl_win32.cpp` + `imgui_impl_dx9.cpp`
+    
+    Legacy DirectX 9 support.
+  </Card>
+</CardGroup>
+
+### Desktop - Vulkan
+
+<CardGroup cols={2}>
+  <Card title="GLFW + Vulkan" icon="fire">
+    **Platform:** Windows, macOS, Linux
+    
+    **Files:** `main.cpp` + `imgui_impl_glfw.cpp` + `imgui_impl_vulkan.cpp`
+    
+    Vulkan API example (quite long because: Vulkan). Uses helper functions from imgui_impl_vulkan.
+  </Card>
+  
+  <Card title="SDL2 + Vulkan" icon="fire">
+    **Platform:** Windows, macOS, Linux
+    
+    **Files:** `main.cpp` + `imgui_impl_sdl2.cpp` + `imgui_impl_vulkan.cpp`
+    
+    SDL2 with Vulkan renderer.
+  </Card>
+  
+  <Card title="Win32 + Vulkan" icon="fire">
+    **Platform:** Windows
+    
+    **Files:** `main.cpp` + `imgui_impl_win32.cpp` + `imgui_impl_vulkan.cpp`
+    
+    Native Win32 window with Vulkan.
+  </Card>
+  
+  <Card title="SDL3 + Vulkan" icon="fire">
+    **Platform:** Windows, macOS, Linux
+    
+    **Files:** `main.cpp` + `imgui_impl_sdl3.cpp` + `imgui_impl_vulkan.cpp`
+    
+    Latest SDL3 with Vulkan renderer.
+  </Card>
+</CardGroup>
+
+### Desktop - Metal (Apple)
+
+<CardGroup cols={2}>
+  <Card title="Apple Metal" icon="apple">
+    **Platform:** macOS, iOS
+    
+    **Files:** `main.m` + `imgui_impl_osx.mm` + `imgui_impl_metal.mm`
+    
+    Based on Xcode 9+ "cross-platform" game template.
+  </Card>
+  
+  <Card title="GLFW + Metal" icon="apple">
+    **Platform:** macOS
+    
+    **Files:** `main.mm` + `imgui_impl_glfw.cpp` + `imgui_impl_metal.mm`
+    
+    GLFW with Metal renderer for macOS.
+  </Card>
+  
+  <Card title="SDL2 + Metal" icon="apple">
+    **Platform:** macOS
+    
+    **Files:** `main.mm` + `imgui_impl_sdl2.cpp` + `imgui_impl_metal.mm`
+    
+    SDL2 with Metal renderer for macOS.
+  </Card>
+  
+  <Card title="SDL3 + Metal" icon="apple">
+    **Platform:** macOS
+    
+    **Files:** `main.cpp` + `imgui_impl_sdl3.cpp` + `imgui_impl_metal.mm`
+    
+    Latest SDL3 with Metal renderer.
+  </Card>
+</CardGroup>
+
+### Desktop - WebGPU
+
+<CardGroup cols={2}>
+  <Card title="GLFW + WebGPU" icon="globe">
+    **Platform:** Emscripten (web), Dawn (native), WGPU (native)
+    
+    **Files:** `main.cpp` + `imgui_impl_glfw.cpp` + `imgui_impl_wgpu.cpp`
+    
+    Modern WebGPU API support.
+  </Card>
+  
+  <Card title="SDL2 + WebGPU" icon="globe">
+    **Platform:** Emscripten (web), Dawn (native), WGPU (native)
+    
+    **Files:** `main.cpp` + `imgui_impl_sdl2.cpp` + `imgui_impl_wgpu.cpp`
+    
+    SDL2 with WebGPU support.
+  </Card>
+</CardGroup>
+
+### Desktop - Other
+
+<Accordion title="GLUT + OpenGL2">
+  **Platform:** Linux/Windows (FreeGLUT), macOS (GLUT framework)
+  
+  **Files:** `main.cpp` + `imgui_impl_glut.cpp` + `imgui_impl_opengl2.cpp`
+  
+  <Warning>
+    GLUT/FreeGLUT is largely obsolete software. Prefer using GLFW or SDL.
+  </Warning>
+</Accordion>
+
+<Accordion title="Allegro 5">
+  **Platform:** Cross-platform
+  
+  **Files:** `main.cpp` + `imgui_impl_allegro5.cpp`
+  
+  Allegro 5 game programming library.
+</Accordion>
+
+<Accordion title="Null Backend">
+  **Platform:** Any
+  
+  **Files:** `main.cpp` + `imgui_impl_null.cpp`
+  
+  Headless example with no graphics output. Used for testing compilation. The null backend is intentionally minimal.
+</Accordion>
+
+### Mobile
+
+<Accordion title="Android + OpenGL3">
+  **Platform:** Android
+  
+  **Files:** `main.cpp` + `imgui_impl_android.cpp` + `imgui_impl_opengl3.cpp`
+  
+  Android application with OpenGL ES support.
+</Accordion>
+
+### SDL Renderer
+
+<CardGroup cols={2}>
+  <Card title="SDL2 + SDL_Renderer" icon="gamepad">
+    **Files:** `main.cpp` + `imgui_impl_sdl2.cpp` + `imgui_impl_sdlrenderer2.cpp`
+    
+    Uses SDL's built-in 2D renderer. Requires SDL 2.0.18+ (November 2021).
+  </Card>
+  
+  <Card title="SDL3 + SDL_Renderer" icon="gamepad">
+    **Files:** `main.cpp` + `imgui_impl_sdl3.cpp` + `imgui_impl_sdlrenderer3.cpp`
+    
+    Latest SDL3 with built-in renderer.
+  </Card>
+  
+  <Card title="SDL3 + SDL_GPU" icon="gamepad">
+    **Files:** `main.cpp` + `imgui_impl_sdl3.cpp` + `imgui_impl_sdlgpu3.cpp`
+    
+    SDL3 with new GPU API.
+  </Card>
+</CardGroup>
+
+## Building Examples
+
+Most examples provide:
+- **Makefiles** for Linux/macOS
+- **Batch files** for Visual Studio 2008+
+- **Solution files** (.sln) for Visual Studio 2012+
+- **Xcode projects** for Apple platforms
+
+<Note>
+  You can also import `imgui_impl_xxx.cpp/.h` files directly into your codebase or compile them with command-line tools.
+</Note>
+
+### CMake Support
+
+While official examples don't use CMake, community CMake support is available:
+- https://github.com/ocornut/imgui/pull/1713
+- https://github.com/ocornut/imgui/pull/3027
+
+## Binary Downloads
+
+Windows binaries for some examples are available at:
+- https://www.dearimgui.com/binaries
+
+## Integration Resources
+
+<Steps>
+  1. Read the [Getting Started guide](https://github.com/ocornut/imgui/wiki/Getting-Started) on the Wiki
+  2. Read `docs/BACKENDS.md` or online at https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md
+  3. Read `PROGRAMMER GUIDE` section in `imgui.cpp`
+  4. Read the comments at the top of each backend file
+  5. Study the example code that matches your target platform
+</Steps>
+
+## Mouse Cursor Latency
+
+Dear ImGui doesn't introduce significant extra lag for most behaviors. At 60 FPS, your experience should be pleasant.
+
+<Accordion title="About Hardware vs Software Cursors">
+  OS mouse cursors are typically rendered through hardware-accelerated paths, making them feel smoother than content rendered via regular graphics APIs. This disconnect may be noticeable to sensitive users.
+  
+  You can experiment with `io.MouseDrawCursor = true` to request Dear ImGui draw a cursor using the graphics API. However, rendering at 60 FPS will feel sluggish.
+  
+  Consider switching to a software cursor _only_ during interactive drags.
+</Accordion>
+
+## Learning from Examples
+
+### Example Structure
+
+Most examples follow this pattern:
+
+```cpp
+int main(int, char**)
+{
+    // Setup window and graphics context
+    // ...
+    
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+    
+    // Main loop
+    while (!glfwWindowShouldClose(window))
+    {
+        // Poll and handle events
+        glfwPollEvents();
+        
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        
+        // Your UI code here
+        ImGui::ShowDemoWindow();
+        
+        // Rendering
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        
+        glfwSwapBuffers(window);
+    }
+    
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    
+    return 0;
+}
+```
+
+## Tips for Choosing an Example
+
+<CardGroup cols={2}>
+  <Card title="For Modern Applications" icon="rocket">
+    Choose OpenGL3, DirectX11/12, Vulkan, or Metal examples. These use modern programmable pipelines.
+  </Card>
+  
+  <Card title="For Web Applications" icon="globe">
+    Use GLFW + OpenGL3 or SDL2 + OpenGL3 examples with Emscripten compilation.
+  </Card>
+  
+  <Card title="For Quick Prototyping" icon="bolt">
+    Start with GLFW + OpenGL3 or SDL2 + OpenGL3. They're well-documented and widely supported.
+  </Card>
+  
+  <Card title="For Game Engines" icon="gamepad">
+    Choose the example matching your engine's rendering API (DirectX, Vulkan, Metal, etc.).
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+1. **Choose an example** matching your platform and graphics API
+2. **Build and run** the example to see Dear ImGui in action
+3. **Study the code** to understand the integration pattern
+4. **Modify the example** to experiment with Dear ImGui features
+5. **Integrate into your project** using the example as a template
+
+## See Also
+
+- [Troubleshooting](/guides/troubleshooting) - Common issues and solutions
+- [Best Practices](/guides/best-practices) - Recommended patterns and practices
+- [Fonts](/guides/fonts) - Loading and using custom fonts
+- [BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md) - Backend implementation details

@@ -1,0 +1,299 @@
+---
+title: 'Input & ImGuiIO'
+description: 'Access input state and configure Dear ImGui input/output settings'
+---
+
+## Getting ImGuiIO
+
+### GetIO
+
+```cpp
+ImGuiIO& GetIO();
+```
+
+Access the ImGuiIO structure which contains mouse/keyboard/gamepad inputs, time, various configuration options/flags.
+
+<ParamField path="Returns" type="ImGuiIO&">
+  Reference to the current context's IO structure
+</ParamField>
+
+**Example:**
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+if (io.WantCaptureMouse)
+{
+    // Dear ImGui is using the mouse, don't pass events to your game
+}
+```
+
+## Input Functions
+
+<Note>
+Backends should call these functions to submit input events. Application code typically only reads the resulting state.
+</Note>
+
+### AddKeyEvent
+
+```cpp
+void ImGuiIO::AddKeyEvent(ImGuiKey key, bool down);
+```
+
+Queue a new key down/up event.
+
+<ParamField path="key" type="ImGuiKey">
+  Key identifier (e.g., `ImGuiKey_A`, `ImGuiKey_Space`)
+</ParamField>
+
+<ParamField path="down" type="bool">
+  True for key down, false for key up
+</ParamField>
+
+### AddKeyAnalogEvent
+
+```cpp
+void ImGuiIO::AddKeyAnalogEvent(ImGuiKey key, bool down, float v);
+```
+
+Queue a key down/up event for analog values (e.g., gamepad triggers).
+
+<ParamField path="v" type="float">
+  Analog value (typically 0.0f to 1.0f)
+</ParamField>
+
+### AddMousePosEvent
+
+```cpp
+void ImGuiIO::AddMousePosEvent(float x, float y);
+```
+
+Queue a mouse position update. Use `-FLT_MAX, -FLT_MAX` to signify no mouse.
+
+<ParamField path="x" type="float">
+  Mouse X position
+</ParamField>
+
+<ParamField path="y" type="float">
+  Mouse Y position
+</ParamField>
+
+### AddMouseButtonEvent
+
+```cpp
+void ImGuiIO::AddMouseButtonEvent(int button, bool down);
+```
+
+Queue a mouse button change.
+
+<ParamField path="button" type="int">
+  Mouse button (0=left, 1=right, 2=middle)
+</ParamField>
+
+<ParamField path="down" type="bool">
+  True for button down, false for button up
+</ParamField>
+
+### AddMouseWheelEvent
+
+```cpp
+void ImGuiIO::AddMouseWheelEvent(float wheel_x, float wheel_y);
+```
+
+Queue a mouse wheel update.
+
+<ParamField path="wheel_x" type="float">
+  Horizontal wheel delta (positive = scroll left, negative = scroll right)
+</ParamField>
+
+<ParamField path="wheel_y" type="float">
+  Vertical wheel delta (positive = scroll up, negative = scroll down)
+</ParamField>
+
+### AddMouseSourceEvent
+
+```cpp
+void ImGuiIO::AddMouseSourceEvent(ImGuiMouseSource source);
+```
+
+Queue a mouse source change (Mouse/TouchScreen/Pen).
+
+<ParamField path="source" type="ImGuiMouseSource">
+  Source identifier (`ImGuiMouseSource_Mouse`, `ImGuiMouseSource_TouchScreen`, or `ImGuiMouseSource_Pen`)
+</ParamField>
+
+### AddFocusEvent
+
+```cpp
+void ImGuiIO::AddFocusEvent(bool focused);
+```
+
+Queue a gain/loss of focus for the application.
+
+<ParamField path="focused" type="bool">
+  True when application gains focus, false when it loses focus
+</ParamField>
+
+### AddInputCharacter
+
+```cpp
+void ImGuiIO::AddInputCharacter(unsigned int c);
+```
+
+Queue a new character input.
+
+<ParamField path="c" type="unsigned int">
+  Unicode codepoint
+</ParamField>
+
+### AddInputCharactersUTF8
+
+```cpp
+void ImGuiIO::AddInputCharactersUTF8(const char* str);
+```
+
+Queue new characters input from a UTF-8 string.
+
+<ParamField path="str" type="const char*">
+  UTF-8 encoded string
+</ParamField>
+
+## Input Clearing
+
+### ClearEventsQueue
+
+```cpp
+void ImGuiIO::ClearEventsQueue();
+```
+
+Clear all incoming events.
+
+### ClearInputKeys
+
+```cpp
+void ImGuiIO::ClearInputKeys();
+```
+
+Clear current keyboard/gamepad state and current frame text input buffer. Equivalent to releasing all keys/buttons.
+
+### ClearInputMouse
+
+```cpp
+void ImGuiIO::ClearInputMouse();
+```
+
+Clear current mouse state.
+
+## Input State Access
+
+### Mouse State
+
+```cpp
+struct ImGuiIO
+{
+    ImVec2      MousePos;           // Mouse position
+    bool        MouseDown[5];       // Mouse buttons (0=left, 1=right, 2=middle)
+    float       MouseWheel;         // Mouse wheel vertical
+    float       MouseWheelH;        // Mouse wheel horizontal
+    ImGuiMouseSource MouseSource;   // Mouse source (Mouse/TouchScreen/Pen)
+    // ...
+};
+```
+
+<ResponseField name="MousePos" type="ImVec2">
+  Mouse position in pixels. Set to `ImVec2(-FLT_MAX, -FLT_MAX)` if mouse is unavailable.
+</ResponseField>
+
+<ResponseField name="MouseDown" type="bool[5]">
+  Mouse buttons state. Index 0=left, 1=right, 2=middle.
+</ResponseField>
+
+<ResponseField name="MouseWheel" type="float">
+  Mouse wheel vertical: 1 unit scrolls about 5 lines text.
+</ResponseField>
+
+### Keyboard Modifiers
+
+```cpp
+struct ImGuiIO
+{
+    bool        KeyCtrl;        // Ctrl key down
+    bool        KeyShift;       // Shift key down
+    bool        KeyAlt;         // Alt key down
+    bool        KeySuper;       // Windows/Super (non-macOS), Ctrl (macOS)
+    ImGuiKeyChord KeyMods;      // Combined modifier flags
+    // ...
+};
+```
+
+<ResponseField name="KeyCtrl" type="bool">
+  Ctrl modifier down (non-macOS) or Cmd modifier down (macOS).
+</ResponseField>
+
+<ResponseField name="KeyMods" type="ImGuiKeyChord">
+  Combined key modifiers flags (updated by `NewFrame()`).
+</ResponseField>
+
+## Want Capture Flags
+
+<Tip>
+When reading `io.WantCaptureMouse` or `io.WantCaptureKeyboard` to dispatch your inputs, it is generally easier and more correct to use their state **BEFORE** calling `NewFrame()`.
+</Tip>
+
+```cpp
+struct ImGuiIO
+{
+    bool WantCaptureMouse;      // ImGui wants mouse input
+    bool WantCaptureKeyboard;   // ImGui wants keyboard input
+    bool WantTextInput;         // ImGui wants text input
+    bool WantSetMousePos;       // Request mouse position change
+    bool WantSaveIniSettings;   // Request .ini save
+    // ...
+};
+```
+
+<ResponseField name="WantCaptureMouse" type="bool">
+  Set when Dear ImGui will use mouse inputs. In this case, do not dispatch mouse inputs to your game/application.
+</ResponseField>
+
+<ResponseField name="WantCaptureKeyboard" type="bool">
+  Set when Dear ImGui will use keyboard inputs. In this case, do not dispatch keyboard inputs to your game/application.
+</ResponseField>
+
+<ResponseField name="WantTextInput" type="bool">
+  Mobile/console: when set, you may display an on-screen keyboard. Set by Dear ImGui when it wants textual keyboard input.
+</ResponseField>
+
+<ResponseField name="WantSetMousePos" type="bool">
+  MousePos has been altered, backend should reposition mouse on next frame. Rarely used! Only when `io.ConfigNavMoveSetMousePos` is enabled.
+</ResponseField>
+
+**Example:**
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Before NewFrame()
+if (!io.WantCaptureMouse)
+{
+    // Process mouse events for your game
+    ProcessGameMouseInput();
+}
+
+if (!io.WantCaptureKeyboard)
+{
+    // Process keyboard events for your game
+    ProcessGameKeyboardInput();
+}
+
+ImGui::NewFrame();
+// ... ImGui code ...
+```
+
+## Configuration Fields
+
+See [ImGuiIO](/api/imgui-io) for complete list of configuration options.
+
+## See Also
+
+- [Keyboard](/api/keyboard) - Keyboard input functions
+- [Mouse](/api/mouse) - Mouse input functions
+- [Shortcuts](/api/shortcuts) - Keyboard shortcuts and input routing
+- [ImGuiIO](/api/imgui-io) - Complete ImGuiIO structure reference

@@ -1,0 +1,326 @@
+---
+title: 'Menus'
+description: 'Menu bar and menu widgets for Dear ImGui'
+---
+
+## Menu Bars
+
+### BeginMenuBar
+
+```cpp
+bool ImGui::BeginMenuBar()
+```
+
+Append to menu-bar of current window (requires `ImGuiWindowFlags_MenuBar` flag set on parent window).
+
+<ResponseField name="return" type="bool">
+  True if menu bar is open. Only call EndMenuBar() if this returns true.
+</ResponseField>
+
+```cpp
+// Example
+ImGui::Begin("Window", NULL, ImGuiWindowFlags_MenuBar);
+if (ImGui::BeginMenuBar()) {
+    if (ImGui::BeginMenu("File")) {
+        if (ImGui::MenuItem("Open", "Ctrl+O")) { /* Do stuff */ }
+        if (ImGui::MenuItem("Save", "Ctrl+S")) { /* Do stuff */ }
+        ImGui::EndMenu();
+    }
+    ImGui::EndMenuBar();
+}
+ImGui::End();
+```
+
+### EndMenuBar
+
+```cpp
+void ImGui::EndMenuBar()
+```
+
+Close menu bar. Only call `EndMenuBar()` if `BeginMenuBar()` returns true.
+
+### BeginMainMenuBar
+
+```cpp
+bool ImGui::BeginMainMenuBar()
+```
+
+Create and append to a full screen menu-bar.
+
+<ResponseField name="return" type="bool">
+  True if menu bar is open. Only call EndMainMenuBar() if this returns true.
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::BeginMainMenuBar()) {
+    if (ImGui::BeginMenu("File")) {
+        if (ImGui::MenuItem("New", "Ctrl+N")) { /* Do stuff */ }
+        if (ImGui::MenuItem("Open", "Ctrl+O")) { /* Do stuff */ }
+        ImGui::EndMenu();
+    }
+    if (ImGui::BeginMenu("Edit")) {
+        if (ImGui::MenuItem("Undo", "Ctrl+Z")) { /* Do stuff */ }
+        if (ImGui::MenuItem("Redo", "Ctrl+Y")) { /* Do stuff */ }
+        ImGui::EndMenu();
+    }
+    ImGui::EndMainMenuBar();
+}
+```
+
+### EndMainMenuBar
+
+```cpp
+void ImGui::EndMainMenuBar()
+```
+
+Close main menu bar. Only call `EndMainMenuBar()` if `BeginMainMenuBar()` returns true.
+
+## Menus
+
+### BeginMenu
+
+```cpp
+bool ImGui::BeginMenu(const char* label, bool enabled = true)
+```
+
+Create a sub-menu entry. Only call `EndMenu()` if this returns true.
+
+<ParamField path="label" type="const char*">
+  Menu label
+</ParamField>
+
+<ParamField path="enabled" type="bool" default="true">
+  Whether the menu is enabled (grayed out if false)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when menu is open
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::BeginMenu("File")) {
+    if (ImGui::MenuItem("New")) { /* Do stuff */ }
+    if (ImGui::MenuItem("Open")) { /* Do stuff */ }
+    if (ImGui::BeginMenu("Recent Files")) {
+        ImGui::MenuItem("file1.txt");
+        ImGui::MenuItem("file2.txt");
+        ImGui::EndMenu();
+    }
+    ImGui::EndMenu();
+}
+
+// Disabled menu
+if (ImGui::BeginMenu("Disabled", false)) {
+    // This won't be reached
+    ImGui::EndMenu();
+}
+```
+
+### EndMenu
+
+```cpp
+void ImGui::EndMenu()
+```
+
+Close menu. Only call `EndMenu()` if `BeginMenu()` returns true.
+
+## Menu Items
+
+### MenuItem
+
+```cpp
+bool ImGui::MenuItem(const char* label, const char* shortcut = NULL, bool selected = false, bool enabled = true)
+```
+
+Menu item. Returns true when activated.
+
+<ParamField path="label" type="const char*">
+  Menu item label
+</ParamField>
+
+<ParamField path="shortcut" type="const char*" default="NULL">
+  Keyboard shortcut text (display only, not processed by ImGui)
+</ParamField>
+
+<ParamField path="selected" type="bool" default="false">
+  Whether the item is selected (displays checkmark)
+</ParamField>
+
+<ParamField path="enabled" type="bool" default="true">
+  Whether the item is enabled
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when activated
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::MenuItem("New", "Ctrl+N")) {
+    // New file
+}
+
+if (ImGui::MenuItem("Open", "Ctrl+O")) {
+    // Open file
+}
+
+ImGui::Separator();
+
+if (ImGui::MenuItem("Quit", "Alt+F4")) {
+    // Quit application
+}
+
+// With checkmark
+static bool show_grid = true;
+if (ImGui::MenuItem("Show Grid", NULL, show_grid)) {
+    show_grid = !show_grid;
+}
+
+// Disabled
+if (ImGui::MenuItem("Disabled Item", NULL, false, false)) {
+    // Won't be reached
+}
+```
+
+### MenuItem (pointer)
+
+```cpp
+bool ImGui::MenuItem(const char* label, const char* shortcut, bool* p_selected, bool enabled = true)
+```
+
+Menu item with pointer to selection state. Returns true when activated, and toggles `*p_selected` if `p_selected != NULL`.
+
+<ParamField path="label" type="const char*">
+  Menu item label
+</ParamField>
+
+<ParamField path="shortcut" type="const char*">
+  Keyboard shortcut text
+</ParamField>
+
+<ParamField path="p_selected" type="bool*">
+  Pointer to selection state (automatically toggled)
+</ParamField>
+
+<ParamField path="enabled" type="bool" default="true">
+  Whether the item is enabled
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when activated
+</ResponseField>
+
+```cpp
+// Example
+static bool show_wireframe = false;
+static bool show_normals = false;
+static bool show_grid = true;
+
+if (ImGui::BeginMenu("View")) {
+    ImGui::MenuItem("Wireframe", NULL, &show_wireframe);
+    ImGui::MenuItem("Normals", NULL, &show_normals);
+    ImGui::MenuItem("Grid", NULL, &show_grid);
+    ImGui::EndMenu();
+}
+```
+
+## Complete Example
+
+```cpp
+// Full menu system example
+void ShowMenuExample() {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("New", "Ctrl+N")) {
+                // Create new file
+            }
+            if (ImGui::MenuItem("Open", "Ctrl+O")) {
+                // Open file
+            }
+            if (ImGui::BeginMenu("Open Recent")) {
+                ImGui::MenuItem("project1.txt");
+                ImGui::MenuItem("project2.txt");
+                ImGui::MenuItem("project3.txt");
+                ImGui::EndMenu();
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Save", "Ctrl+S")) {
+                // Save file
+            }
+            if (ImGui::MenuItem("Save As..", "Ctrl+Shift+S")) {
+                // Save as
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Quit", "Alt+F4")) {
+                // Quit application
+            }
+            ImGui::EndMenu();
+        }
+        
+        if (ImGui::BeginMenu("Edit")) {
+            if (ImGui::MenuItem("Undo", "Ctrl+Z")) {
+                // Undo
+            }
+            if (ImGui::MenuItem("Redo", "Ctrl+Y", false, false)) {
+                // Redo (disabled)
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem("Cut", "Ctrl+X")) {
+                // Cut
+            }
+            if (ImGui::MenuItem("Copy", "Ctrl+C")) {
+                // Copy
+            }
+            if (ImGui::MenuItem("Paste", "Ctrl+V")) {
+                // Paste
+            }
+            ImGui::EndMenu();
+        }
+        
+        if (ImGui::BeginMenu("View")) {
+            static bool show_grid = true;
+            static bool show_wireframe = false;
+            static bool show_normals = false;
+            
+            ImGui::MenuItem("Grid", NULL, &show_grid);
+            ImGui::MenuItem("Wireframe", NULL, &show_wireframe);
+            ImGui::MenuItem("Normals", NULL, &show_normals);
+            
+            ImGui::Separator();
+            
+            if (ImGui::BeginMenu("Camera")) {
+                if (ImGui::MenuItem("Perspective")) {
+                    // Set perspective camera
+                }
+                if (ImGui::MenuItem("Orthographic")) {
+                    // Set orthographic camera
+                }
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenu();
+        }
+        
+        if (ImGui::BeginMenu("Help")) {
+            if (ImGui::MenuItem("Documentation")) {
+                // Open docs
+            }
+            if (ImGui::MenuItem("About")) {
+                // Show about dialog
+            }
+            ImGui::EndMenu();
+        }
+        
+        ImGui::EndMainMenuBar();
+    }
+}
+```
+
+## Notes
+
+- MenuItem keyboard shortcuts are displayed but NOT processed by Dear ImGui. You need to handle keyboard input yourself.
+- You can use `##` in labels to hide text after it (useful for creating unique IDs).
+- Menus can be nested to any depth.
+- Use `ImGui::Separator()` to add horizontal lines between menu items.
+- MenuItem returns true on activation, which happens on mouse release (not press).

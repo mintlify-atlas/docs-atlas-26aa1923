@@ -1,0 +1,475 @@
+---
+title: Drag and Drop
+description: Implement drag and drop functionality for moving data between widgets and windows in Dear ImGui.
+---
+
+# Drag and Drop
+
+Dear ImGui provides a flexible drag and drop system that works with any widget. You can drag data between widgets, windows, and even across different Dear ImGui contexts.
+
+## Overview
+
+The drag and drop system consists of two parts:
+
+- **Drag Source**: The widget being dragged (uses `BeginDragDropSource()`)
+- **Drop Target**: The widget receiving the drop (uses `BeginDragDropTarget()`)
+
+## Basic Workflow
+
+<Steps>
+
+### Create Drag Source
+
+After rendering a widget, call `BeginDragDropSource()`. If it returns true, set payload and call `EndDragDropSource()`.
+
+### Set Payload
+
+Call `SetDragDropPayload()` with a type string and your data.
+
+### Create Drop Target
+
+After rendering target widget, call `BeginDragDropTarget()`. If it returns true, accept payload and call `EndDragDropTarget()`.
+
+### Accept Payload
+
+Call `AcceptDragDropPayload()` to receive the dropped data.
+
+</Steps>
+
+## Simple Drag and Drop Example
+
+```cpp
+// Drag source
+ImGui::Button("Drag Me");
+if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+{
+    // Set payload with data to carry
+    int payload_data = 42;
+    ImGui::SetDragDropPayload("MY_DND_TYPE", &payload_data, sizeof(int));
+    
+    // Display preview while dragging
+    ImGui::Text("Dragging: %d", payload_data);
+    
+    ImGui::EndDragDropSource();
+}
+
+// Drop target
+ImGui::Button("Drop Here");
+if (ImGui::BeginDragDropTarget())
+{
+    if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("MY_DND_TYPE"))
+    {
+        // Payload accepted! Extract data
+        int received_data = *(const int*)payload->Data;
+        printf("Received: %d\n", received_data);
+    }
+    ImGui::EndDragDropTarget();
+}
+```
+
+## Drag and Drop Functions
+
+### BeginDragDropSource
+
+Call after submitting an item to make it draggable:
+
+```cpp
+bool BeginDragDropSource(ImGuiDragDropFlags flags = 0);
+```
+
+**Flags:**
+```cpp
+enum ImGuiDragDropFlags_
+{
+    ImGuiDragDropFlags_None                     = 0,
+    // BeginDragDropSource() flags
+    ImGuiDragDropFlags_SourceNoPreviewTooltip   = 1 << 0,  // Disable preview tooltip
+    ImGuiDragDropFlags_SourceNoDisableHover     = 1 << 1,  // Keep hover on source
+    ImGuiDragDropFlags_SourceNoHoldToOpenOthers = 1 << 2,  // Disable hover-to-open
+    ImGuiDragDropFlags_SourceAllowNullID        = 1 << 3,  // Allow without ItemID
+    ImGuiDragDropFlags_SourceExtern             = 1 << 4,  // External source
+    ImGuiDragDropFlags_SourceAutoExpirePayload  = 1 << 5,  // Auto expire payload
+    
+    // AcceptDragDropPayload() flags  
+    ImGuiDragDropFlags_AcceptBeforeDelivery     = 1 << 10, // Peek without accepting
+    ImGuiDragDropFlags_AcceptNoDrawDefaultRect  = 1 << 11, // Don't draw default rect
+    ImGuiDragDropFlags_AcceptNoPreviewTooltip   = 1 << 12, // Disable tooltip
+    ImGuiDragDropFlags_AcceptPeekOnly = ImGuiDragDropFlags_AcceptBeforeDelivery | 
+                                        ImGuiDragDropFlags_AcceptNoDrawDefaultRect,
+};
+```
+
+### SetDragDropPayload
+
+Set the data to be carried during drag:
+
+```cpp
+bool SetDragDropPayload(const char* type, const void* data, size_t size, 
+                        ImGuiCond cond = 0);
+```
+
+**Parameters:**
+- `type`: User-defined string (max 32 characters, strings starting with `_` are reserved)
+- `data`: Pointer to your data
+- `size`: Size of data in bytes
+- `cond`: When to set payload (usually 0 for always)
+
+### BeginDragDropTarget
+
+Call after submitting an item to make it a drop target:
+
+```cpp
+bool BeginDragDropTarget();
+```
+
+### AcceptDragDropPayload
+
+Accept a payload of a given type:
+
+```cpp
+const ImGuiPayload* AcceptDragDropPayload(const char* type, 
+                                          ImGuiDragDropFlags flags = 0);
+```
+
+Returns `NULL` if payload type doesn't match or if mouse button not released.
+
+### GetDragDropPayload
+
+Peek into current payload from anywhere:
+
+```cpp
+const ImGuiPayload* GetDragDropPayload();
+```
+
+Returns `NULL` when drag and drop is inactive.
+
+## ImGuiPayload Structure
+
+```cpp
+struct ImGuiPayload
+{
+    void*           Data;           // Data (copied and owned by dear imgui)
+    int             DataSize;       // Data size
+    
+    // [Internal]
+    ImGuiID         SourceId;       // Source item id
+    ImGuiID         SourceParentId; // Source parent id (if available)
+    int             DataFrameCount; // Data timestamp
+    char            DataType[32+1]; // Data type tag (short user-supplied string)
+    bool            Preview;        // Set when hovering target (AcceptDragDropPayload called)
+    bool            Delivery;       // Set when mouse button released over target
+    
+    // Helper methods
+    bool IsDataType(const char* type) const;
+    bool IsPreview() const;   // Is payload being previewed?
+    bool IsDelivery() const;  // Was payload delivered?
+};
+```
+
+## Dragging Between Widgets
+
+### Simple List Reordering
+
+```cpp
+static const char* items[] = { "Item 0", "Item 1", "Item 2", "Item 3", "Item 4" };
+static int items_count = IM_COUNTOF(items);
+
+for (int n = 0; n < items_count; n++)
+{
+    ImGui::PushID(n);
+    ImGui::Selectable(items[n]);
+    
+    // Drag source
+    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+    {
+        ImGui::SetDragDropPayload("DND_REORDER", &n, sizeof(int));
+        ImGui::Text("Dragging: %s", items[n]);
+        ImGui::EndDragDropSource();
+    }
+    
+    // Drop target
+    if (ImGui::BeginDragDropTarget())
+    {
+        if (const ImGuiPayload* payload = 
+            ImGui::AcceptDragDropPayload("DND_REORDER"))
+        {
+            int source_idx = *(const int*)payload->Data;
+            int target_idx = n;
+            
+            // Swap items
+            const char* tmp = items[source_idx];
+            items[source_idx] = items[target_idx];
+            items[target_idx] = tmp;
+        }
+        ImGui::EndDragDropTarget();
+    }
+    
+    ImGui::PopID();
+}
+```
+
+### Dragging Custom Data
+
+```cpp
+struct MyData {
+    int ID;
+    char Name[64];
+    float Value;
+};
+
+MyData source_data = { 123, "MyObject", 3.14f };
+
+// Drag source
+ImGui::Button("Drag Object");
+if (ImGui::BeginDragDropSource())
+{
+    ImGui::SetDragDropPayload("MY_OBJECT", &source_data, sizeof(MyData));
+    ImGui::Text("Dragging: %s", source_data.Name);
+    ImGui::EndDragDropSource();
+}
+
+// Drop target
+ImGui::Button("Drop Object Here");
+if (ImGui::BeginDragDropTarget())
+{
+    if (const ImGuiPayload* payload = 
+        ImGui::AcceptDragDropPayload("MY_OBJECT"))
+    {
+        MyData received = *(const MyData*)payload->Data;
+        printf("Received object: %s (ID=%d, Value=%.2f)\n",
+               received.Name, received.ID, received.Value);
+    }
+    ImGui::EndDragDropTarget();
+}
+```
+
+## Advanced Usage
+
+### Peek Before Delivery
+
+Preview payload without accepting it:
+
+```cpp
+if (ImGui::BeginDragDropTarget())
+{
+    // Peek at payload before mouse is released
+    if (const ImGuiPayload* payload = 
+        ImGui::AcceptDragDropPayload("MY_TYPE", 
+                                     ImGuiDragDropFlags_AcceptPeekOnly))
+    {
+        // Show preview of what would happen
+        int* data = (int*)payload->Data;
+        ImGui::SetTooltip("Will receive: %d", *data);
+    }
+    
+    // Actually accept on delivery
+    if (const ImGuiPayload* payload = 
+        ImGui::AcceptDragDropPayload("MY_TYPE"))
+    {
+        // Process dropped data
+        int received = *(int*)payload->Data;
+    }
+    
+    ImGui::EndDragDropTarget();
+}
+```
+
+### Custom Preview Rendering
+
+```cpp
+ImGui::Button("Drag Me");
+if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip))
+{
+    int payload = 42;
+    ImGui::SetDragDropPayload("MY_TYPE", &payload, sizeof(int));
+    
+    // Custom preview rendering
+    ImDrawList* draw_list = ImGui::GetForegroundDrawList();
+    ImVec2 mouse_pos = ImGui::GetMousePos();
+    draw_list->AddCircleFilled(mouse_pos, 20.0f, IM_COL32(255, 0, 0, 200));
+    draw_list->AddText(mouse_pos, IM_COL32(255, 255, 255, 255), "Dragging");
+    
+    ImGui::EndDragDropSource();
+}
+```
+
+### Multiple Payload Types
+
+Accept multiple types in one target:
+
+```cpp
+if (ImGui::BeginDragDropTarget())
+{
+    // Try accepting as integer
+    if (const ImGuiPayload* payload = 
+        ImGui::AcceptDragDropPayload("INT_TYPE"))
+    {
+        int value = *(int*)payload->Data;
+        printf("Received int: %d\n", value);
+    }
+    
+    // Or try accepting as string
+    if (const ImGuiPayload* payload = 
+        ImGui::AcceptDragDropPayload("STRING_TYPE"))
+    {
+        const char* value = (const char*)payload->Data;
+        printf("Received string: %s\n", value);
+    }
+    
+    ImGui::EndDragDropTarget();
+}
+```
+
+## Drag and Drop with Tables
+
+```cpp
+if (ImGui::BeginTable("table", 3, ImGuiTableFlags_Borders))
+{
+    for (int row = 0; row < 5; row++)
+    {
+        ImGui::TableNextRow();
+        
+        for (int column = 0; column < 3; column++)
+        {
+            ImGui::TableSetColumnIndex(column);
+            
+            char label[32];
+            sprintf(label, "Cell %d,%d", row, column);
+            ImGui::Selectable(label);
+            
+            // Drag source
+            if (ImGui::BeginDragDropSource())
+            {
+                struct CellData { int row, col; } data = { row, column };
+                ImGui::SetDragDropPayload("CELL_DND", &data, sizeof(CellData));
+                ImGui::Text("Moving cell %d,%d", row, column);
+                ImGui::EndDragDropSource();
+            }
+            
+            // Drop target
+            if (ImGui::BeginDragDropTarget())
+            {
+                if (const ImGuiPayload* payload = 
+                    ImGui::AcceptDragDropPayload("CELL_DND"))
+                {
+                    CellData* data = (CellData*)payload->Data;
+                    printf("Dropped cell %d,%d onto %d,%d\n",
+                           data->row, data->col, row, column);
+                }
+                ImGui::EndDragDropTarget();
+            }
+        }
+    }
+    ImGui::EndTable();
+}
+```
+
+## Color Drag and Drop
+
+ImGui widgets already support color drag and drop:
+
+```cpp
+static float color1[4] = { 1.0f, 0.0f, 0.0f, 1.0f };
+static float color2[4] = { 0.0f, 1.0f, 0.0f, 1.0f };
+
+// These automatically support drag and drop between each other
+ImGui::ColorEdit4("Color 1", color1);
+ImGui::ColorEdit4("Color 2", color2);
+
+// Also works with ColorButton
+ImGui::ColorButton("MyColor", ImVec4(color1[0], color1[1], color1[2], color1[3]));
+if (ImGui::BeginDragDropSource())
+{
+    ImGui::SetDragDropPayload("MY_COLOR", color1, sizeof(float) * 4);
+    ImGui::ColorButton("DraggedColor", ImVec4(color1[0], color1[1], color1[2], color1[3]));
+    ImGui::EndDragDropSource();
+}
+```
+
+## Best Practices
+
+<Steps>
+
+### Use Descriptive Type Strings
+
+Choose meaningful type names like `"SCENE_OBJECT"` instead of `"TYPE1"`.
+
+### Keep Payload Small
+
+For large objects, consider passing pointers or indices instead of copying entire structures.
+
+### Always Pair Begin/End
+
+Always call `EndDragDropSource()` if `BeginDragDropSource()` returns true, same for targets.
+
+### Handle NULL Payloads
+
+Always check if `AcceptDragDropPayload()` returns NULL before accessing data.
+
+### Avoid Reserved Names
+
+Don't use type strings starting with `_` (reserved for Dear ImGui internal types).
+
+</Steps>
+
+<Warning>
+**Important notes:**
+- Payload data is **copied and owned** by Dear ImGui
+- An item can be both a drag source AND a drop target
+- If you stop calling `BeginDragDropSource()`, the payload is preserved but won't show a preview
+- Type strings are limited to 32 characters
+</Warning>
+
+## Complete Example: File Tree
+
+```cpp
+struct FileNode {
+    char Name[64];
+    int ID;
+    bool IsFolder;
+    std::vector<FileNode*> Children;
+};
+
+void RenderFileNode(FileNode* node)
+{
+    ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_OpenOnArrow;
+    if (!node->IsFolder)
+        flags |= ImGuiTreeNodeFlags_Leaf;
+    
+    bool node_open = ImGui::TreeNodeEx(node->Name, flags);
+    
+    // Drag source
+    if (ImGui::BeginDragDropSource())
+    {
+        ImGui::SetDragDropPayload("FILE_NODE", &node->ID, sizeof(int));
+        ImGui::Text("Moving: %s", node->Name);
+        ImGui::EndDragDropSource();
+    }
+    
+    // Drop target (only if folder)
+    if (node->IsFolder && ImGui::BeginDragDropTarget())
+    {
+        if (const ImGuiPayload* payload = 
+            ImGui::AcceptDragDropPayload("FILE_NODE"))
+        {
+            int dragged_id = *(int*)payload->Data;
+            printf("Dropped node %d into folder %s\n", dragged_id, node->Name);
+            // Move node logic here...
+        }
+        ImGui::EndDragDropTarget();
+    }
+    
+    // Render children
+    if (node_open)
+    {
+        for (FileNode* child : node->Children)
+            RenderFileNode(child);
+        ImGui::TreePop();
+    }
+}
+```
+
+## Reference
+
+- [Drag and Drop API](https://github.com/ocornut/imgui/blob/master/imgui.h) (line 968)
+- See `imgui_demo.cpp` under "Widgets->Drag and Drop" for more examples

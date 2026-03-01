@@ -1,0 +1,281 @@
+---
+title: 'Tabs'
+description: 'Tab bar and tab item widgets for Dear ImGui'
+---
+
+## Tab Bars
+
+Tabs are automatically created by the docking system (when in 'docking' branch). Use this to create tab bars/tabs yourself.
+
+### BeginTabBar
+
+```cpp
+bool ImGui::BeginTabBar(const char* str_id, ImGuiTabBarFlags flags = 0)
+```
+
+Create and append into a TabBar. Only call `EndTabBar()` if this returns true.
+
+<ParamField path="str_id" type="const char*">
+  Unique identifier for the tab bar
+</ParamField>
+
+<ParamField path="flags" type="ImGuiTabBarFlags" default="0">
+  Tab bar flags (see ImGuiTabBarFlags_)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if tab bar is visible
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::BeginTabBar("MyTabBar")) {
+    if (ImGui::BeginTabItem("Tab1")) {
+        ImGui::Text("This is tab 1!");
+        ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Tab2")) {
+        ImGui::Text("This is tab 2!");
+        ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+}
+```
+
+### EndTabBar
+
+```cpp
+void ImGui::EndTabBar()
+```
+
+Close tab bar. Only call `EndTabBar()` if `BeginTabBar()` returns true.
+
+## Tab Items
+
+### BeginTabItem
+
+```cpp
+bool ImGui::BeginTabItem(const char* label, bool* p_open = NULL, ImGuiTabItemFlags flags = 0)
+```
+
+Create a Tab. Returns true if the Tab is selected.
+
+<ParamField path="label" type="const char*">
+  Tab label
+</ParamField>
+
+<ParamField path="p_open" type="bool*" default="NULL">
+  Optional pointer to bool to enable close button (set to false when clicked)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiTabItemFlags" default="0">
+  Tab item flags (see ImGuiTabItemFlags_)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when tab is selected
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::BeginTabBar("Tabs")) {
+    if (ImGui::BeginTabItem("Settings")) {
+        ImGui::Text("Settings content");
+        ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Tools")) {
+        ImGui::Text("Tools content");
+        ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+}
+
+// With close button
+static bool tab_open = true;
+if (ImGui::BeginTabBar("ClosableTabs")) {
+    if (tab_open && ImGui::BeginTabItem("Closable", &tab_open)) {
+        ImGui::Text("This tab can be closed");
+        ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+}
+if (!tab_open) {
+    ImGui::Text("Tab was closed!");
+}
+```
+
+### EndTabItem
+
+```cpp
+void ImGui::EndTabItem()
+```
+
+Close tab item. Only call `EndTabItem()` if `BeginTabItem()` returns true.
+
+### TabItemButton
+
+```cpp
+bool ImGui::TabItemButton(const char* label, ImGuiTabItemFlags flags = 0)
+```
+
+Create a Tab behaving like a button. Return true when clicked. Cannot be selected in the tab bar.
+
+<ParamField path="label" type="const char*">
+  Button label
+</ParamField>
+
+<ParamField path="flags" type="ImGuiTabItemFlags" default="0">
+  Tab item flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when clicked
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::BeginTabBar("TabBar")) {
+    if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing)) {
+        // Add new tab
+    }
+    
+    if (ImGui::BeginTabItem("Tab1")) {
+        ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+}
+```
+
+### SetTabItemClosed
+
+```cpp
+void ImGui::SetTabItemClosed(const char* tab_or_docked_window_label)
+```
+
+Notify TabBar or Docking system of a closed tab/window ahead (useful to reduce visual flicker on reorderable tab bars). For tab-bar: call after `BeginTabBar()` and before Tab submissions. Otherwise call with a window name.
+
+<ParamField path="tab_or_docked_window_label" type="const char*">
+  Tab or window label
+</ParamField>
+
+## Tab Bar Flags
+
+### ImGuiTabBarFlags_
+
+Flags for `BeginTabBar()`.
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiTabBarFlags_None` | Default |
+| `ImGuiTabBarFlags_Reorderable` | Allow manually dragging tabs to re-order them |
+| `ImGuiTabBarFlags_AutoSelectNewTabs` | Automatically select new tabs when they appear |
+| `ImGuiTabBarFlags_TabListPopupButton` | Enable popup button for tab list |
+| `ImGuiTabBarFlags_NoCloseWithMiddleMouseButton` | Disable closing tabs with middle mouse button |
+| `ImGuiTabBarFlags_NoTabListScrollingButtons` | Disable scrolling buttons (when fitting policy is scroll) |
+| `ImGuiTabBarFlags_NoTooltip` | Disable tooltips when hovering a tab |
+| `ImGuiTabBarFlags_DrawSelectedOverline` | Draw selected overline markers over selected tab |
+| `ImGuiTabBarFlags_FittingPolicyMixed` | Shrink tabs when they don't fit, then enable scrolling (default) |
+| `ImGuiTabBarFlags_FittingPolicyShrink` | Shrink tabs when they don't fit |
+| `ImGuiTabBarFlags_FittingPolicyScroll` | Enable scrolling buttons when tabs don't fit |
+
+```cpp
+// Reorderable tabs
+if (ImGui::BeginTabBar("Reorderable", ImGuiTabBarFlags_Reorderable)) {
+    if (ImGui::BeginTabItem("Tab1")) {
+        ImGui::EndTabItem();
+    }
+    if (ImGui::BeginTabItem("Tab2")) {
+        ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+}
+
+// Auto-select new tabs
+if (ImGui::BeginTabBar("AutoSelect", ImGuiTabBarFlags_AutoSelectNewTabs)) {
+    // ...
+    ImGui::EndTabBar();
+}
+```
+
+## Tab Item Flags
+
+### ImGuiTabItemFlags_
+
+Flags for `BeginTabItem()`.
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiTabItemFlags_None` | Default |
+| `ImGuiTabItemFlags_UnsavedDocument` | Display a dot next to the title + set NoAssumedClosure |
+| `ImGuiTabItemFlags_SetSelected` | Trigger flag to programmatically make the tab selected |
+| `ImGuiTabItemFlags_NoCloseWithMiddleMouseButton` | Disable closing with middle mouse button |
+| `ImGuiTabItemFlags_NoPushId` | Don't call PushID()/PopID() on BeginTabItem()/EndTabItem() |
+| `ImGuiTabItemFlags_NoTooltip` | Disable tooltip for the given tab |
+| `ImGuiTabItemFlags_NoReorder` | Disable reordering this tab or having another tab cross over |
+| `ImGuiTabItemFlags_Leading` | Enforce the tab position to the left of the tab bar |
+| `ImGuiTabItemFlags_Trailing` | Enforce the tab position to the right of the tab bar |
+| `ImGuiTabItemFlags_NoAssumedClosure` | Tab is selected when trying to close + closure is not immediately assumed |
+
+```cpp
+// Set tab as selected
+if (ImGui::BeginTabItem("Selected", NULL, ImGuiTabItemFlags_SetSelected)) {
+    ImGui::EndTabItem();
+}
+
+// Unsaved document indicator
+if (ImGui::BeginTabItem("Document*", NULL, ImGuiTabItemFlags_UnsavedDocument)) {
+    ImGui::Text("Unsaved changes");
+    ImGui::EndTabItem();
+}
+
+// Leading tab (stays on left)
+if (ImGui::BeginTabItem("Settings", NULL, ImGuiTabItemFlags_Leading)) {
+    ImGui::EndTabItem();
+}
+
+// Trailing tab (stays on right)
+if (ImGui::BeginTabItem("Help", NULL, ImGuiTabItemFlags_Trailing)) {
+    ImGui::EndTabItem();
+}
+```
+
+## Complete Example
+
+```cpp
+void ShowTabBarExample() {
+    static int tab_count = 3;
+    static bool tab_open[10] = { true, true, true, false, false, false, false, false, false, false };
+    
+    if (ImGui::BeginTabBar("MyTabs", ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_AutoSelectNewTabs)) {
+        // Add button
+        if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoTooltip)) {
+            if (tab_count < 10) {
+                tab_open[tab_count] = true;
+                tab_count++;
+            }
+        }
+        
+        // Tab items
+        for (int n = 0; n < tab_count; n++) {
+            if (!tab_open[n])
+                continue;
+                
+            char buf[16];
+            snprintf(buf, sizeof(buf), "Tab %d", n + 1);
+            
+            if (ImGui::BeginTabItem(buf, &tab_open[n])) {
+                ImGui::Text("This is the content of %s", buf);
+                ImGui::Text("Close me by clicking the X button.");
+                
+                if (ImGui::Button("Close This Tab")) {
+                    tab_open[n] = false;
+                }
+                
+                ImGui::EndTabItem();
+            }
+        }
+        
+        ImGui::EndTabBar();
+    }
+}
+```

@@ -1,0 +1,361 @@
+---
+title: Color Pickers
+description: Color selection and editing widgets in Dear ImGui
+---
+
+Color widgets provide an intuitive way for users to select and edit colors. Dear ImGui offers both inline color editors and full picker popups.
+
+## Color Edit Widgets
+
+### ColorEdit3()
+
+Edit RGB color (3 components):
+
+```cpp
+IMGUI_API bool ColorEdit3(const char* label, float col[3], ImGuiColorEditFlags flags = 0);
+```
+
+<ParamField path="label" type="const char*" required>
+  Widget label
+</ParamField>
+
+<ParamField path="col" type="float[3]" required>
+  RGB color array (values 0.0 to 1.0)
+</ParamField>
+
+```cpp
+static float color3[3] = { 1.0f, 0.5f, 0.0f };  // Orange
+ImGui::ColorEdit3("Color", color3);
+```
+
+### ColorEdit4()
+
+Edit RGBA color (4 components with alpha):
+
+```cpp
+IMGUI_API bool ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flags = 0);
+```
+
+```cpp
+static ImVec4 color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+ImGui::ColorEdit4("MyColor", (float*)&color);
+
+// With flags
+ImGui::ColorEdit4("Color HSV", (float*)&color, ImGuiColorEditFlags_DisplayHSV);
+ImGui::ColorEdit4("Color Float", (float*)&color, ImGuiColorEditFlags_Float);
+```
+
+<Note>
+  ColorEdit widgets display a colored square that can be:
+  - **Left-clicked** to open a color picker
+  - **Right-clicked** to open options menu
+  - **Ctrl+Clicked** on components to input values directly
+</Note>
+
+## Color Picker Widgets
+
+### ColorPicker3() / ColorPicker4()
+
+Full-featured color picker:
+
+```cpp
+IMGUI_API bool ColorPicker3(const char* label, float col[3], ImGuiColorEditFlags flags = 0);
+IMGUI_API bool ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags flags = 0,
+                            const float* ref_col = NULL);
+```
+
+<ParamField path="ref_col" type="const float*">
+  Optional reference color to display for comparison
+</ParamField>
+
+```cpp
+static ImVec4 color = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+
+// Basic picker
+ImGui::ColorPicker4("##picker", (float*)&color);
+
+// With reference color
+ImVec4 ref_color(1.0f, 0.0f, 0.0f, 1.0f);
+ImGui::ColorPicker4("##picker", (float*)&color, 0, (float*)&ref_color);
+```
+
+## Color Button
+
+### ColorButton()
+
+Display a colored square button:
+
+```cpp
+IMGUI_API bool ColorButton(const char* desc_id, const ImVec4& col,
+                           ImGuiColorEditFlags flags = 0, const ImVec2& size = ImVec2(0, 0));
+```
+
+```cpp
+ImVec4 color(1.0f, 0.0f, 0.0f, 1.0f);
+
+// Basic color button
+if (ImGui::ColorButton("MyColor##3b", color)) {
+    // Button was clicked
+}
+
+// Larger color button without picker
+ImGui::ColorButton("##color", color, ImGuiColorEditFlags_NoPicker, ImVec2(80, 80));
+```
+
+## Color Edit Flags
+
+Customize color widget behavior with flags:
+
+### Display Mode Flags
+
+```cpp
+// No alpha component
+ImGui::ColorEdit4("RGB", col, ImGuiColorEditFlags_NoAlpha);
+
+// Display as HSV instead of RGB
+ImGui::ColorEdit4("HSV", col, ImGuiColorEditFlags_DisplayHSV);
+
+// Display as hexadecimal
+ImGui::ColorEdit4("Hex", col, ImGuiColorEditFlags_DisplayHex);
+
+// Display with float values
+ImGui::ColorEdit4("Float", col, ImGuiColorEditFlags_Float);
+```
+
+### Picker Mode Flags
+
+```cpp
+// Use hue bar picker (default for ColorPicker)
+ImGui::ColorPicker4("##p", col, ImGuiColorEditFlags_PickerHueBar);
+
+// Use hue wheel picker
+ImGui::ColorPicker4("##p", col, ImGuiColorEditFlags_PickerHueWheel);
+```
+
+### Alpha Flags
+
+<CodeGroup>
+```cpp Alpha Display
+// Force alpha to 1.0 (opaque)
+ImGui::ColorEdit4("Color", col, ImGuiColorEditFlags_AlphaOpaque);
+
+// Alpha channel without background grid
+ImGui::ColorEdit4("Color", col, ImGuiColorEditFlags_AlphaNoBg);
+
+// Half preview of alpha
+ImGui::ColorEdit4("Color", col, ImGuiColorEditFlags_AlphaPreviewHalf);
+
+// Show alpha bar
+ImGui::ColorPicker4("##picker", col, ImGuiColorEditFlags_AlphaBar);
+```
+
+```cpp Component Flags
+// Hide input sliders
+ImGui::ColorEdit4("Color", col, ImGuiColorEditFlags_NoInputs);
+
+// Hide small preview square
+ImGui::ColorPicker4("##picker", col, ImGuiColorEditFlags_NoSmallPreview);
+
+// Hide side preview
+ImGui::ColorPicker4("##picker", col, ImGuiColorEditFlags_NoSidePreview);
+```
+</CodeGroup>
+
+### Interaction Flags
+
+```cpp
+// Disable drag and drop
+ImGui::ColorEdit4("Color", col, ImGuiColorEditFlags_NoDragDrop);
+
+// Disable right-click options menu
+ImGui::ColorEdit4("Color", col, ImGuiColorEditFlags_NoOptions);
+
+// Disable picker popup (button only)
+ImGui::ColorButton("##btn", color, ImGuiColorEditFlags_NoPicker);
+
+// No border around color button
+ImGui::ColorButton("##btn", color, ImGuiColorEditFlags_NoBorder);
+
+// No tooltip on hover
+ImGui::ColorButton("##btn", color, ImGuiColorEditFlags_NoTooltip);
+```
+
+## Custom Color Picker Popup
+
+Create a custom picker popup with palette:
+
+```cpp
+static ImVec4 color = ImVec4(0.5f, 0.5f, 0.5f, 1.0f);
+static ImVec4 backup_color;
+
+bool open_popup = ImGui::ColorButton("MyColor##3b", color);
+ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
+open_popup |= ImGui::Button("Palette");
+
+if (open_popup) {
+    ImGui::OpenPopup("mypicker");
+    backup_color = color;
+}
+
+if (ImGui::BeginPopup("mypicker")) {
+    ImGui::Text("MY CUSTOM COLOR PICKER");
+    ImGui::Separator();
+    
+    ImGui::ColorPicker4("##picker", (float*)&color,
+                        ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
+    ImGui::SameLine();
+    
+    ImGui::BeginGroup();
+    ImGui::Text("Current");
+    ImGui::ColorButton("##current", color, ImGuiColorEditFlags_NoPicker, ImVec2(60, 40));
+    ImGui::Text("Previous");
+    if (ImGui::ColorButton("##previous", backup_color, ImGuiColorEditFlags_NoPicker, ImVec2(60, 40)))
+        color = backup_color;
+    ImGui::EndGroup();
+    
+    ImGui::EndPopup();
+}
+```
+
+## Color Palette
+
+Create a palette of saved colors:
+
+```cpp
+// Initialize palette
+static bool palette_init = true;
+static ImVec4 saved_palette[32];
+
+if (palette_init) {
+    for (int n = 0; n < 32; n++) {
+        ImGui::ColorConvertHSVtoRGB(n / 31.0f, 0.8f, 0.8f,
+            saved_palette[n].x, saved_palette[n].y, saved_palette[n].z);
+        saved_palette[n].w = 1.0f;
+    }
+    palette_init = false;
+}
+
+// Display palette
+for (int n = 0; n < 32; n++) {
+    ImGui::PushID(n);
+    if ((n % 8) != 0)
+        ImGui::SameLine(0.0f, ImGui::GetStyle().ItemSpacing.y);
+    
+    if (ImGui::ColorButton("##palette", saved_palette[n],
+                           ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoPicker,
+                           ImVec2(20, 20))) {
+        current_color = saved_palette[n];
+    }
+    
+    // Drag and drop support
+    if (ImGui::BeginDragDropTarget()) {
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
+            memcpy((float*)&saved_palette[n], payload->Data, sizeof(float) * 3);
+        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F))
+            memcpy((float*)&saved_palette[n], payload->Data, sizeof(float) * 4);
+        ImGui::EndDragDropTarget();
+    }
+    
+    ImGui::PopID();
+}
+```
+
+## Color Conversion Utilities
+
+```cpp
+// HSV to RGB
+float r, g, b;
+ImGui::ColorConvertHSVtoRGB(h, s, v, r, g, b);
+
+// RGB to HSV
+float h, s, v;
+ImGui::ColorConvertRGBtoHSV(r, g, b, h, s, v);
+
+// ImVec4 to ImU32
+ImU32 color_u32 = ImGui::ColorConvertFloat4ToU32(ImVec4(1.0f, 0.5f, 0.0f, 1.0f));
+
+// ImU32 to ImVec4
+ImVec4 color_vec4 = ImGui::ColorConvertU32ToFloat4(0xFF8000FF);
+```
+
+## Set Color Edit Options
+
+Set default options for all color widgets:
+
+```cpp
+IMGUI_API void SetColorEditOptions(ImGuiColorEditFlags flags);
+```
+
+```cpp
+// Set default picker type and display mode
+ImGui::SetColorEditOptions(ImGuiColorEditFlags_PickerHueWheel | ImGuiColorEditFlags_DisplayRGB);
+```
+
+## Complete Example
+
+```cpp
+void ShowColorDemo() {
+    ImGui::Begin("Color Demo");
+    
+    static ImVec4 color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    
+    // Inline color editor
+    ImGui::Text("Inline editor:");
+    ImGui::ColorEdit3("RGB", (float*)&color);
+    ImGui::ColorEdit4("RGBA", (float*)&color);
+    
+    ImGui::Spacing();
+    
+    // Color with HSV display
+    ImGui::Text("HSV display:");
+    ImGui::ColorEdit4("Color HSV", (float*)&color, ImGuiColorEditFlags_DisplayHSV);
+    
+    ImGui::Spacing();
+    
+    // Color button only (no inputs)
+    ImGui::Text("Button only:");
+    ImGui::ColorEdit4("##button", (float*)&color,
+                      ImGuiColorEditFlags_NoInputs | ImGuiColorEditFlags_NoLabel);
+    
+    ImGui::Spacing();
+    ImGui::Separator();
+    ImGui::Spacing();
+    
+    // Full color picker
+    ImGui::Text("Full picker:");
+    static ImGuiColorEditFlags picker_flags = ImGuiColorEditFlags_None;
+    ImGui::CheckboxFlags("With Alpha", &picker_flags, ImGuiColorEditFlags_AlphaBar);
+    ImGui::CheckboxFlags("Hue Wheel", &picker_flags, ImGuiColorEditFlags_PickerHueWheel);
+    
+    ImGui::ColorPicker4("##picker", (float*)&color, picker_flags);
+    
+    ImGui::End();
+}
+```
+
+## HDR Colors
+
+Enable HDR mode to allow values beyond 0.0-1.0 range:
+
+```cpp
+static float hdr_color[3] = { 2.5f, 1.0f, 0.5f };
+ImGui::ColorEdit3("HDR Color", hdr_color, ImGuiColorEditFlags_HDR);
+```
+
+<Note>
+  With `ImGuiColorEditFlags_HDR`, the color components can go beyond the normal 0.0-1.0 range, useful for emission colors or bloom effects.
+</Note>
+
+## Best Practices
+
+<Tip>
+  Use `ImGuiColorEditFlags_NoAlpha` when you only need RGB colors without transparency.
+</Tip>
+
+<Warning>
+  ColorEdit returns `true` every frame the color is being edited. Check the return value only if you need to respond to changes.
+</Warning>
+
+<Tip>
+  Enable drag and drop between color widgets automatically unless you specify `ImGuiColorEditFlags_NoDragDrop`.
+</Tip>

@@ -1,0 +1,272 @@
+---
+title: 'Spacing & Alignment'
+description: 'Functions for controlling spacing, indentation, and alignment'
+---
+
+## Spacing Functions
+
+### Spacing
+
+```cpp
+void Spacing();
+```
+
+Add vertical spacing between widgets.
+
+**Example:**
+```cpp
+ImGui::Text("Line 1");
+ImGui::Spacing();
+ImGui::Text("Line 2 with extra space");
+```
+
+### Dummy
+
+```cpp
+void Dummy(const ImVec2& size);
+```
+
+Add a dummy item of given size. Unlike `InvisibleButton()`, `Dummy()` won't take mouse clicks or be navigable.
+
+<ParamField path="size" type="const ImVec2&">
+  Size of the dummy item in pixels
+</ParamField>
+
+**Example:**
+```cpp
+// Add 20 pixels of horizontal spacing
+ImGui::Dummy(ImVec2(20.0f, 0.0f));
+ImGui::SameLine();
+ImGui::Text("Indented text");
+
+// Add 50 pixels of vertical spacing
+ImGui::Dummy(ImVec2(0.0f, 50.0f));
+```
+
+### NewLine
+
+```cpp
+void NewLine();
+```
+
+Undo a `SameLine()` or force a new line when in a horizontal-layout context.
+
+**Example:**
+```cpp
+ImGui::Text("Line 1");
+ImGui::SameLine();
+ImGui::Text("Same line");
+ImGui::NewLine();
+ImGui::Text("Line 2");
+```
+
+## Horizontal Layout
+
+### SameLine
+
+```cpp
+void SameLine(float offset_from_start_x = 0.0f, float spacing = -1.0f);
+```
+
+Call between widgets or groups to layout them horizontally. X position given in window coordinates.
+
+<ParamField path="offset_from_start_x" type="float" default="0.0f">
+  Absolute X position from left of window. Use 0.0f to use current position.
+</ParamField>
+
+<ParamField path="spacing" type="float" default="-1.0f">
+  Spacing from previous widget. Use -1.0f to use default spacing (style.ItemInnerSpacing.x).
+</ParamField>
+
+**Example:**
+```cpp
+// Place widgets on same line with default spacing
+ImGui::Text("Label:");
+ImGui::SameLine();
+ImGui::Button("Button");
+
+// Custom spacing
+ImGui::Text("A");
+ImGui::SameLine(0.0f, 20.0f);
+ImGui::Text("B");
+
+// Absolute positioning
+ImGui::Text("Left");
+ImGui::SameLine(150.0f);
+ImGui::Text("At X=150");
+```
+
+## Indentation
+
+### Indent
+
+```cpp
+void Indent(float indent_w = 0.0f);
+```
+
+Move content position toward the right, by `indent_w`, or `style.IndentSpacing` if `indent_w <= 0`.
+
+<ParamField path="indent_w" type="float" default="0.0f">
+  Indentation width in pixels. Use 0.0f or negative for default `style.IndentSpacing`.
+</ParamField>
+
+**Example:**
+```cpp
+ImGui::Text("Normal");
+ImGui::Indent();
+ImGui::Text("Indented");
+ImGui::Indent();
+ImGui::Text("Double indented");
+ImGui::Unindent(2.0f * ImGui::GetStyle().IndentSpacing);
+```
+
+### Unindent
+
+```cpp
+void Unindent(float indent_w = 0.0f);
+```
+
+Move content position back to the left, by `indent_w`, or `style.IndentSpacing` if `indent_w <= 0`.
+
+<ParamField path="indent_w" type="float" default="0.0f">
+  Indentation width in pixels. Use 0.0f or negative for default `style.IndentSpacing`.
+</ParamField>
+
+## Alignment
+
+### AlignTextToFramePadding
+
+```cpp
+void AlignTextToFramePadding();
+```
+
+Vertically align upcoming text baseline to `FramePadding.y` so that it will align properly to regularly framed items (call if you have text on a line before a framed item).
+
+**Example:**
+```cpp
+ImGui::AlignTextToFramePadding();
+ImGui::Text("Label:");
+ImGui::SameLine();
+ImGui::Button("Button");
+```
+
+## Separator
+
+### Separator
+
+```cpp
+void Separator();
+```
+
+Horizontal separator line. Inside a menu bar or in horizontal layout mode, this becomes a vertical separator.
+
+**Example:**
+```cpp
+ImGui::Text("Section 1");
+ImGui::Button("Button 1");
+ImGui::Separator();
+ImGui::Text("Section 2");
+ImGui::Button("Button 2");
+```
+
+### SeparatorText
+
+```cpp
+void SeparatorText(const char* label);
+```
+
+Currently: formatted text with a horizontal line.
+
+<ParamField path="label" type="const char*">
+  Text to display on the separator
+</ParamField>
+
+**Example:**
+```cpp
+ImGui::SeparatorText("Configuration");
+ImGui::Checkbox("Option 1", &option1);
+ImGui::Checkbox("Option 2", &option2);
+
+ImGui::SeparatorText("Advanced");
+ImGui::Checkbox("Debug Mode", &debug);
+```
+
+## Measurement Functions
+
+### GetTextLineHeight
+
+```cpp
+float GetTextLineHeight();
+```
+
+Get height of a single line of text. Approximately equals `FontSize`.
+
+<ParamField path="Returns" type="float">
+  Height in pixels
+</ParamField>
+
+### GetTextLineHeightWithSpacing
+
+```cpp
+float GetTextLineHeightWithSpacing();
+```
+
+Get height of a line plus spacing. Equals `FontSize + style.ItemSpacing.y` (distance in pixels between 2 consecutive lines of text).
+
+<ParamField path="Returns" type="float">
+  Height with spacing in pixels
+</ParamField>
+
+### GetFrameHeight
+
+```cpp
+float GetFrameHeight();
+```
+
+Get height of a framed item. Approximately equals `FontSize + style.FramePadding.y * 2`.
+
+<ParamField path="Returns" type="float">
+  Frame height in pixels
+</ParamField>
+
+### GetFrameHeightWithSpacing
+
+```cpp
+float GetFrameHeightWithSpacing();
+```
+
+Get height of a framed item plus spacing. Equals `FontSize + style.FramePadding.y * 2 + style.ItemSpacing.y` (distance in pixels between 2 consecutive lines of framed widgets).
+
+<ParamField path="Returns" type="float">
+  Frame height with spacing in pixels
+</ParamField>
+
+## Common Patterns
+
+### Right-Aligned Widgets
+
+```cpp
+float button_width = 120.0f;
+ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - button_width);
+ImGui::Button("Right Aligned", ImVec2(button_width, 0));
+```
+
+### Centered Widget
+
+```cpp
+float button_width = 120.0f;
+ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (ImGui::GetContentRegionAvail().x - button_width) * 0.5f);
+ImGui::Button("Centered", ImVec2(button_width, 0));
+```
+
+### Uniform Grid Layout
+
+```cpp
+float cell_size = 100.0f;
+for (int i = 0; i < 12; i++)
+{
+    if (i % 4 != 0)
+        ImGui::SameLine();
+    ImGui::Button(std::to_string(i).c_str(), ImVec2(cell_size, cell_size));
+}
+```

@@ -1,0 +1,341 @@
+---
+title: Demo & Debug Windows
+description: Built-in demonstration and debugging windows for Dear ImGui
+---
+
+Dear ImGui provides several built-in windows for demonstration, debugging, and learning. These are invaluable tools for both learning the library and diagnosing issues in your application.
+
+## ShowDemoWindow
+
+Displays the comprehensive Dear ImGui demo window showcasing all features.
+
+```cpp
+void ShowDemoWindow(bool* p_open = NULL);
+```
+
+### Parameters
+
+<ParamField path="p_open" type="bool*" default="NULL">
+  Optional pointer to a boolean controlling window visibility. When the user clicks the close button, this is set to false.
+</ParamField>
+
+### Description
+
+The demo window is the best way to learn Dear ImGui. It demonstrates:
+- All widget types and their variants
+- Layout and grouping techniques
+- Window management features
+- Input handling examples
+- Tables, trees, and list boxes
+- Drag & drop functionality
+- Multi-selection patterns
+- Custom drawing with ImDrawList
+- Performance optimization tips
+
+### Example
+
+```cpp
+// Simple usage - always show
+ImGui::ShowDemoWindow();
+
+// With close button
+bool show_demo = true;
+while (running) {
+    ImGui::NewFrame();
+    
+    if (show_demo) {
+        ImGui::ShowDemoWindow(&show_demo);
+    }
+    
+    ImGui::Render();
+}
+```
+
+### With Menu Integration
+
+```cpp
+bool show_demo = false;
+
+if (ImGui::BeginMainMenuBar()) {
+    if (ImGui::BeginMenu("Windows")) {
+        ImGui::MenuItem("Demo Window", NULL, &show_demo);
+        ImGui::EndMenu();
+    }
+    ImGui::EndMainMenuBar();
+}
+
+if (show_demo) {
+    ImGui::ShowDemoWindow(&show_demo);
+}
+```
+
+<Note>
+The demo window source code (imgui_demo.cpp) is extensively commented and serves as a learning resource. Read through it to understand best practices.
+</Note>
+
+## ShowMetricsWindow
+
+Displays the metrics/debugger window showing Dear ImGui internals.
+
+```cpp
+void ShowMetricsWindow(bool* p_open = NULL);
+```
+
+### Parameters
+
+<ParamField path="p_open" type="bool*" default="NULL">
+  Optional pointer to a boolean controlling window visibility.
+</ParamField>
+
+### Description
+
+The metrics window provides deep insight into Dear ImGui's internal state:
+- Active windows and their properties
+- Draw command statistics
+- Vertex and index buffer usage
+- Memory allocations
+- Active ID and hover information
+- Font atlas details
+- Input state monitoring
+- Settings inspection
+
+### Example
+
+```cpp
+bool show_metrics = false;
+
+// Toggle with keyboard shortcut
+if (ImGui::IsKeyPressed(ImGuiKey_F1)) {
+    show_metrics = !show_metrics;
+}
+
+if (show_metrics) {
+    ImGui::ShowMetricsWindow(&show_metrics);
+}
+```
+
+### Debugging Window Issues
+
+```cpp
+// When debugging window behavior
+ImGui::Begin("My Window");
+ImGui::Text("Some content");
+ImGui::End();
+
+// Show metrics to inspect window state
+ImGui::ShowMetricsWindow();
+// Navigate to Windows -> "My Window" to see:
+// - Position, Size
+// - Flags
+// - Draw commands
+// - Active/Focused state
+```
+
+<Note>
+Use the metrics window to diagnose performance issues. It shows draw call counts and vertex/index buffer sizes, helping identify rendering bottlenecks.
+</Note>
+
+## ShowDebugLogWindow
+
+Displays a simplified log of important Dear ImGui events.
+
+```cpp
+void ShowDebugLogWindow(bool* p_open = NULL);
+```
+
+### Parameters
+
+<ParamField path="p_open" type="bool*" default="NULL">
+  Optional pointer to a boolean controlling window visibility.
+</ParamField>
+
+### Description
+
+The debug log window records:
+- Navigation events
+- Focus changes
+- Input capture events
+- Window creation/destruction
+- Table operations
+- Multi-select operations
+- Other significant state changes
+
+### Example
+
+```cpp
+bool show_log = false;
+
+if (ImGui::BeginMainMenuBar()) {
+    if (ImGui::BeginMenu("Debug")) {
+        ImGui::MenuItem("Debug Log", NULL, &show_log);
+        ImGui::EndMenu();
+    }
+    ImGui::EndMainMenuBar();
+}
+
+if (show_log) {
+    ImGui::ShowDebugLogWindow(&show_log);
+}
+```
+
+### Debugging Input Issues
+
+```cpp
+// Enable log when debugging input handling
+static bool show_log = true;
+ImGui::ShowDebugLogWindow(&show_log);
+
+// Your UI code
+if (ImGui::Button("Test Button")) {
+    // Check debug log to see:
+    // - Whether button received focus
+    // - Navigation events
+    // - Input routing
+}
+```
+
+<Note>
+The debug log is particularly useful when debugging keyboard navigation and focus issues.
+</Note>
+
+## ShowAboutWindow
+
+Displays the About window with version, credits, and build information.
+
+```cpp
+void ShowAboutWindow(bool* p_open = NULL);
+```
+
+### Parameters
+
+<ParamField path="p_open" type="bool*" default="NULL">
+  Optional pointer to a boolean controlling window visibility.
+</ParamField>
+
+### Description
+
+The About window displays:
+- Dear ImGui version (e.g., "1.92.7 WIP")
+- Credits and contributors
+- Build/system information
+- Compiler details
+- Configuration flags
+- Links to documentation and resources
+
+### Example
+
+```cpp
+bool show_about = false;
+
+if (ImGui::BeginMainMenuBar()) {
+    if (ImGui::BeginMenu("Help")) {
+        if (ImGui::MenuItem("About Dear ImGui")) {
+            show_about = true;
+        }
+        ImGui::EndMenu();
+    }
+    ImGui::EndMainMenuBar();
+}
+
+if (show_about) {
+    ImGui::ShowAboutWindow(&show_about);
+}
+```
+
+### Version Information
+
+```cpp
+// Get version programmatically
+const char* version = ImGui::GetVersion();
+printf("Using Dear ImGui %s\n", version);
+
+// Show in about window
+ImGui::ShowAboutWindow();
+```
+
+## Complete Debug UI Example
+
+```cpp
+struct DebugWindows {
+    bool show_demo = false;
+    bool show_metrics = false;
+    bool show_log = false;
+    bool show_about = false;
+};
+
+static DebugWindows debug;
+
+void RenderDebugMenu() {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("Windows")) {
+            ImGui::MenuItem("Demo Window", "F1", &debug.show_demo);
+            ImGui::Separator();
+            ImGui::MenuItem("Metrics/Debugger", "F2", &debug.show_metrics);
+            ImGui::MenuItem("Debug Log", "F3", &debug.show_log);
+            ImGui::Separator();
+            ImGui::MenuItem("About Dear ImGui", NULL, &debug.show_about);
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+    
+    // Keyboard shortcuts
+    if (ImGui::IsKeyPressed(ImGuiKey_F1)) debug.show_demo = !debug.show_demo;
+    if (ImGui::IsKeyPressed(ImGuiKey_F2)) debug.show_metrics = !debug.show_metrics;
+    if (ImGui::IsKeyPressed(ImGuiKey_F3)) debug.show_log = !debug.show_log;
+    
+    // Render windows
+    if (debug.show_demo) ImGui::ShowDemoWindow(&debug.show_demo);
+    if (debug.show_metrics) ImGui::ShowMetricsWindow(&debug.show_metrics);
+    if (debug.show_log) ImGui::ShowDebugLogWindow(&debug.show_log);
+    if (debug.show_about) ImGui::ShowAboutWindow(&debug.show_about);
+}
+```
+
+<Warning>
+Keep debug windows disabled in release builds to avoid exposing internal state to end users. Use preprocessor directives:
+```cpp
+#ifdef _DEBUG
+    ImGui::ShowMetricsWindow();
+#endif
+```
+</Warning>
+
+## Best Practices
+
+### Learning the Library
+
+```cpp
+// Always make the demo available during development
+#ifdef _DEBUG
+    static bool show_demo = true;
+    ImGui::ShowDemoWindow(&show_demo);
+#endif
+```
+
+### Performance Monitoring
+
+```cpp
+// Monitor draw calls and vertex counts
+static bool show_metrics = false;
+if (ImGui::IsKeyPressed(ImGuiKey_F11)) {
+    show_metrics = !show_metrics;
+}
+
+if (show_metrics) {
+    ImGui::ShowMetricsWindow(&show_metrics);
+    // Check "Drawlists" section for performance stats
+}
+```
+
+### Issue Reporting
+
+```cpp
+// When reporting bugs, include metrics window info
+ImGui::ShowMetricsWindow();
+// Take a screenshot showing:
+// - Window hierarchy
+// - Draw command counts
+// - Active/Hovered items
+// Include in your bug report
+```

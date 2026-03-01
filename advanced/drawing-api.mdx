@@ -1,0 +1,352 @@
+---
+title: Drawing API (ImDrawList)
+description: Learn how to use ImDrawList for custom rendering with lines, shapes, text, and paths in Dear ImGui.
+---
+
+# Drawing API (ImDrawList)
+
+The ImDrawList API provides low-level access to Dear ImGui's rendering system, allowing you to draw custom shapes, lines, text, and complex graphics primitives.
+
+## Overview
+
+ImDrawList is a draw command list that holds rendering instructions. Each window has its own ImDrawList, and you can also get background and foreground draw lists for global rendering.
+
+### Getting a Draw List
+
+```cpp
+// Get the draw list for the current window
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Get the background draw list (renders behind all windows)
+ImDrawList* bg_draw_list = ImGui::GetBackgroundDrawList();
+
+// Get the foreground draw list (renders in front of all windows)
+ImDrawList* fg_draw_list = ImGui::GetForegroundDrawList();
+```
+
+## Basic Shapes
+
+### Lines
+
+Draw lines between two points:
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Draw a simple line
+ImVec2 p1(100, 100);
+ImVec2 p2(200, 200);
+draw_list->AddLine(p1, p2, IM_COL32(255, 0, 0, 255), 2.0f);
+```
+
+**Function signature:**
+```cpp
+void AddLine(const ImVec2& p1, const ImVec2& p2, ImU32 col, float thickness = 1.0f);
+```
+
+### Rectangles
+
+Draw outlined or filled rectangles:
+
+```cpp
+// Outlined rectangle
+ImVec2 p_min(50, 50);
+ImVec2 p_max(150, 100);
+draw_list->AddRect(p_min, p_max, IM_COL32(255, 255, 0, 255));
+
+// Filled rectangle
+draw_list->AddRectFilled(p_min, p_max, IM_COL32(0, 255, 0, 128));
+
+// Rectangle with rounded corners
+draw_list->AddRect(p_min, p_max, IM_COL32(255, 0, 255, 255), 10.0f);
+
+// Multi-colored filled rectangle
+draw_list->AddRectFilledMultiColor(
+    p_min, p_max,
+    IM_COL32(255, 0, 0, 255),   // Top-left
+    IM_COL32(0, 255, 0, 255),   // Top-right  
+    IM_COL32(0, 0, 255, 255),   // Bottom-right
+    IM_COL32(255, 255, 0, 255)  // Bottom-left
+);
+```
+
+**Function signatures:**
+```cpp
+void AddRect(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, 
+             float rounding = 0.0f, ImDrawFlags flags = 0, float thickness = 1.0f);
+void AddRectFilled(const ImVec2& p_min, const ImVec2& p_max, ImU32 col, 
+                   float rounding = 0.0f, ImDrawFlags flags = 0);
+void AddRectFilledMultiColor(const ImVec2& p_min, const ImVec2& p_max, 
+                             ImU32 col_upr_left, ImU32 col_upr_right,
+                             ImU32 col_bot_right, ImU32 col_bot_left);
+```
+
+### Circles and Ellipses
+
+Draw circular and elliptical shapes:
+
+```cpp
+// Circle (auto-calculated segments)
+ImVec2 center(200, 200);
+float radius = 50.0f;
+draw_list->AddCircle(center, radius, IM_COL32(255, 255, 255, 255));
+
+// Filled circle
+draw_list->AddCircleFilled(center, radius, IM_COL32(255, 0, 0, 128));
+
+// Circle with specific segment count
+draw_list->AddCircle(center, radius, IM_COL32(0, 255, 255, 255), 32, 2.0f);
+
+// Ellipse
+ImVec2 radius_vec(60.0f, 40.0f);
+draw_list->AddEllipse(center, radius_vec, IM_COL32(255, 255, 0, 255));
+
+// Filled ellipse with rotation
+float rotation = 0.5f; // radians
+draw_list->AddEllipseFilled(center, radius_vec, IM_COL32(0, 255, 0, 128), rotation);
+```
+
+**Function signatures:**
+```cpp
+void AddCircle(const ImVec2& center, float radius, ImU32 col, 
+               int num_segments = 0, float thickness = 1.0f);
+void AddCircleFilled(const ImVec2& center, float radius, ImU32 col, 
+                     int num_segments = 0);
+void AddEllipse(const ImVec2& center, const ImVec2& radius, ImU32 col, 
+                float rot = 0.0f, int num_segments = 0, float thickness = 1.0f);
+void AddEllipseFilled(const ImVec2& center, const ImVec2& radius, ImU32 col, 
+                      float rot = 0.0f, int num_segments = 0);
+```
+
+<Note>
+Using `num_segments = 0` automatically calculates the optimal number of segments based on the radius. This is the recommended approach.
+</Note>
+
+### Triangles and Polygons
+
+```cpp
+// Triangle
+ImVec2 p1(100, 150);
+ImVec2 p2(150, 50);
+ImVec2 p3(200, 150);
+draw_list->AddTriangle(p1, p2, p3, IM_COL32(255, 0, 255, 255), 2.0f);
+draw_list->AddTriangleFilled(p1, p2, p3, IM_COL32(255, 0, 255, 128));
+
+// Regular polygon (N-gon)
+ImVec2 center(200, 200);
+draw_list->AddNgon(center, 50.0f, IM_COL32(0, 255, 255, 255), 6); // Hexagon
+draw_list->AddNgonFilled(center, 50.0f, IM_COL32(0, 255, 255, 128), 6);
+
+// Quad
+ImVec2 p4(250, 150);
+draw_list->AddQuad(p1, p2, p3, p4, IM_COL32(255, 255, 0, 255));
+draw_list->AddQuadFilled(p1, p2, p3, p4, IM_COL32(255, 255, 0, 128));
+```
+
+## Text Rendering
+
+Draw text at specific positions:
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Simple text
+ImVec2 pos(100, 100);
+draw_list->AddText(pos, IM_COL32(255, 255, 255, 255), "Hello, World!");
+
+// Text with custom font and size
+ImFont* font = ImGui::GetFont();
+float font_size = 24.0f;
+draw_list->AddText(font, font_size, pos, IM_COL32(255, 255, 0, 255), 
+                   "Custom Font Text");
+
+// Text with wrapping
+float wrap_width = 200.0f;
+draw_list->AddText(font, font_size, pos, IM_COL32(255, 255, 255, 255),
+                   "This is a long text that will wrap at the specified width.",
+                   NULL, wrap_width);
+```
+
+**Function signatures:**
+```cpp
+void AddText(const ImVec2& pos, ImU32 col, const char* text_begin, 
+             const char* text_end = NULL);
+void AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col,
+             const char* text_begin, const char* text_end = NULL, 
+             float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
+```
+
+## Path API
+
+The path API allows you to build complex shapes by accumulating points:
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Build a custom shape using paths
+draw_list->PathClear();
+draw_list->PathLineTo(ImVec2(100, 100));
+draw_list->PathLineTo(ImVec2(200, 100));
+draw_list->PathLineTo(ImVec2(200, 200));
+draw_list->PathLineTo(ImVec2(100, 200));
+draw_list->PathStroke(IM_COL32(255, 255, 0, 255), ImDrawFlags_Closed, 2.0f);
+
+// Draw an arc
+draw_list->PathClear();
+ImVec2 center(200, 200);
+float radius = 50.0f;
+float a_min = 0.0f;           // Start angle (radians)
+float a_max = 3.14159f * 0.5f; // End angle (radians)
+draw_list->PathArcTo(center, radius, a_min, a_max);
+draw_list->PathStroke(IM_COL32(255, 0, 0, 255), 0, 2.0f);
+
+// Fill a convex polygon
+draw_list->PathClear();
+draw_list->PathLineTo(ImVec2(100, 100));
+draw_list->PathLineTo(ImVec2(150, 50));
+draw_list->PathLineTo(ImVec2(200, 100));
+draw_list->PathLineTo(ImVec2(150, 150));
+draw_list->PathFillConvex(IM_COL32(0, 255, 0, 128));
+```
+
+**Path functions:**
+```cpp
+void PathClear();
+void PathLineTo(const ImVec2& pos);
+void PathArcTo(const ImVec2& center, float radius, float a_min, float a_max, 
+               int num_segments = 0);
+void PathBezierCubicCurveTo(const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, 
+                            int num_segments = 0);
+void PathRect(const ImVec2& rect_min, const ImVec2& rect_max, 
+              float rounding = 0.0f, ImDrawFlags flags = 0);
+void PathStroke(ImU32 col, ImDrawFlags flags = 0, float thickness = 1.0f);
+void PathFillConvex(ImU32 col);
+void PathFillConcave(ImU32 col);
+```
+
+## Bezier Curves
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Cubic Bezier curve (4 control points)
+ImVec2 p1(100, 100);
+ImVec2 p2(150, 50);
+ImVec2 p3(250, 50);
+ImVec2 p4(300, 100);
+draw_list->AddBezierCubic(p1, p2, p3, p4, IM_COL32(255, 255, 0, 255), 2.0f);
+
+// Quadratic Bezier curve (3 control points)
+ImVec2 q1(100, 200);
+ImVec2 q2(200, 150);
+ImVec2 q3(300, 200);
+draw_list->AddBezierQuadratic(q1, q2, q3, IM_COL32(0, 255, 255, 255), 2.0f);
+```
+
+## Image Rendering
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Draw image
+ImTextureRef my_texture = /* your texture */;
+ImVec2 p_min(100, 100);
+ImVec2 p_max(300, 300);
+draw_list->AddImage(my_texture, p_min, p_max);
+
+// Draw image with custom UV coordinates
+ImVec2 uv_min(0.0f, 0.0f);
+ImVec2 uv_max(1.0f, 1.0f);
+draw_list->AddImage(my_texture, p_min, p_max, uv_min, uv_max, IM_COL32_WHITE);
+
+// Draw rounded image
+float rounding = 10.0f;
+draw_list->AddImageRounded(my_texture, p_min, p_max, uv_min, uv_max, 
+                           IM_COL32_WHITE, rounding);
+```
+
+## Clipping
+
+Clip rendering to specific regions:
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Push clip rectangle
+ImVec2 clip_min(100, 100);
+ImVec2 clip_max(400, 400);
+draw_list->PushClipRect(clip_min, clip_max);
+
+// Draw something (will be clipped)
+draw_list->AddCircleFilled(ImVec2(500, 500), 100.0f, IM_COL32(255, 0, 0, 255));
+
+// Restore previous clip rect
+draw_list->PopClipRect();
+```
+
+## Color Helpers
+
+```cpp
+// Create colors using IM_COL32 macro (RGBA, 0-255)
+ImU32 red = IM_COL32(255, 0, 0, 255);
+ImU32 semi_transparent = IM_COL32(255, 255, 255, 128);
+
+// Convert from ImVec4 (RGBA, 0.0-1.0)
+ImVec4 color_vec(1.0f, 0.0f, 0.0f, 1.0f);
+ImU32 color = ImGui::ColorConvertFloat4ToU32(color_vec);
+
+// Get style color as packed U32
+ImU32 button_color = ImGui::GetColorU32(ImGuiCol_Button);
+```
+
+## Complete Example
+
+```cpp
+void DrawCustomGraphics()
+{
+    ImGui::Begin("Custom Drawing");
+    
+    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+    ImVec2 canvas_pos = ImGui::GetCursorScreenPos();
+    ImVec2 canvas_size = ImGui::GetContentRegionAvail();
+    
+    if (canvas_size.x < 50.0f) canvas_size.x = 50.0f;
+    if (canvas_size.y < 50.0f) canvas_size.y = 50.0f;
+    
+    // Draw background
+    draw_list->AddRectFilled(canvas_pos, 
+        ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + canvas_size.y),
+        IM_COL32(50, 50, 50, 255));
+    
+    // Draw grid
+    float grid_step = 64.0f;
+    for (float x = 0.0f; x < canvas_size.x; x += grid_step)
+        draw_list->AddLine(
+            ImVec2(canvas_pos.x + x, canvas_pos.y),
+            ImVec2(canvas_pos.x + x, canvas_pos.y + canvas_size.y),
+            IM_COL32(200, 200, 200, 40));
+    for (float y = 0.0f; y < canvas_size.y; y += grid_step)
+        draw_list->AddLine(
+            ImVec2(canvas_pos.x, canvas_pos.y + y),
+            ImVec2(canvas_pos.x + canvas_size.x, canvas_pos.y + y),
+            IM_COL32(200, 200, 200, 40));
+    
+    // Draw some shapes
+    ImVec2 center = ImVec2(canvas_pos.x + canvas_size.x * 0.5f, 
+                           canvas_pos.y + canvas_size.y * 0.5f);
+    draw_list->AddCircleFilled(center, 30.0f, IM_COL32(255, 0, 0, 255));
+    draw_list->AddCircle(center, 50.0f, IM_COL32(255, 255, 0, 255), 32, 3.0f);
+    
+    ImGui::End();
+}
+```
+
+<Warning>
+Filled shapes must use **clockwise winding order**. The anti-aliasing fringe depends on it. Counter-clockwise shapes will have inward anti-aliasing.
+</Warning>
+
+## Reference
+
+- [ImDrawList source code](https://github.com/ocornut/imgui/blob/master/imgui.h) (line 3268)
+- See `imgui_demo.cpp` for extensive examples
+- For rectangular primitives, `p_min` represents upper-left and `p_max` represents lower-right corners

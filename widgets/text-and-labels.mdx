@@ -1,0 +1,287 @@
+---
+title: Text and Labels
+description: Display formatted text, colored text, and labels in Dear ImGui
+---
+
+Text widgets display information to the user without requiring interaction. Dear ImGui provides several text functions for different formatting needs.
+
+## Basic Text Functions
+
+### Text()
+
+Display formatted text using printf-style formatting:
+
+```cpp
+IMGUI_API void Text(const char* fmt, ...) IM_FMTARGS(1);
+```
+
+<CodeGroup>
+```cpp Basic Text
+ImGui::Text("Hello, world!");
+ImGui::Text("Counter: %d", counter);
+ImGui::Text("FPS: %.1f", ImGui::GetIO().Framerate);
+```
+
+```cpp Formatted Output
+int score = 1000;
+float health = 75.5f;
+ImGui::Text("Score: %d", score);
+ImGui::Text("Health: %.1f%%", health);
+ImGui::Text("Position: (%.2f, %.2f)", x, y);
+```
+</CodeGroup>
+
+### TextUnformatted()
+
+Display raw text without formatting (faster for long text):
+
+```cpp
+IMGUI_API void TextUnformatted(const char* text, const char* text_end = NULL);
+```
+
+<Note>
+  `TextUnformatted()` is more efficient than `Text()` for long text blocks as it doesn't process format specifiers. It also supports non-null-terminated strings when `text_end` is provided.
+</Note>
+
+```cpp
+const char* long_text = "This is a very long piece of text...";
+ImGui::TextUnformatted(long_text);
+
+// With explicit length
+ImGui::TextUnformatted(long_text, long_text + 100);
+```
+
+## Colored Text
+
+### TextColored()
+
+Display text with a custom color:
+
+```cpp
+IMGUI_API void TextColored(const ImVec4& col, const char* fmt, ...) IM_FMTARGS(2);
+```
+
+```cpp
+ImGui::TextColored(ImVec4(1.0f, 0.0f, 1.0f, 1.0f), "Pink");
+ImGui::TextColored(ImVec4(1.0f, 1.0f, 0.0f, 1.0f), "Yellow");
+ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Error: %s", error_msg);
+```
+
+### TextDisabled()
+
+Display text with the disabled color from the current style:
+
+```cpp
+IMGUI_API void TextDisabled(const char* fmt, ...) IM_FMTARGS(1);
+```
+
+```cpp
+ImGui::TextDisabled("(This option is disabled)");
+ImGui::TextDisabled("Inactive: %d items", inactive_count);
+```
+
+<Note>
+  The disabled color is defined in `ImGuiStyle::Colors[ImGuiCol_TextDisabled]`. Use this for consistency across your application.
+</Note>
+
+## Wrapped Text
+
+### TextWrapped()
+
+Display text that automatically wraps at the window edge:
+
+```cpp
+IMGUI_API void TextWrapped(const char* fmt, ...) IM_FMTARGS(1);
+```
+
+```cpp
+ImGui::TextWrapped(
+    "This text should automatically wrap on the edge of the window. "
+    "The current implementation for text wrapping follows simple rules "
+    "suitable for English and possibly other languages."
+);
+```
+
+### Custom Text Wrapping
+
+For more control over text wrapping, use `PushTextWrapPos()` / `PopTextWrapPos()`:
+
+```cpp
+IMGUI_API void PushTextWrapPos(float wrap_local_pos_x = 0.0f);
+IMGUI_API void PopTextWrapPos();
+```
+
+<ParamField path="wrap_local_pos_x" type="float">
+  - `< 0.0f`: No wrapping
+  - `= 0.0f`: Wrap to end of window (or column)
+  - `> 0.0f`: Wrap at specified position in window local space
+</ParamField>
+
+```cpp
+float wrap_width = 200.0f;
+ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
+ImGui::Text("The lazy dog is a good dog. This paragraph should fit within %.0f pixels.", wrap_width);
+ImGui::PopTextWrapPos();
+```
+
+## Label and Value Pairs
+
+### LabelText()
+
+Display a label and value aligned like other widgets:
+
+```cpp
+IMGUI_API void LabelText(const char* label, const char* fmt, ...) IM_FMTARGS(2);
+```
+
+```cpp
+ImGui::LabelText("label", "Value");
+ImGui::LabelText("Position", "(%.1f, %.1f)", x, y);
+ImGui::LabelText("Status", "%s", status_text);
+```
+
+### BulletText()
+
+Display text with a bullet point:
+
+```cpp
+IMGUI_API void BulletText(const char* fmt, ...) IM_FMTARGS(1);
+```
+
+```cpp
+ImGui::BulletText("Important point 1");
+ImGui::BulletText("Important point 2");
+ImGui::BulletText("Count: %d", count);
+```
+
+You can also use `Bullet()` separately to just draw the bullet:
+
+```cpp
+ImGui::Bullet();
+ImGui::Text("Custom content after bullet");
+```
+
+## Separator Text
+
+### SeparatorText()
+
+Display a horizontal line with text (added in recent versions):
+
+```cpp
+IMGUI_API void SeparatorText(const char* label);
+```
+
+```cpp
+ImGui::SeparatorText("Section 1");
+// ... content ...
+
+ImGui::SeparatorText("Section 2");
+// ... content ...
+```
+
+## Text Links
+
+### TextLink()
+
+Display clickable hyperlink-style text:
+
+```cpp
+IMGUI_API bool TextLink(const char* label);
+IMGUI_API bool TextLinkOpenURL(const char* label, const char* url = NULL);
+```
+
+```cpp
+if (ImGui::TextLink("Documentation")) {
+    OpenBrowser("https://github.com/ocornut/imgui");
+}
+
+// Automatically opens URL when clicked
+ImGui::TextLinkOpenURL("GitHub", "https://github.com/ocornut/imgui");
+```
+
+## Font Size Control
+
+You can change the font size for text rendering:
+
+```cpp
+IMGUI_API void PushFont(ImFont* font, float font_size_base_unscaled);
+IMGUI_API void PopFont();
+```
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+
+// Double the current font size
+ImGui::PushFont(NULL, style.FontSizeBase * 2.0f);
+ImGui::Text("Large Text");
+ImGui::PopFont();
+
+// Custom size
+ImGui::PushFont(NULL, 24.0f);
+ImGui::Text("24-point text");
+ImGui::PopFont();
+```
+
+<Note>
+  Use `NULL` for the font parameter to keep the current font. The `font_size_base_unscaled` parameter is the size before global scale factors are applied.
+</Note>
+
+## Complete Example
+
+```cpp
+void ShowTextDemo() {
+    ImGui::Begin("Text Demo");
+    
+    // Basic text
+    ImGui::Text("Basic text output");
+    ImGui::Text("Counter: %d", frame_count);
+    
+    ImGui::Spacing();
+    
+    // Colored text
+    ImGui::TextColored(ImVec4(1.0f, 0.0f, 0.0f, 1.0f), "Error message");
+    ImGui::TextColored(ImVec4(0.0f, 1.0f, 0.0f, 1.0f), "Success!");
+    ImGui::TextDisabled("Disabled information");
+    
+    ImGui::Spacing();
+    
+    // Wrapped text
+    ImGui::TextWrapped(
+        "This is a long piece of text that will automatically wrap "
+        "when it reaches the edge of the window."
+    );
+    
+    ImGui::Spacing();
+    
+    // Bullet points
+    ImGui::BulletText("Feature 1");
+    ImGui::BulletText("Feature 2");
+    ImGui::BulletText("Feature 3");
+    
+    ImGui::Spacing();
+    
+    // Label-value pairs
+    ImGui::LabelText("Name", "John Doe");
+    ImGui::LabelText("Score", "%d", player_score);
+    
+    ImGui::Spacing();
+    
+    // Separator with text
+    ImGui::SeparatorText("Additional Info");
+    
+    // Hyperlink
+    ImGui::TextLinkOpenURL("Documentation", "https://github.com/ocornut/imgui");
+    
+    ImGui::End();
+}
+```
+
+## Best Practices
+
+<Warning>
+  Avoid calling `Text()` in tight loops with string concatenation. Pre-format strings or use `TextUnformatted()` for better performance.
+</Warning>
+
+<Tip>
+  Use `ImGui::GetIO().Framerate` to display FPS: `ImGui::Text("%.1f FPS", ImGui::GetIO().Framerate);`
+</Tip>

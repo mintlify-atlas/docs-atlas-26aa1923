@@ -1,0 +1,290 @@
+---
+title: Immediate Mode Paradigm
+description: Understanding Dear ImGui's immediate mode architecture and how it differs from retained mode GUI systems
+---
+
+## What is Immediate Mode?
+
+Dear ImGui implements the **Immediate Mode GUI (IMGUI)** paradigm, which is fundamentally different from traditional retained-mode UI toolkits like Qt, GTK, or WPF.
+
+### The Core Concept
+
+In immediate mode, your application code **creates the entire UI every frame**. There's no persistent UI tree or widget objects that need to be managed. The UI is described procedurally as part of your application loop.
+
+```cpp
+while (running)
+{
+    ImGui::NewFrame();
+    
+    // UI is created every frame
+    ImGui::Begin("My Window");
+    if (ImGui::Button("Click Me"))
+        DoSomething();
+    ImGui::Text("Counter: %d", counter);
+    ImGui::End();
+    
+    ImGui::Render();
+}
+```
+
+<Note>
+If your code doesn't run, the UI is gone! This is by design and is actually a powerful feature.
+</Note>
+
+## Immediate Mode vs Retained Mode
+
+Here's how Dear ImGui differs from traditional UI toolkits:
+
+| Dear ImGui (Immediate Mode) | Qt/GTK/WPF (Retained Mode) |
+|------------------------------|----------------------------|
+| UI fully issued on every update | UI issued once, then modified |
+| UI layout is fully dynamic | UI layout is mostly static |
+| Application submits UI and forgets about it | Application manages widget objects |
+| Minimal data storage in UI library | Entire widget tree stored |
+| UI code can be added anywhere | UI code in dedicated spots |
+| Data is naturally synchronized | Manual synchronization via signals/callbacks |
+| Simple, low-level API | Complex, high-level API |
+
+### Example Comparison
+
+**Dear ImGui (Immediate Mode):**
+```cpp
+if (ImGui::Button("Save"))
+    MySaveFunction();
+
+ImGui::SliderFloat("Volume", &volume, 0.0f, 1.0f);
+```
+
+**Traditional Toolkit (Retained Mode):**
+```cpp
+UiButton* button = new UiButton("Save");
+button->OnClick = &MySaveFunction;
+parent->Add(button);
+
+UiSlider* slider = new UiSlider("Volume");
+slider->SetRange(0.0f, 1.0f);
+slider->BindData<float>(&volume);
+parent->Add(slider);
+```
+
+## What IMGUI Really Means
+
+<Warning>
+Many people misunderstand what "immediate mode" means. It does NOT refer to immediate mode rendering!
+</Warning>
+
+**IMGUI refers to the API** - the interface between your application and the UI system:
+
+- An IMGUI API favors the **application owning its data** as the single source of truth
+- An IMGUI API **minimizes state retention** in the UI system
+- An IMGUI API **minimizes state retention** by the application about UI elements
+- Synchronization between application data and UI data is **natural and automatic**
+
+**IMGUI does NOT refer to the implementation.** What happens inside the library doesn't matter. Dear ImGui actually uses retained data structures internally for efficiency - it builds optimized vertex buffers and command lists.
+
+<Info>
+Dear ImGui outputs efficient batched draw calls. It's not "hammering your GPU" - it creates optimized vertex buffers once per frame.
+</Info>
+
+## Key Advantages
+
+### 1. No State Synchronization
+
+Your application data is the source of truth. There's no separate "UI state" to keep in sync:
+
+```cpp
+struct Player {
+    char name[64];
+    int health;
+    float speed;
+};
+
+Player player;
+
+// In your game loop - UI always reflects current state
+ImGui::InputText("Name", player.name, 64);
+ImGui::SliderInt("Health", &player.health, 0, 100);
+ImGui::DragFloat("Speed", &player.speed, 0.1f);
+```
+
+The `player` struct is directly edited. No callbacks, no data binding, no synchronization bugs.
+
+### 2. Dynamic UIs Are Easy
+
+You can create UI based on arbitrary logic:
+
+```cpp
+ImGui::Begin("Dynamic UI");
+
+// UI structure changes based on game state
+if (game_mode == MODE_EDIT)
+{
+    ImGui::Button("Place Object");
+    ImGui::ColorEdit3("Brush Color", brush_color);
+}
+else if (game_mode == MODE_PLAY)
+{
+    ImGui::Text("Score: %d", score);
+    ImGui::ProgressBar(time_remaining / max_time);
+}
+
+// Show a widget for each active enemy
+for (Enemy& enemy : active_enemies)
+{
+    ImGui::PushID(&enemy);
+    ImGui::Text("%s: HP %d", enemy.name, enemy.hp);
+    if (ImGui::Button("Target"))
+        SetTarget(&enemy);
+    ImGui::PopID();
+}
+
+ImGui::End();
+```
+
+### 3. UI Code Can Live Anywhere
+
+You can add UI anywhere in your codebase:
+
+```cpp
+void UpdatePhysics()
+{
+    // Debug UI right in your physics code!
+    if (debug_physics)
+    {
+        ImGui::Begin("Physics Debug");
+        ImGui::Text("Velocity: %.2f", velocity);
+        ImGui::DragFloat("Gravity", &gravity);
+        ImGui::End();
+    }
+    
+    // Your physics update
+    velocity += gravity * dt;
+}
+```
+
+You can even create UI for local variables during development:
+
+```cpp
+void MyFunction()
+{
+    float local_var = CalculateSomething();
+    
+    // Temporary debug UI for this local variable
+    ImGui::Begin("Debug");
+    ImGui::DragFloat("Local Var", &local_var);
+    ImGui::End();
+    
+    UseSomehow(local_var);
+}
+```
+
+## Common Misconceptions
+
+### "Immediate Mode is Slow"
+
+**False.** People confuse immediate mode GUI with immediate mode rendering. Dear ImGui:
+
+- Builds optimized vertex buffers and command lists
+- Batches draw calls efficiently  
+- Minimizes state changes
+- Doesn't touch GPU directly during UI code
+- A typical idle frame never calls malloc/free
+
+### "You Can't Do Complex UIs"
+
+**False.** Dear ImGui is used in professional game engines, debuggers, and tools. See examples:
+
+- [Tracy Profiler](https://github.com/wolfpld/tracy)
+- [RemedyBG Debugger](https://remedybg.itch.io/remedybg)
+- [ImHex Editor](https://github.com/WerWolv/ImHex)
+
+### "Data is Recreated Every Frame"
+
+**False.** Only the UI description is recreated. Your application data lives in your own structures and is only modified when the user interacts with widgets.
+
+## When to Use Immediate Mode
+
+Immediate mode GUIs excel at:
+
+- **Developer tools** - debuggers, profilers, editors
+- **Content creation tools** - level editors, animation tools
+- **Debug/visualization overlays** - in-game debug menus
+- **Data-driven UIs** - reflecting dynamic or changing data
+- **Rapid prototyping** - quick iteration on UI design
+- **Game engine integration** - tools within a game engine
+
+<Warning>
+Dear ImGui is NOT designed for end-user application UIs where you need full internationalization, accessibility features, or platform-native look and feel.
+</Warning>
+
+## The Single Pass Model
+
+Dear ImGui uses a **single-pass** immediate mode model:
+
+```cpp
+// Each frame:
+NewFrame();     // Start new frame
+// Your UI code runs ONCE
+ImGui::Button("Test");
+Render();       // Finalize and generate draw commands
+GetDrawData();  // Get draw commands for rendering
+```
+
+This differs from Unity's IMGUI which uses multiple passes. There are pros and cons to each approach, but the single-pass model offers:
+
+- Simpler mental model
+- Better performance 
+- More predictable behavior
+
+## Best Practices
+
+### Keep Application Data Separate
+
+```cpp
+// Good: Application owns data
+struct AppState {
+    float value;
+    bool enabled;
+};
+
+AppState state;
+ImGui::SliderFloat("Value", &state.value, 0.0f, 1.0f);
+```
+
+### Embrace the Frame-by-Frame Model
+
+```cpp
+// The UI adapts automatically to data changes
+void RenderUI()
+{
+    ImGui::Begin("Status");
+    
+    // This text changes automatically when player.health changes
+    ImGui::Text("Health: %d", player.health);
+    
+    // This progress bar updates automatically
+    ImGui::ProgressBar(player.health / 100.0f);
+    
+    ImGui::End();
+}
+```
+
+### Use Early Outs for Performance
+
+```cpp
+if (!ImGui::Begin("My Window", &open))
+{
+    ImGui::End();
+    return; // Window collapsed, skip expensive UI code
+}
+
+// Expensive UI code here
+ImGui::End();
+```
+
+## Further Reading
+
+- [Casey Muratori's Original IMGUI Article](http://mollyrocket.com/861)
+- [Johannes Alm's IMGUI Book](http://www.johno.se/book/imgui.html)  
+- [Dear ImGui Wiki: About the IMGUI Paradigm](https://github.com/ocornut/imgui/wiki#about-the-imgui-paradigm)
+- [Troubleshooting Guide](/guides/troubleshooting)

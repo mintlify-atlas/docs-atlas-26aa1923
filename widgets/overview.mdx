@@ -1,0 +1,164 @@
+---
+title: Widgets Overview
+description: Introduction to Dear ImGui widgets and common widget patterns
+---
+
+Dear ImGui provides a rich set of widgets for building interactive user interfaces. All widgets follow the immediate mode paradigm where you call functions every frame to display and interact with UI elements.
+
+## Widget Categories
+
+Dear ImGui widgets are organized into several categories:
+
+<CardGroup cols={2}>
+  <Card title="Text and Labels" icon="font" href="/widgets/text-and-labels">
+    Display formatted text, colored text, and labels
+  </Card>
+  <Card title="Buttons" icon="hand-pointer" href="/widgets/buttons">
+    Interactive buttons including standard, small, and arrow buttons
+  </Card>
+  <Card title="Input Widgets" icon="keyboard" href="/widgets/inputs">
+    Text input, numeric input, and input validation
+  </Card>
+  <Card title="Sliders and Drags" icon="sliders" href="/widgets/sliders-and-drags">
+    Value adjustment widgets with visual feedback
+  </Card>
+  <Card title="Color Pickers" icon="palette" href="/widgets/color-pickers">
+    Color selection and editing widgets
+  </Card>
+  <Card title="Trees and Selectables" icon="tree" href="/widgets/trees-and-selectables">
+    Hierarchical data display and selection widgets
+  </Card>
+  <Card title="Combos and Lists" icon="list" href="/widgets/combos-and-lists">
+    Dropdown menus and list boxes
+  </Card>
+  <Card title="Menus" icon="bars" href="/widgets/menus">
+    Menu bars and context menus
+  </Card>
+  <Card title="Tables" icon="table" href="/widgets/tables">
+    Advanced table layouts with sorting and resizing
+  </Card>
+</CardGroup>
+
+## Common Widget Patterns
+
+### Return Values
+
+Most widgets return `true` when their value has been changed or when they've been activated:
+
+```cpp
+if (ImGui::Button("Click Me")) {
+    // Button was clicked this frame
+}
+
+static float value = 0.0f;
+if (ImGui::SliderFloat("slider", &value, 0.0f, 1.0f)) {
+    // Value was changed this frame
+}
+```
+
+### Widget IDs
+
+Dear ImGui uses the widget label to generate a unique ID. When you need multiple widgets with the same label, use `PushID()` / `PopID()`:
+
+```cpp
+for (int i = 0; i < 5; i++) {
+    ImGui::PushID(i);
+    if (ImGui::Button("Click")) {
+        // Each button has a unique ID
+    }
+    ImGui::PopID();
+}
+```
+
+You can also use the `##` syntax to hide part of the label:
+
+```cpp
+ImGui::Button("Save##file1");  // Label: "Save", ID: "Save##file1"
+ImGui::Button("Save##file2");  // Label: "Save", ID: "Save##file2"
+```
+
+### Querying Widget State
+
+After calling a widget function, you can query its state using `IsItem*()` functions:
+
+```cpp
+ImGui::Button("My Button");
+if (ImGui::IsItemHovered()) {
+    ImGui::SetTooltip("This is a tooltip");
+}
+if (ImGui::IsItemActive()) {
+    // Button is being held down
+}
+if (ImGui::IsItemClicked()) {
+    // Button was clicked
+}
+```
+
+### Widget Sizing
+
+Many widgets accept a size parameter. Common conventions:
+
+- `size.x == 0.0f`: Use default/natural width
+- `size.x > 0.0f`: Specify exact width in pixels
+- `size.x < 0.0f`: Align to right edge with specified margin
+- `-FLT_MIN`: Use all available width
+
+```cpp
+ImGui::Button("Default Size");
+ImGui::Button("Fixed Size", ImVec2(200, 50));
+ImGui::Button("Full Width", ImVec2(-FLT_MIN, 0));
+```
+
+## Widget Flags
+
+Many widget types support flags to customize their behavior:
+
+```cpp
+// Button flags
+ImGui::InvisibleButton("hidden", ImVec2(100, 100), ImGuiButtonFlags_MouseButtonRight);
+
+// Input text flags
+ImGui::InputText("##input", buf, 256, 
+    ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsNoBlank);
+
+// Slider flags
+ImGui::SliderFloat("##slider", &value, 0.0f, 1.0f, "%.3f",
+    ImGuiSliderFlags_AlwaysClamp | ImGuiSliderFlags_Logarithmic);
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Use static variables for widget state">
+    Widget state variables should persist across frames:
+    ```cpp
+    static float my_value = 0.0f;  // Good
+    ImGui::SliderFloat("value", &my_value, 0.0f, 1.0f);
+    ```
+  </Accordion>
+  
+  <Accordion title="Check return values when needed">
+    Only check return values when you need to respond to changes:
+    ```cpp
+    if (ImGui::SliderFloat("volume", &volume, 0.0f, 1.0f)) {
+        UpdateAudioVolume(volume);  // Only update when changed
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Use descriptive labels">
+    Labels help with debugging and make code more readable:
+    ```cpp
+    ImGui::Button("Apply Settings");  // Good
+    ImGui::Button("OK");              // Less descriptive
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+Explore specific widget categories to learn about their unique features and usage patterns:
+
+- Start with [Text and Labels](/widgets/text-and-labels) for basic output
+- Learn about [Buttons](/widgets/buttons) for user interaction
+- Dive into [Input Widgets](/widgets/inputs) for data entry

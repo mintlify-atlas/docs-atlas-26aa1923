@@ -1,0 +1,580 @@
+---
+title: Performance Optimization
+description: Techniques and best practices for optimizing Dear ImGui performance in your applications
+---
+
+## Overview
+
+Dear ImGui is designed to be fast and lightweight, but understanding its performance characteristics helps you build responsive UIs even with complex interfaces.
+
+<Note>
+  Most applications won't need aggressive optimization. Start with these techniques only if you experience performance issues.
+</Note>
+
+## Performance Philosophy
+
+Dear ImGui's immediate mode design means:
+- UI code runs every frame
+- Only visible elements generate draw commands
+- The library is optimized for common use cases
+- Simple UIs are extremely fast
+
+## Measuring Performance
+
+### Built-in Metrics
+
+```cpp
+ImGui::ShowMetricsWindow();
+```
+
+The metrics window shows:
+- Active windows count
+- Active widgets count
+- Vertices and indices count
+- Draw calls
+- Frame time
+
+### Custom Measurements
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Frame rate
+float fps = io.Framerate;
+
+// Delta time
+float dt = io.DeltaTime;
+
+// Render stats
+ImDrawData* draw_data = ImGui::GetDrawData();
+int total_vtx = draw_data->TotalVtxCount;
+int total_idx = draw_data->TotalIdxCount;
+int cmd_lists = draw_data->CmdListsCount;
+
+ImGui::Text("FPS: %.1f (%.2f ms)", fps, dt * 1000.0f);
+ImGui::Text("Vertices: %d, Indices: %d", total_vtx, total_idx);
+ImGui::Text("Draw Lists: %d", cmd_lists);
+```
+
+## CPU Optimization
+
+### Early Exit for Collapsed Windows
+
+```cpp
+// Good: Skip expensive content when collapsed
+if (ImGui::Begin("Complex Window", &open)) {
+    // Only execute this if window is visible
+    RenderExpensiveContent();
+}
+ImGui::End();
+
+// The Begin() return value indicates if window is not collapsed
+```
+
+### Use ListClipper for Large Lists
+
+ListClipper only renders visible items:
+
+```cpp
+ImGuiListClipper clipper;
+clipper.Begin(10000);  // 10,000 items
+
+while (clipper.Step()) {
+    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+        ImGui::Text("Item %d", i);
+        // Only ~20-30 items actually rendered!
+    }
+}
+```
+
+**Benefits:**
+- Constant-time performance regardless of list size
+- Smooth scrolling
+- Lower CPU and GPU usage
+
+**Advanced usage with custom items:**
+
+```cpp
+ImGuiListClipper clipper;
+clipper.Begin(items.size(), item_height);
+
+while (clipper.Step()) {
+    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+        ImGui::PushID(i);
+        bool selected = selection.contains(i);
+        if (ImGui::Selectable(items[i].name, &selected)) {
+            selection.toggle(i);
+        }
+        ImGui::PopID();
+    }
+}
+```
+
+### Minimize Function Calls
+
+```cpp
+// Less efficient: Many small UI updates
+for (int i = 0; i < 1000; i++) {
+    ImGui::Text("Item %d", i);
+}
+
+// Better: Use Text for simple cases, use ListClipper for large lists
+ImGuiListClipper clipper;
+clipper.Begin(1000);
+while (clipper.Step()) {
+    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+        ImGui::Text("Item %d", i);
+    }
+}
+```
+
+### Reduce String Operations
+
+```cpp
+// Expensive: Format string every frame
+for (int i = 0; i < 100; i++) {
+    ImGui::Text("Item %d: %s", i, GetItemName(i).c_str());
+}
+
+// Better: Cache formatted strings when data changes
+struct CachedItem {
+    std::string name;
+    char label[128];
+    bool dirty = true;
+    
+    void Update() {
+        if (dirty) {
+            snprintf(label, sizeof(label), "Item %d: %s", id, name.c_str());
+            dirty = false;
+        }
+    }
+};
+
+// In render loop
+for (auto& item : items) {
+    item.Update();
+    ImGui::Text("%s", item.label);
+}
+```
+
+### Conditional UI Updates
+
+```cpp
+// Good: Only update complex UI when needed
+static bool needs_rebuild = true;
+static std::vector<Node*> visible_nodes;
+
+if (needs_rebuild) {
+    visible_nodes.clear();
+    CollectVisibleNodes(root, visible_nodes);
+    needs_rebuild = false;
+}
+
+// Render cached visible nodes
+for (Node* node : visible_nodes) {
+    RenderNode(node);
+}
+
+// Mark for rebuild when data changes
+if (data_changed) {
+    needs_rebuild = true;
+}
+```
+
+## GPU Optimization
+
+### Minimize State Changes
+
+Each ImDrawCmd can potentially cause a state change:
+
+```cpp
+// Good: Batch similar items
+ImGui::PushStyleColor(ImGuiCol_Button, red);
+for (int i = 0; i < 10; i++) {
+    ImGui::Button("Red Button");
+}
+ImGui::PopStyleColor();
+// Potentially fewer draw calls
+
+// Less efficient: Change state every iteration
+for (int i = 0; i < 10; i++) {
+    ImGui::PushStyleColor(ImGuiCol_Button, red);
+    ImGui::Button("Red Button");
+    ImGui::PopStyleColor();
+}
+// More draw calls
+```
+
+### Reduce Window Count
+
+```cpp
+// Less efficient: Many separate windows
+ImGui::Begin("Window1");
+ImGui::End();
+
+ImGui::Begin("Window2");
+ImGui::End();
+
+ImGui::Begin("Window3");
+ImGui::End();
+
+// Better: Use child windows or sections
+ImGui::Begin("Main Window");
+
+if (ImGui::CollapsingHeader("Section 1")) {
+    // Content 1
+}
+
+if (ImGui::CollapsingHeader("Section 2")) {
+    // Content 2
+}
+
+if (ImGui::CollapsingHeader("Section 3")) {
+    // Content 3
+}
+
+ImGui::End();
+```
+
+### Optimize Rounding and Anti-Aliasing
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+
+// Reduce for better performance
+style.WindowRounding = 0.0f;    // From 5.0f
+style.FrameRounding = 0.0f;     // From 3.0f
+style.ScrollbarRounding = 0.0f; // From 2.0f
+
+// Disable anti-aliasing on low-end hardware
+style.AntiAliasedLines = false;
+style.AntiAliasedLinesUseTex = false;
+style.AntiAliasedFill = false;
+```
+
+**Impact:**
+- No rounding = fewer vertices
+- No AA = simpler rendering
+- Can improve performance by 20-40% on low-end GPUs
+
+### Adjust Tessellation Quality
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+
+// Reduce quality for better performance
+style.CurveTessellationTol = 2.5f;         // Default: 1.25f (higher = lower quality, fewer polygons)
+style.CircleTessellationMaxError = 0.5f;   // Default: 0.3f (higher = lower quality)
+```
+
+### Minimize Transparency
+
+```cpp
+// Transparent windows are more expensive to render
+ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 1.0f));  // Opaque
+// vs
+ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.0f, 0.0f, 0.0f, 0.5f));  // Transparent
+```
+
+## Memory Optimization
+
+### Font Atlas Size
+
+<Accordion title="Reduce Oversampling">
+  ```cpp
+  ImFontConfig config;
+  config.OversampleH = 1;  // Default: 3 (uses 3x horizontal memory)
+  config.OversampleV = 1;  // Default: 1
+  
+  io.Fonts->AddFontFromFileTTF("font.ttf", 16.0f, &config);
+  ```
+  
+  **Trade-off:** Lower quality at small sizes, but smaller atlas.
+</Accordion>
+
+<Accordion title="Limit Glyph Ranges (Pre-1.92)">
+  Before v1.92, loading only needed glyphs reduces atlas size:
+  
+  ```cpp
+  // Load only ASCII
+  io.Fonts->AddFontFromFileTTF("font.ttf", 16.0f, nullptr,
+                                io.Fonts->GetGlyphRangesDefault());
+  
+  // Custom ranges
+  ImVector<ImWchar> ranges;
+  ImFontGlyphRangesBuilder builder;
+  builder.AddText("YourGameText");  // Add all text from your game
+  builder.BuildRanges(&ranges);
+  io.Fonts->AddFontFromFileTTF("font.ttf", 16.0f, nullptr, ranges.Data);
+  ```
+</Accordion>
+
+<Accordion title="Disable Power-of-Two Height">
+  ```cpp
+  io.Fonts->Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;
+  ```
+  
+  Saves memory by using exact needed height instead of rounding up.
+</Accordion>
+
+### Reduce Buffer Sizes
+
+```cpp
+// For large text inputs, only allocate what you need
+static char small_buffer[64];    // For short inputs
+static char medium_buffer[256];  // For medium inputs
+
+// Don't default to huge buffers
+// static char buffer[4096];  // Wasteful for most cases
+```
+
+## Draw Call Optimization
+
+### Understanding Draw Calls
+
+Each `ImDrawCmd` potentially triggers:
+- State changes (blend mode, scissor rect)
+- Texture binding
+- Draw call submission
+
+**View draw calls:**
+
+```cpp
+ImDrawData* draw_data = ImGui::GetDrawData();
+for (int n = 0; n < draw_data->CmdListsCount; n++) {
+    const ImDrawList* cmd_list = draw_data->CmdLists[n];
+    ImGui::Text("DrawList %d: %d commands", n, cmd_list->CmdBuffer.Size);
+}
+```
+
+### Minimize Clipping Changes
+
+```cpp
+// Good: Group items with same clipping
+ImGui::BeginChild("Region", ImVec2(0, 300));
+for (int i = 0; i < 100; i++) {
+    ImGui::Text("Item %d", i);
+}
+ImGui::EndChild();
+
+// Less efficient: Many child regions
+for (int i = 0; i < 10; i++) {
+    ImGui::BeginChild("Region", ImVec2(0, 30));
+    ImGui::Text("Item %d", i);
+    ImGui::EndChild();
+}
+```
+
+### Avoid Frequent Texture Switches
+
+```cpp
+// If you're using custom images, batch by texture:
+
+// Good: Same texture
+for (int i = 0; i < 10; i++) {
+    ImGui::Image(texture_atlas, size, uv0, uv1);  // Same texture
+}
+
+// Less efficient: Different textures
+for (int i = 0; i < 10; i++) {
+    ImGui::Image(textures[i], size);  // Texture switch each iteration
+}
+```
+
+## Platform-Specific Optimizations
+
+### Desktop (High-End)
+
+```cpp
+// Enable quality features
+ImGuiStyle& style = ImGui::GetStyle();
+style.AntiAliasedLines = true;
+style.AntiAliasedLinesUseTex = true;
+style.AntiAliasedFill = true;
+style.WindowRounding = 5.0f;
+style.FrameRounding = 3.0f;
+
+// Use higher oversampling
+ImFontConfig config;
+config.OversampleH = 3;
+config.OversampleV = 1;
+```
+
+### Mobile / Low-End
+
+```cpp
+// Reduce quality for performance
+ImGuiStyle& style = ImGui::GetStyle();
+style.AntiAliasedLines = false;
+style.AntiAliasedFill = false;
+style.WindowRounding = 0.0f;
+style.FrameRounding = 0.0f;
+style.CurveTessellationTol = 3.0f;
+
+// Minimal oversampling
+ImFontConfig config;
+config.OversampleH = 1;
+config.OversampleV = 1;
+
+// Touch-friendly
+style.TouchExtraPadding = ImVec2(5, 5);
+style.FramePadding = ImVec2(8, 6);  // Larger hit boxes
+```
+
+### Web (Emscripten)
+
+```cpp
+// Keep draw calls low
+// Minimize window count
+// Reduce transparency
+// Use simpler styles
+
+// Consider frame rate limiting
+Emscripten_WebGLContextAttributes attrs;
+attrs.majorVersion = 2;
+attrs.minorVersion = 0;
+attrs.enableExtensionsByDefault = 1;
+attrs.stencil = 0;  // Disable if not needed
+```
+
+## Profiling
+
+### Identify Bottlenecks
+
+```cpp
+#include <chrono>
+
+auto start = std::chrono::high_resolution_clock::now();
+
+// Your ImGui code
+RenderComplexUI();
+
+auto end = std::chrono::high_resolution_clock::now();
+auto duration = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+
+ImGui::Text("UI Time: %.2f ms", duration.count() / 1000.0f);
+```
+
+### Use Graphics Debuggers
+
+- **RenderDoc** (Windows, Linux) - https://renderdoc.org
+- **Xcode Instruments** (macOS, iOS)
+- **NVIDIA Nsight** (NVIDIA GPUs)
+- **PIX** (Windows, DirectX)
+
+## Common Performance Issues
+
+<Accordion title="Too Many Windows">
+  **Symptom:** High draw call count
+  
+  **Solution:** Use child windows, collapsing headers, or tabs instead of separate windows.
+</Accordion>
+
+<Accordion title="Large Lists Without Clipper">
+  **Symptom:** Low FPS with long lists
+  
+  **Solution:** Always use `ImGuiListClipper` for lists with >100 items.
+</Accordion>
+
+<Accordion title="Excessive String Formatting">
+  **Symptom:** High CPU usage
+  
+  **Solution:** Cache formatted strings, update only when data changes.
+</Accordion>
+
+<Accordion title="Many Style Changes">
+  **Symptom:** High draw call count
+  
+  **Solution:** Batch similar items, minimize PushStyleColor/PushStyleVar calls.
+</Accordion>
+
+<Accordion title="Large Font Atlas">
+  **Symptom:** Slow initialization, high memory usage
+  
+  **Solution:** Reduce oversampling, limit glyph ranges (pre-1.92), or use multiple smaller fonts.
+</Accordion>
+
+## Benchmarking Example
+
+```cpp
+struct PerformanceMetrics {
+    float avg_fps = 0.0f;
+    float min_fps = FLT_MAX;
+    float max_fps = 0.0f;
+    int total_vertices = 0;
+    int total_indices = 0;
+    int draw_calls = 0;
+    
+    void Update() {
+        ImGuiIO& io = ImGui::GetIO();
+        float fps = io.Framerate;
+        
+        avg_fps = avg_fps * 0.95f + fps * 0.05f;  // Exponential moving average
+        min_fps = std::min(min_fps, fps);
+        max_fps = std::max(max_fps, fps);
+        
+        ImDrawData* draw_data = ImGui::GetDrawData();
+        total_vertices = draw_data->TotalVtxCount;
+        total_indices = draw_data->TotalIdxCount;
+        
+        draw_calls = 0;
+        for (int n = 0; n < draw_data->CmdListsCount; n++) {
+            draw_calls += draw_data->CmdLists[n]->CmdBuffer.Size;
+        }
+    }
+    
+    void Display() {
+        ImGui::Begin("Performance");
+        ImGui::Text("FPS: %.1f (avg: %.1f, min: %.1f, max: %.1f)",
+                    ImGui::GetIO().Framerate, avg_fps, min_fps, max_fps);
+        ImGui::Text("Vertices: %d, Indices: %d", total_vertices, total_indices);
+        ImGui::Text("Draw Calls: %d", draw_calls);
+        
+        if (ImGui::Button("Reset Stats")) {
+            min_fps = FLT_MAX;
+            max_fps = 0.0f;
+        }
+        ImGui::End();
+    }
+};
+```
+
+## Performance Checklist
+
+<Steps>
+  1. **Profile first** - Identify actual bottlenecks before optimizing
+  2. **Use ListClipper** - For any list with >50 items
+  3. **Early exit** - Check Begin() return value
+  4. **Batch style changes** - Group similar items
+  5. **Minimize windows** - Use child windows instead
+  6. **Cache data** - Don't recompute every frame
+  7. **Reduce rounding** - If targeting low-end hardware
+  8. **Monitor metrics** - Keep metrics window open during development
+  9. **Test on target** - Profile on actual target hardware
+  10. **Optimize atlas** - Reduce oversampling or glyph ranges if needed
+</Steps>
+
+## Performance Targets
+
+**Good performance:**
+- 60 FPS on target hardware
+- Less than 1000 vertices per frame for simple UIs
+- Less than 50 draw calls per frame
+- Less than 1ms CPU time for UI
+
+**Acceptable for complex UIs:**
+- 30-60 FPS
+- Less than 10000 vertices per frame
+- Less than 200 draw calls per frame
+- Less than 5ms CPU time for UI
+
+<Warning>
+  If you're significantly exceeding these numbers, investigate using the techniques in this guide.
+</Warning>
+
+## See Also
+
+- [Best Practices](/guides/best-practices) - General ImGui best practices
+- [Troubleshooting](/guides/troubleshooting) - Common issues
+- [Examples](/guides/examples) - Example applications
+- [Metrics Window API](https://github.com/ocornut/imgui/blob/master/imgui.h) - ShowMetricsWindow() documentation

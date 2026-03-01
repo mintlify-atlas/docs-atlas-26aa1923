@@ -1,0 +1,412 @@
+---
+title: 'Mouse Input'
+description: 'Functions for checking mouse state, clicks, position, and dragging'
+---
+
+## Mouse Button State
+
+### IsMouseDown
+
+```cpp
+bool IsMouseDown(ImGuiMouseButton button);
+```
+
+Check if mouse button is being held.
+
+<ParamField path="button" type="ImGuiMouseButton">
+  Mouse button (0=left, 1=right, 2=middle)
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if button is currently down
+</ParamField>
+
+**Example:**
+```cpp
+if (ImGui::IsMouseDown(ImGuiMouseButton_Left))
+{
+    ImGui::Text("Left mouse button is held");
+}
+```
+
+### IsMouseClicked
+
+```cpp
+bool IsMouseClicked(ImGuiMouseButton button, bool repeat = false);
+```
+
+Check if mouse button was clicked (went from !Down to Down). Same as `GetMouseClickedCount() == 1`.
+
+<ParamField path="button" type="ImGuiMouseButton">
+  Mouse button to check
+</ParamField>
+
+<ParamField path="repeat" type="bool" default="false">
+  If true, returns true on repeat clicks
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if button was just clicked
+</ParamField>
+
+**Example:**
+```cpp
+if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+{
+    ProcessClick();
+}
+```
+
+### IsMouseReleased
+
+```cpp
+bool IsMouseReleased(ImGuiMouseButton button);
+```
+
+Check if mouse button was released (went from Down to !Down).
+
+<ParamField path="button" type="ImGuiMouseButton">
+  Mouse button to check
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if button was just released
+</ParamField>
+
+### IsMouseDoubleClicked
+
+```cpp
+bool IsMouseDoubleClicked(ImGuiMouseButton button);
+```
+
+Check if mouse button was double-clicked. Same as `GetMouseClickedCount() == 2`.
+
+<ParamField path="button" type="ImGuiMouseButton">
+  Mouse button to check
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if button was double-clicked
+</ParamField>
+
+<Note>
+A double-click will also report `IsMouseClicked() == true`.
+</Note>
+
+**Example:**
+```cpp
+if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+{
+    OpenItem();
+}
+```
+
+### GetMouseClickedCount
+
+```cpp
+int GetMouseClickedCount(ImGuiMouseButton button);
+```
+
+Return the number of successive mouse clicks at the time where a click happened.
+
+<ParamField path="button" type="ImGuiMouseButton">
+  Mouse button to check
+</ParamField>
+
+<ParamField path="Returns" type="int">
+  Number of clicks (0=not clicked, 1=single click, 2=double click, 3=triple click, etc.)
+</ParamField>
+
+**Example:**
+```cpp
+int clicks = ImGui::GetMouseClickedCount(ImGuiMouseButton_Left);
+if (clicks == 1) SingleClick();
+else if (clicks == 2) DoubleClick();
+else if (clicks == 3) TripleClick();
+```
+
+## Mouse Position
+
+### GetMousePos
+
+```cpp
+ImVec2 GetMousePos();
+```
+
+Get mouse position. Shortcut to `ImGui::GetIO().MousePos`.
+
+<ParamField path="Returns" type="ImVec2">
+  Mouse position in screen coordinates
+</ParamField>
+
+**Example:**
+```cpp
+ImVec2 mouse_pos = ImGui::GetMousePos();
+ImGui::Text("Mouse Position: (%.1f, %.1f)", mouse_pos.x, mouse_pos.y);
+```
+
+### GetMousePosOnOpeningCurrentPopup
+
+```cpp
+ImVec2 GetMousePosOnOpeningCurrentPopup();
+```
+
+Retrieve mouse position at the time of opening popup we have `BeginPopup()` into. Useful to avoid user backing that value themselves.
+
+<ParamField path="Returns" type="ImVec2">
+  Mouse position when popup was opened
+</ParamField>
+
+### IsMousePosValid
+
+```cpp
+bool IsMousePosValid(const ImVec2* mouse_pos = NULL);
+```
+
+Check if mouse position is valid. By convention, we use `(-FLT_MAX, -FLT_MAX)` to denote no mouse available.
+
+<ParamField path="mouse_pos" type="const ImVec2*" default="NULL">
+  Mouse position to check (NULL = use current mouse position)
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if position is valid
+</ParamField>
+
+## Mouse Dragging
+
+### IsMouseDragging
+
+```cpp
+bool IsMouseDragging(ImGuiMouseButton button, float lock_threshold = -1.0f);
+```
+
+Check if mouse is dragging. Uses `io.MouseDraggingThreshold` if `lock_threshold < 0.0f`.
+
+<ParamField path="button" type="ImGuiMouseButton">
+  Mouse button to check
+</ParamField>
+
+<ParamField path="lock_threshold" type="float" default="-1.0f">
+  Distance threshold before considering dragging. Use -1.0f for default threshold.
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if mouse is dragging
+</ParamField>
+
+**Example:**
+```cpp
+if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+{
+    ImVec2 delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+    ImGui::Text("Dragging: (%.1f, %.1f)", delta.x, delta.y);
+}
+```
+
+### GetMouseDragDelta
+
+```cpp
+ImVec2 GetMouseDragDelta(ImGuiMouseButton button = 0, float lock_threshold = -1.0f);
+```
+
+Return the delta from the initial clicking position while the mouse button is pressed or was just released. This is locked and returns 0.0f until the mouse moves past a distance threshold at least once.
+
+<ParamField path="button" type="ImGuiMouseButton" default="0">
+  Mouse button to check
+</ParamField>
+
+<ParamField path="lock_threshold" type="float" default="-1.0f">
+  Distance threshold. Use -1.0f for `io.MouseDraggingThreshold`.
+</ParamField>
+
+<ParamField path="Returns" type="ImVec2">
+  Drag delta in pixels
+</ParamField>
+
+**Example:**
+```cpp
+if (ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+{
+    ImVec2 drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+    object_position.x += drag_delta.x;
+    object_position.y += drag_delta.y;
+    ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+}
+```
+
+### ResetMouseDragDelta
+
+```cpp
+void ResetMouseDragDelta(ImGuiMouseButton button = 0);
+```
+
+Reset drag delta for a mouse button.
+
+<ParamField path="button" type="ImGuiMouseButton" default="0">
+  Mouse button to reset
+</ParamField>
+
+## Mouse Hovering
+
+### IsMouseHoveringRect
+
+```cpp
+bool IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool clip = true);
+```
+
+Check if mouse is hovering given bounding rect in screen space. Clipped by current clipping settings, but disregarding of other consideration of focus/window ordering/popup-block.
+
+<ParamField path="r_min" type="const ImVec2&">
+  Top-left corner of rectangle
+</ParamField>
+
+<ParamField path="r_max" type="const ImVec2&">
+  Bottom-right corner of rectangle
+</ParamField>
+
+<ParamField path="clip" type="bool" default="true">
+  Whether to respect current clipping rectangle
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if mouse is within rectangle
+</ParamField>
+
+**Example:**
+```cpp
+ImVec2 min = ImVec2(100, 100);
+ImVec2 max = ImVec2(200, 200);
+if (ImGui::IsMouseHoveringRect(min, max))
+{
+    ImGui::GetWindowDrawList()->AddRectFilled(min, max, IM_COL32(255, 0, 0, 64));
+}
+```
+
+## Mouse Cursor
+
+### GetMouseCursor
+
+```cpp
+ImGuiMouseCursor GetMouseCursor();
+```
+
+Get desired mouse cursor shape. Important: reset in `ImGui::NewFrame()`, updated during the frame. Valid before `Render()`.
+
+<ParamField path="Returns" type="ImGuiMouseCursor">
+  Cursor type
+</ParamField>
+
+### SetMouseCursor
+
+```cpp
+void SetMouseCursor(ImGuiMouseCursor cursor_type);
+```
+
+Set desired mouse cursor shape.
+
+<ParamField path="cursor_type" type="ImGuiMouseCursor">
+  Cursor type to set
+</ParamField>
+
+**Example:**
+```cpp
+if (IsItemHovered())
+{
+    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+}
+```
+
+## Mouse Cursor Types
+
+```cpp
+enum ImGuiMouseCursor_
+{
+    ImGuiMouseCursor_None = -1,
+    ImGuiMouseCursor_Arrow = 0,         // Standard arrow
+    ImGuiMouseCursor_TextInput,         // When hovering over InputText, etc.
+    ImGuiMouseCursor_ResizeAll,         // Unused by ImGui
+    ImGuiMouseCursor_ResizeNS,          // When hovering horizontal border
+    ImGuiMouseCursor_ResizeEW,          // When hovering vertical border
+    ImGuiMouseCursor_ResizeNESW,        // When hovering bottom-left corner
+    ImGuiMouseCursor_ResizeNWSE,        // When hovering bottom-right corner
+    ImGuiMouseCursor_Hand,              // Unused by ImGui (e.g., for hyperlinks)
+    ImGuiMouseCursor_Wait,              // When waiting for something to process/load
+    ImGuiMouseCursor_Progress,          // When waiting but application still interactive
+    ImGuiMouseCursor_NotAllowed,        // When hovering disallowed interaction
+    ImGuiMouseCursor_COUNT
+};
+```
+
+## Mouse Button Enum
+
+```cpp
+enum ImGuiMouseButton_
+{
+    ImGuiMouseButton_Left = 0,
+    ImGuiMouseButton_Right = 1,
+    ImGuiMouseButton_Middle = 2,
+    ImGuiMouseButton_COUNT = 5
+};
+```
+
+<Note>
+These values are guaranteed to be stable. You can use 0/1 directly.
+</Note>
+
+## Mouse Capture
+
+### SetNextFrameWantCaptureMouse
+
+```cpp
+void SetNextFrameWantCaptureMouse(bool want_capture_mouse);
+```
+
+Override `io.WantCaptureMouse` flag next frame. Equivalent to setting `io.WantCaptureMouse` after the next `NewFrame()` call.
+
+<ParamField path="want_capture_mouse" type="bool">
+  Whether to capture mouse
+</ParamField>
+
+## Common Patterns
+
+### Custom Drag Widget
+
+```cpp
+ImGui::InvisibleButton("drag_area", ImVec2(200, 200));
+if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+{
+    ImVec2 drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+    object_pos.x += drag_delta.x;
+    object_pos.y += drag_delta.y;
+    ImGui::ResetMouseDragDelta(ImGuiMouseButton_Left);
+}
+```
+
+### Click Detection with Double-Click
+
+```cpp
+if (ImGui::IsItemClicked())
+{
+    if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+        OpenItem();
+    else
+        SelectItem();
+}
+```
+
+### Custom Context Menu
+
+```cpp
+if (ImGui::IsMouseClicked(ImGuiMouseButton_Right) && 
+    ImGui::IsMouseHoveringRect(item_min, item_max))
+{
+    ImGui::OpenPopup("context_menu");
+}
+```
+
+## See Also
+
+- [Keyboard](/api/keyboard) - Keyboard input functions
+- [Input](/api/input) - General input and ImGuiIO functions
+- [Shortcuts](/api/shortcuts) - Keyboard shortcuts

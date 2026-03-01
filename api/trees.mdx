@@ -1,0 +1,329 @@
+---
+title: 'Trees'
+description: 'Tree node and collapsing header widgets for Dear ImGui'
+---
+
+## Tree Nodes
+
+TreeNode functions return true when the node is open, in which case you need to also call `TreePop()` when you are finished displaying the tree node contents.
+
+### TreeNode
+
+```cpp
+bool ImGui::TreeNode(const char* label)
+```
+
+Simple tree node.
+
+<ParamField path="label" type="const char*">
+  Node label (also used as ID)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when node is open
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::TreeNode("Node")) {
+    ImGui::Text("Contents");
+    ImGui::TreePop();
+}
+```
+
+### TreeNode (with format)
+
+```cpp
+bool ImGui::TreeNode(const char* str_id, const char* fmt, ...)
+bool ImGui::TreeNode(const void* ptr_id, const char* fmt, ...)
+```
+
+Helper variation to easily decorrelate the ID from the displayed string.
+
+<ParamField path="str_id" type="const char*">
+  String identifier (not displayed)
+</ParamField>
+
+<ParamField path="ptr_id" type="const void*">
+  Pointer identifier (not displayed)
+</ParamField>
+
+<ParamField path="fmt" type="const char*">
+  Format string (printf-style)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when node is open
+</ResponseField>
+
+```cpp
+// Example
+for (int i = 0; i < 5; i++) {
+    if (ImGui::TreeNode((void*)(intptr_t)i, "Object %d", i)) {
+        ImGui::Text("Details for object %d", i);
+        ImGui::TreePop();
+    }
+}
+```
+
+### TreeNodeEx
+
+```cpp
+bool ImGui::TreeNodeEx(const char* label, ImGuiTreeNodeFlags flags = 0)
+bool ImGui::TreeNodeEx(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, ...)
+bool ImGui::TreeNodeEx(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, ...)
+```
+
+Tree node with flags.
+
+<ParamField path="label" type="const char*">
+  Node label
+</ParamField>
+
+<ParamField path="flags" type="ImGuiTreeNodeFlags" default="0">
+  Tree node flags (see ImGuiTreeNodeFlags_)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when node is open
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::TreeNodeEx("Node", ImGuiTreeNodeFlags_DefaultOpen)) {
+    ImGui::Text("Contents");
+    ImGui::TreePop();
+}
+
+// Leaf node (no arrow)
+if (ImGui::TreeNodeEx("Leaf", ImGuiTreeNodeFlags_Leaf)) {
+    ImGui::Text("Leaf content");
+    ImGui::TreePop();
+}
+```
+
+### TreePush / TreePop
+
+```cpp
+void ImGui::TreePush(const char* str_id)
+void ImGui::TreePush(const void* ptr_id)
+void ImGui::TreePop()
+```
+
+`TreePush()` = `Indent() + PushID()`. Already called by `TreeNode()` when returning true, but you can call `TreePush/TreePop` yourself if desired.
+
+<ParamField path="str_id" type="const char*">
+  String identifier
+</ParamField>
+
+<ParamField path="ptr_id" type="const void*">
+  Pointer identifier
+</ParamField>
+
+```cpp
+// Example
+ImGui::TreePush("##subtree");
+ImGui::Text("Indented content");
+ImGui::TreePop();
+```
+
+### GetTreeNodeToLabelSpacing
+
+```cpp
+float ImGui::GetTreeNodeToLabelSpacing()
+```
+
+Horizontal distance preceding label when using `TreeNode*()` or `Bullet()` == `(g.FontSize + style.FramePadding.x*2)` for a regular unframed TreeNode.
+
+<ResponseField name="return" type="float">
+  Spacing in pixels
+</ResponseField>
+
+## Collapsing Headers
+
+### CollapsingHeader
+
+```cpp
+bool ImGui::CollapsingHeader(const char* label, ImGuiTreeNodeFlags flags = 0)
+```
+
+If returning true the header is open. Doesn't indent nor push on ID stack. User doesn't have to call `TreePop()`.
+
+<ParamField path="label" type="const char*">
+  Header label
+</ParamField>
+
+<ParamField path="flags" type="ImGuiTreeNodeFlags" default="0">
+  Tree node flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when header is open
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::CollapsingHeader("Settings")) {
+    ImGui::Text("Option 1");
+    ImGui::Text("Option 2");
+}
+```
+
+### CollapsingHeader (with close button)
+
+```cpp
+bool ImGui::CollapsingHeader(const char* label, bool* p_visible, ImGuiTreeNodeFlags flags = 0)
+```
+
+When `p_visible != NULL`: if `*p_visible==true` display an additional small close button on upper right of the header which will set the bool to false when clicked. If `*p_visible==false` don't display the header.
+
+<ParamField path="label" type="const char*">
+  Header label
+</ParamField>
+
+<ParamField path="p_visible" type="bool*">
+  Pointer to visibility boolean
+</ParamField>
+
+<ParamField path="flags" type="ImGuiTreeNodeFlags" default="0">
+  Tree node flags
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True when header is open
+</ResponseField>
+
+```cpp
+// Example
+static bool visible = true;
+if (ImGui::CollapsingHeader("Settings", &visible)) {
+    ImGui::Text("Settings content");
+}
+if (!visible) {
+    ImGui::Text("Settings are hidden");
+}
+```
+
+## Tree Control
+
+### SetNextItemOpen
+
+```cpp
+void ImGui::SetNextItemOpen(bool is_open, ImGuiCond cond = 0)
+```
+
+Set next TreeNode/CollapsingHeader open state.
+
+<ParamField path="is_open" type="bool">
+  Open state
+</ParamField>
+
+<ParamField path="cond" type="ImGuiCond" default="0">
+  Condition for setting (see ImGuiCond_)
+</ParamField>
+
+```cpp
+// Example
+ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+if (ImGui::TreeNode("Auto Opened")) {
+    ImGui::TreePop();
+}
+```
+
+### SetNextItemStorageID
+
+```cpp
+void ImGui::SetNextItemStorageID(ImGuiID storage_id)
+```
+
+Set ID to use for open/close storage (default to same as item ID).
+
+<ParamField path="storage_id" type="ImGuiID">
+  Storage identifier
+</ParamField>
+
+### TreeNodeGetOpen
+
+```cpp
+bool ImGui::TreeNodeGetOpen(ImGuiID storage_id)
+```
+
+Retrieve tree node open/close state.
+
+<ParamField path="storage_id" type="ImGuiID">
+  Storage identifier
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if node is open
+</ResponseField>
+
+## Tree Node Flags
+
+### ImGuiTreeNodeFlags_
+
+Flags for `TreeNodeEx()`, `CollapsingHeader()`.
+
+#### Display Options
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiTreeNodeFlags_None` | Default |
+| `ImGuiTreeNodeFlags_Selected` | Draw as selected |
+| `ImGuiTreeNodeFlags_Framed` | Draw frame with background |
+| `ImGuiTreeNodeFlags_AllowOverlap` | Hit testing to allow subsequent widgets to overlap |
+| `ImGuiTreeNodeFlags_NoTreePushOnOpen` | Don't do TreePush() when open (e.g. for CollapsingHeader) |
+| `ImGuiTreeNodeFlags_NoAutoOpenOnLog` | Don't automatically open node when logging is active |
+| `ImGuiTreeNodeFlags_DefaultOpen` | Default node to be open |
+| `ImGuiTreeNodeFlags_OpenOnDoubleClick` | Open on double-click instead of simple click |
+| `ImGuiTreeNodeFlags_OpenOnArrow` | Open when clicking on the arrow part |
+| `ImGuiTreeNodeFlags_Leaf` | No collapsing, no arrow (use as convenience for leaf nodes) |
+| `ImGuiTreeNodeFlags_Bullet` | Display a bullet instead of arrow |
+| `ImGuiTreeNodeFlags_FramePadding` | Use FramePadding to vertically align text baseline |
+
+#### Width Options
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiTreeNodeFlags_SpanAvailWidth` | Extend hit box to right-most edge |
+| `ImGuiTreeNodeFlags_SpanFullWidth` | Extend hit box to left-most and right-most edges |
+| `ImGuiTreeNodeFlags_SpanLabelWidth` | Narrow hit box + narrow hovering highlight |
+| `ImGuiTreeNodeFlags_SpanAllColumns` | Frame will span all columns of container table |
+| `ImGuiTreeNodeFlags_LabelSpanAllColumns` | Label will span all columns of container table |
+
+#### Navigation
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiTreeNodeFlags_NavLeftJumpsToParent` | Nav: left arrow moves back to parent |
+
+#### Tree Lines
+
+| Flag | Description |
+|------|-------------|
+| `ImGuiTreeNodeFlags_DrawLinesNone` | No lines drawn |
+| `ImGuiTreeNodeFlags_DrawLinesFull` | Horizontal lines to child nodes, vertical line down to TreePop() |
+| `ImGuiTreeNodeFlags_DrawLinesToNodes` | Horizontal lines to child nodes, vertical line to bottom-most child |
+
+```cpp
+// Examples
+if (ImGui::TreeNodeEx("Selected Node", ImGuiTreeNodeFlags_Selected)) {
+    ImGui::TreePop();
+}
+
+if (ImGui::TreeNodeEx("Open by Default", ImGuiTreeNodeFlags_DefaultOpen)) {
+    ImGui::TreePop();
+}
+
+if (ImGui::TreeNodeEx("Leaf Node", ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen)) {
+    // No TreePop() needed
+}
+
+if (ImGui::TreeNodeEx("With Bullet", ImGuiTreeNodeFlags_Bullet)) {
+    ImGui::TreePop();
+}
+
+if (ImGui::TreeNodeEx("Framed", ImGuiTreeNodeFlags_Framed)) {
+    ImGui::TreePop();
+}
+```

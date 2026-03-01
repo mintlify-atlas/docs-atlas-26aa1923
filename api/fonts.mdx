@@ -1,0 +1,436 @@
+---
+title: 'Fonts & Font Atlas'
+description: 'Font loading, configuration, and management'
+---
+
+## Overview
+
+Dear ImGui manages fonts through `ImFontAtlas`, which loads and rasterizes multiple TTF/OTF fonts into a single texture. Since version 1.92.0, fonts can be rendered at any size dynamically.
+
+<Tip>
+ImFontAtlas automatically loads a default embedded font if you didn't load one manually.
+</Tip>
+
+## Adding Fonts
+
+### AddFontDefault
+
+```cpp
+ImFont* AddFontDefault(const ImFontConfig* font_cfg = NULL);
+```
+
+Add default font. Selects between embedded vector font (recommended) and bitmap font.
+
+<ParamField path="font_cfg" type="const ImFontConfig*" default="NULL">
+  Optional font configuration
+</ParamField>
+
+<ParamField path="Returns" type="ImFont*">
+  Pointer to loaded font
+</ParamField>
+
+**Example:**
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+ImFont* font = io.Fonts->AddFontDefault();
+```
+
+### AddFontFromFileTTF
+
+```cpp
+ImFont* AddFontFromFileTTF(const char* filename, float size_pixels = 0.0f,
+                           const ImFontConfig* font_cfg = NULL,
+                           const ImWchar* glyph_ranges = NULL);
+```
+
+Load font from TTF/OTF file.
+
+<ParamField path="filename" type="const char*">
+  Path to .ttf or .otf file
+</ParamField>
+
+<ParamField path="size_pixels" type="float" default="0.0f">
+  Legacy base size. Use 0.0f for default size (13px), or specify a size for legacy behavior.
+</ParamField>
+
+<ParamField path="font_cfg" type="const ImFontConfig*" default="NULL">
+  Optional font configuration
+</ParamField>
+
+<ParamField path="glyph_ranges" type="const ImWchar*" default="NULL">
+  Glyph ranges to load (NULL = default ranges)
+</ParamField>
+
+<ParamField path="Returns" type="ImFont*">
+  Pointer to loaded font, or NULL on error
+</ParamField>
+
+**Example:**
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/Roboto-Regular.ttf", 16.0f);
+```
+
+### AddFontFromMemoryTTF
+
+```cpp
+ImFont* AddFontFromMemoryTTF(void* font_data, int font_data_size,
+                             float size_pixels = 0.0f,
+                             const ImFontConfig* font_cfg = NULL,
+                             const ImWchar* glyph_ranges = NULL);
+```
+
+Load font from memory. **Note:** Transfers ownership of `font_data` to ImFontAtlas!
+
+<ParamField path="font_data" type="void*">
+  Font data in memory (ownership transferred unless `FontDataOwnedByAtlas=false`)
+</ParamField>
+
+<ParamField path="font_data_size" type="int">
+  Size of font data in bytes
+</ParamField>
+
+<Warning>
+By default, `AddFontFromMemoryTTF()` takes ownership of the data and will free it. Set `font_cfg->FontDataOwnedByAtlas = false` to keep ownership.
+</Warning>
+
+### AddFontFromMemoryCompressedTTF
+
+```cpp
+ImFont* AddFontFromMemoryCompressedTTF(const void* compressed_font_data,
+                                       int compressed_font_data_size,
+                                       float size_pixels = 0.0f,
+                                       const ImFontConfig* font_cfg = NULL,
+                                       const ImWchar* glyph_ranges = NULL);
+```
+
+Load font from compressed data. Data is still owned by caller.
+
+## Font Configuration
+
+### ImFontConfig Structure
+
+```cpp
+struct ImFontConfig
+{
+    void*           FontData;               // TTF/OTF data
+    int             FontDataSize;           // TTF/OTF data size
+    bool            FontDataOwnedByAtlas;   // true: atlas will free data
+    float           SizePixels;             // Legacy base size
+    int             OversampleH;            // Rasterize at higher quality (1-4)
+    int             OversampleV;            // Rasterize at higher quality (1-4)
+    bool            PixelSnapH;             // Align every glyph to pixel boundary
+    ImVec2          GlyphExtraSpacing;      // Extra spacing between glyphs
+    ImVec2          GlyphOffset;            // Offset all glyphs from this font
+    const ImWchar*  GlyphRanges;            // List of Unicode ranges
+    float           GlyphMinAdvanceX;       // Minimum AdvanceX for glyphs
+    float           GlyphMaxAdvanceX;       // Maximum AdvanceX for glyphs
+    bool            MergeMode;              // Merge into previous font
+    unsigned int    FontLoaderFlags;        // Settings for font loader
+    float           RasterizerMultiply;     // Brighten (>1.0f) or darken (<1.0f)
+    float           RasterizerDensity;      // DPI scale for rasterization
+    char            Name[40];               // Name for debugging
+    ImFont*         DstFont;                // [Internal]
+};
+```
+
+**Example with configuration:**
+```cpp
+ImFontConfig config;
+config.OversampleH = 3;
+config.OversampleV = 3;
+config.GlyphExtraSpacing = ImVec2(1.0f, 0.0f);
+config.PixelSnapH = true;
+strcpy(config.Name, "My Custom Font");
+
+ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", 16.0f, &config);
+```
+
+## Font Merging
+
+Merge multiple fonts into one to combine different Unicode ranges:
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+
+// Load base Latin font
+ImFont* font = io.Fonts->AddFontFromFileTTF("fonts/DroidSans.ttf", 16.0f);
+
+// Merge Japanese glyphs into same font
+ImFontConfig config;
+config.MergeMode = true;
+io.Fonts->AddFontFromFileTTF("fonts/NotoSansJP.ttf", 16.0f, &config,
+                             io.Fonts->GetGlyphRangesJapanese());
+```
+
+## Glyph Ranges
+
+### GetGlyphRangesDefault
+
+```cpp
+const ImWchar* GetGlyphRangesDefault();
+```
+
+Get Basic Latin + Extended Latin glyph ranges.
+
+### Other Glyph Ranges
+
+```cpp
+const ImWchar* GetGlyphRangesGreek();
+const ImWchar* GetGlyphRangesKorean();
+const ImWchar* GetGlyphRangesJapanese();
+const ImWchar* GetGlyphRangesChineseFull();
+const ImWchar* GetGlyphRangesChineseSimplifiedCommon();
+const ImWchar* GetGlyphRangesCyrillic();
+const ImWchar* GetGlyphRangesThai();
+const ImWchar* GetGlyphRangesVietnamese();
+```
+
+**Example:**
+```cpp
+ImFont* font = io.Fonts->AddFontFromFileTTF(
+    "fonts/NotoSans.ttf",
+    16.0f,
+    NULL,
+    io.Fonts->GetGlyphRangesCyrillic()
+);
+```
+
+## Custom Glyph Ranges
+
+### ImFontGlyphRangesBuilder
+
+Build custom glyph ranges from text:
+
+```cpp
+ImFontGlyphRangesBuilder builder;
+builder.AddText("Hello World");
+builder.AddChar(0x4E00); // Add specific Unicode character
+builder.AddRanges(io.Fonts->GetGlyphRangesDefault());
+
+ImVector<ImWchar> ranges;
+builder.BuildRanges(&ranges);
+
+ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", 16.0f, NULL, ranges.Data);
+```
+
+## Using Fonts
+
+### PushFont
+
+```cpp
+void PushFont(ImFont* font, float font_size_base_unscaled);
+```
+
+Set current font. In 1.92+, you must specify both font and size.
+
+<ParamField path="font" type="ImFont*">
+  Font to use (NULL = keep current font)
+</ParamField>
+
+<ParamField path="font_size_base_unscaled" type="float">
+  Base font size before global scaling (0.0f = keep current size)
+</ParamField>
+
+**Example:**
+```cpp
+ImFont* big_font = io.Fonts->AddFontFromFileTTF("font.ttf", 24.0f);
+
+// Use font at its loaded size
+ImGui::PushFont(big_font, big_font->LegacySize);
+ImGui::Text("Big text");
+ImGui::PopFont();
+
+// Use font at custom size (1.92+ feature)
+ImGui::PushFont(big_font, 48.0f);
+ImGui::Text("Even bigger text");
+ImGui::PopFont();
+```
+
+### PopFont
+
+```cpp
+void PopFont();
+```
+
+Restore previous font.
+
+### GetFont
+
+```cpp
+ImFont* GetFont();
+```
+
+Get current font.
+
+### GetFontSize
+
+```cpp
+float GetFontSize();
+```
+
+Get current scaled font size (height in pixels). **Do not pass this to PushFont()**!
+
+## ImFont Structure
+
+```cpp
+struct ImFont
+{
+    ImFontAtlas*    OwnerAtlas;         // Parent atlas
+    float           LegacySize;         // Font size passed to AddFont()
+    ImWchar         FallbackChar;       // Character used if glyph not found
+    ImWchar         EllipsisChar;       // Character used for ellipsis
+    
+    // Methods
+    bool IsLoaded() const;
+    const char* GetDebugName() const;
+    bool IsGlyphInFont(ImWchar c);
+    ImVec2 CalcTextSizeA(float size, float max_width, float wrap_width,
+                         const char* text_begin, const char* text_end = NULL);
+};
+```
+
+## Text Measurement
+
+### CalcTextSize
+
+```cpp
+ImVec2 CalcTextSize(const char* text, const char* text_end = NULL,
+                    bool hide_text_after_double_hash = false,
+                    float wrap_width = -1.0f);
+```
+
+Calculate text size at current font size.
+
+<ParamField path="text" type="const char*">
+  Text to measure
+</ParamField>
+
+<ParamField path="text_end" type="const char*" default="NULL">
+  End of text (NULL for null-terminated)
+</ParamField>
+
+<ParamField path="hide_text_after_double_hash" type="bool" default="false">
+  Hide text after ##
+</ParamField>
+
+<ParamField path="wrap_width" type="float" default="-1.0f">
+  Width for text wrapping (-1.0f = no wrapping)
+</ParamField>
+
+<ParamField path="Returns" type="ImVec2">
+  Text size in pixels
+</ParamField>
+
+**Example:**
+```cpp
+const char* text = "Hello, World!";
+ImVec2 size = ImGui::CalcTextSize(text);
+ImGui::Text("Text size: %.0f x %.0f", size.x, size.y);
+
+// Center text
+ImVec2 text_size = ImGui::CalcTextSize(text);
+ImVec2 avail = ImGui::GetContentRegionAvail();
+ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (avail.x - text_size.x) * 0.5f);
+ImGui::Text("%s", text);
+```
+
+## ImFontAtlas
+
+### Custom Rectangles
+
+Add custom graphics to font atlas:
+
+```cpp
+ImFontAtlasRectId AddCustomRect(int width, int height, ImFontAtlasRect* out_r = NULL);
+bool GetCustomRect(ImFontAtlasRectId id, ImFontAtlasRect* out_r) const;
+```
+
+**Example:**
+```cpp
+ImFontAtlasRect rect;
+ImFontAtlasRectId rect_id = io.Fonts->AddCustomRect(32, 32, &rect);
+
+// Later, after atlas is built:
+if (io.Fonts->GetCustomRect(rect_id, &rect))
+{
+    // Draw into atlas texture at rect.x, rect.y
+    // Use rect.uv0, rect.uv1 for UV coordinates
+}
+```
+
+## Font Scaling
+
+### Global Font Scaling
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+style.FontScaleMain = 1.5f; // Scale all fonts by 50%
+```
+
+### Per-Font Size (1.92+)
+
+```cpp
+ImGui::PushFont(my_font, 24.0f); // Render at 24px
+ImGui::Text("24px text");
+ImGui::PopFont();
+
+ImGui::PushFont(my_font, 48.0f); // Same font at 48px
+ImGui::Text("48px text");
+ImGui::PopFont();
+```
+
+## Common Patterns
+
+### Multiple Font Sizes
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+ImFont* font_small = io.Fonts->AddFontFromFileTTF("font.ttf", 12.0f);
+ImFont* font_regular = io.Fonts->AddFontFromFileTTF("font.ttf", 16.0f);
+ImFont* font_large = io.Fonts->AddFontFromFileTTF("font.ttf", 24.0f);
+
+// Usage
+ImGui::PushFont(font_large, font_large->LegacySize);
+ImGui::Text("Header");
+ImGui::PopFont();
+
+ImGui::PushFont(font_regular, font_regular->LegacySize);
+ImGui::Text("Body text");
+ImGui::PopFont();
+```
+
+### Icon Fonts
+
+```cpp
+// Load regular font
+ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", 16.0f);
+
+// Merge icon font
+ImFontConfig config;
+config.MergeMode = true;
+config.GlyphMinAdvanceX = 16.0f;
+static const ImWchar icon_ranges[] = { 0xf000, 0xf3ff, 0 };
+io.Fonts->AddFontFromFileTTF("fontawesome.ttf", 16.0f, &config, icon_ranges);
+
+// Usage
+ImGui::Text("\uf015 Home"); // FontAwesome home icon
+```
+
+## ShowFontSelector
+
+```cpp
+void ShowFontSelector(const char* label);
+```
+
+Add font selector block (not a window), essentially a combo listing loaded fonts.
+
+**Example:**
+```cpp
+ImGui::ShowFontSelector("Font");
+```
+
+## See Also
+
+- [Style](/api/style) - Font size and scaling in style
+- [Text](/api/text) - Text rendering functions

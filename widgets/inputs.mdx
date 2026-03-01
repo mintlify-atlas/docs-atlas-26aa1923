@@ -1,0 +1,344 @@
+---
+title: Input Widgets
+description: Text input, numeric input, and input validation in Dear ImGui
+---
+
+Input widgets allow users to enter and edit data. Dear ImGui provides input functions for text, integers, floats, and other data types.
+
+## Text Input
+
+### InputText()
+
+Single-line text input:
+
+```cpp
+IMGUI_API bool InputText(const char* label, char* buf, size_t buf_size, 
+                         ImGuiInputTextFlags flags = 0, 
+                         ImGuiInputTextCallback callback = NULL, 
+                         void* user_data = NULL);
+```
+
+<ParamField path="label" type="const char*" required>
+  Widget label
+</ParamField>
+
+<ParamField path="buf" type="char*" required>
+  Character buffer to edit
+</ParamField>
+
+<ParamField path="buf_size" type="size_t" required>
+  Size of the buffer (including null terminator)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiInputTextFlags" default="0">
+  Optional input text flags (see below)
+</ParamField>
+
+```cpp
+static char text[128] = "Hello, world!";
+ImGui::InputText("##input", text, IM_COUNTOF(text));
+
+if (ImGui::IsItemDeactivatedAfterEdit()) {
+    // Text was edited and user pressed Enter or clicked away
+    printf("Final text: %s\n", text);
+}
+```
+
+### InputTextMultiline()
+
+Multi-line text input:
+
+```cpp
+IMGUI_API bool InputTextMultiline(const char* label, char* buf, size_t buf_size,
+                                  const ImVec2& size = ImVec2(0, 0),
+                                  ImGuiInputTextFlags flags = 0,
+                                  ImGuiInputTextCallback callback = NULL,
+                                  void* user_data = NULL);
+```
+
+```cpp
+static char multiline[1024] = "Line 1\nLine 2\nLine 3";
+ImGui::InputTextMultiline("##multiline", multiline, IM_COUNTOF(multiline),
+                          ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16));
+```
+
+### InputTextWithHint()
+
+Text input with placeholder hint:
+
+```cpp
+IMGUI_API bool InputTextWithHint(const char* label, const char* hint, 
+                                 char* buf, size_t buf_size,
+                                 ImGuiInputTextFlags flags = 0,
+                                 ImGuiInputTextCallback callback = NULL,
+                                 void* user_data = NULL);
+```
+
+```cpp
+static char email[128] = "";
+ImGui::InputTextWithHint("##email", "Enter email address", email, IM_COUNTOF(email));
+
+static char search[256] = "";
+ImGui::InputTextWithHint("##search", "Search...", search, IM_COUNTOF(search));
+```
+
+## Input Text Flags
+
+Customize text input behavior with flags:
+
+<CodeGroup>
+```cpp Character Filtering
+// Numbers only
+ImGui::InputText("##numbers", buf, 128, ImGuiInputTextFlags_CharsDecimal);
+
+// Hexadecimal only
+ImGui::InputText("##hex", buf, 128, ImGuiInputTextFlags_CharsHexadecimal);
+
+// No blank characters
+ImGui::InputText("##noblank", buf, 128, ImGuiInputTextFlags_CharsNoBlank);
+
+// Uppercase only
+ImGui::InputText("##upper", buf, 128, ImGuiInputTextFlags_CharsUppercase);
+```
+
+```cpp Input Modes
+// Password mode (display as *)
+ImGui::InputText("Password", password, 128, ImGuiInputTextFlags_Password);
+
+// Read-only
+ImGui::InputText("Read-only", text, 128, ImGuiInputTextFlags_ReadOnly);
+
+// Allows Tab character
+ImGui::InputText("##code", code, 1024, ImGuiInputTextFlags_AllowTabInput);
+```
+
+```cpp Behavior Flags
+// Enter key keeps active
+ImGui::InputText("##input", buf, 128, ImGuiInputTextFlags_EnterReturnsTrue);
+
+// Callback on every edit
+ImGui::InputText("##live", buf, 128, ImGuiInputTextFlags_CallbackAlways);
+
+// No undo/redo
+ImGui::InputText("##simple", buf, 128, ImGuiInputTextFlags_NoUndoRedo);
+```
+</CodeGroup>
+
+<Note>
+  Common flags include:
+  - `ImGuiInputTextFlags_EnterReturnsTrue` - Return true when Enter pressed
+  - `ImGuiInputTextFlags_Password` - Display as password (***)
+  - `ImGuiInputTextFlags_ReadOnly` - Read-only mode
+  - `ImGuiInputTextFlags_CharsDecimal` - Allow 0-9 . + - *
+  - `ImGuiInputTextFlags_CharsNoBlank` - Filter out spaces and tabs
+</Note>
+
+## Numeric Input
+
+### InputInt()
+
+Integer input with optional step buttons:
+
+```cpp
+IMGUI_API bool InputInt(const char* label, int* v, int step = 1, int step_fast = 100,
+                        ImGuiInputTextFlags flags = 0);
+```
+
+```cpp
+static int i0 = 123;
+ImGui::InputInt("input int", &i0);
+
+// With custom steps
+static int i1 = 0;
+ImGui::InputInt("input int (step)", &i1, 5, 20);
+```
+
+### InputFloat()
+
+Floating-point input:
+
+```cpp
+IMGUI_API bool InputFloat(const char* label, float* v, 
+                          float step = 0.0f, float step_fast = 0.0f,
+                          const char* format = "%.3f",
+                          ImGuiInputTextFlags flags = 0);
+```
+
+```cpp
+static float f0 = 0.001f;
+ImGui::InputFloat("input float", &f0, 0.01f, 1.0f, "%.3f");
+
+// Scientific notation
+static float f1 = 1.e10f;
+ImGui::InputFloat("input scientific", &f1, 0.0f, 0.0f, "%e");
+```
+
+### InputDouble()
+
+Double-precision input:
+
+```cpp
+IMGUI_API bool InputDouble(const char* label, double* v,
+                           double step = 0.0, double step_fast = 0.0,
+                           const char* format = "%.6f",
+                           ImGuiInputTextFlags flags = 0);
+```
+
+```cpp
+static double d0 = 999999.00000001;
+ImGui::InputDouble("input double", &d0, 0.01, 1.0, "%.8f");
+```
+
+## Multi-Component Input
+
+### InputFloat2/3/4()
+
+Input multiple float values:
+
+```cpp
+IMGUI_API bool InputFloat2(const char* label, float v[2], const char* format = "%.3f",
+                           ImGuiInputTextFlags flags = 0);
+IMGUI_API bool InputFloat3(const char* label, float v[3], const char* format = "%.3f",
+                           ImGuiInputTextFlags flags = 0);
+IMGUI_API bool InputFloat4(const char* label, float v[4], const char* format = "%.3f",
+                           ImGuiInputTextFlags flags = 0);
+```
+
+```cpp
+static float vec2[2] = { 0.0f, 0.0f };
+static float vec3[3] = { 0.0f, 0.0f, 0.0f };
+static float vec4[4] = { 0.10f, 0.20f, 0.30f, 0.44f };
+
+ImGui::InputFloat2("position", vec2);
+ImGui::InputFloat3("direction", vec3);
+ImGui::InputFloat4("color", vec4);
+```
+
+### InputInt2/3/4()
+
+Input multiple integer values:
+
+```cpp
+IMGUI_API bool InputInt2(const char* label, int v[2], ImGuiInputTextFlags flags = 0);
+IMGUI_API bool InputInt3(const char* label, int v[3], ImGuiInputTextFlags flags = 0);
+IMGUI_API bool InputInt4(const char* label, int v[4], ImGuiInputTextFlags flags = 0);
+```
+
+```cpp
+static int ivec3[3] = { 10, 20, 30 };
+ImGui::InputInt3("coordinates", ivec3);
+```
+
+## Generic Scalar Input
+
+### InputScalar()
+
+Input any scalar data type:
+
+```cpp
+IMGUI_API bool InputScalar(const char* label, ImGuiDataType data_type, void* p_data,
+                           const void* p_step = NULL, const void* p_step_fast = NULL,
+                           const char* format = NULL, ImGuiInputTextFlags flags = 0);
+```
+
+<ParamField path="data_type" type="ImGuiDataType" required>
+  Data type:
+  - `ImGuiDataType_S8`, `ImGuiDataType_U8`
+  - `ImGuiDataType_S16`, `ImGuiDataType_U16`
+  - `ImGuiDataType_S32`, `ImGuiDataType_U32`
+  - `ImGuiDataType_S64`, `ImGuiDataType_U64`
+  - `ImGuiDataType_Float`, `ImGuiDataType_Double`
+</ParamField>
+
+```cpp
+static ImS8 s8_v = 127;
+static ImU8 u8_v = 255;
+static ImS16 s16_v = 32767;
+
+ImGui::InputScalar("int8", ImGuiDataType_S8, &s8_v);
+ImGui::InputScalar("uint8", ImGuiDataType_U8, &u8_v);
+ImGui::InputScalar("int16", ImGuiDataType_S16, &s16_v);
+```
+
+## Input Validation and Callbacks
+
+Use callbacks to validate or process input:
+
+```cpp
+static int MyCallback(ImGuiInputTextCallbackData* data) {
+    if (data->EventFlag == ImGuiInputTextFlags_CallbackCharFilter) {
+        // Custom character filtering
+        if (data->EventChar < 256 && strchr("0123456789ABCDEFabcdef", (char)data->EventChar)) {
+            return 0;  // Accept
+        }
+        return 1;  // Reject
+    }
+    return 0;
+}
+
+static char hex_input[16] = "";
+ImGui::InputText("Hex", hex_input, 16, 
+                 ImGuiInputTextFlags_CallbackCharFilter, MyCallback);
+```
+
+## Complete Example
+
+```cpp
+void ShowInputDemo() {
+    ImGui::Begin("Input Demo");
+    
+    // Text input
+    static char text[128] = "Hello, world!";
+    ImGui::InputText("Name", text, IM_COUNTOF(text));
+    
+    // Text with hint
+    static char email[128] = "";
+    ImGui::InputTextWithHint("Email", "user@example.com", email, IM_COUNTOF(email));
+    
+    // Password
+    static char password[128] = "";
+    ImGui::InputText("Password", password, IM_COUNTOF(password), 
+                     ImGuiInputTextFlags_Password);
+    
+    ImGui::Spacing();
+    
+    // Numeric inputs
+    static int i0 = 123;
+    ImGui::InputInt("Integer", &i0);
+    
+    static float f0 = 0.001f;
+    ImGui::InputFloat("Float", &f0, 0.01f, 1.0f, "%.3f");
+    
+    static double d0 = 999.999;
+    ImGui::InputDouble("Double", &d0, 0.01, 1.0, "%.3f");
+    
+    ImGui::Spacing();
+    
+    // Multi-component
+    static float vec3[3] = { 0.0f, 3.14159f, 2.71828f };
+    ImGui::InputFloat3("Vector", vec3);
+    
+    ImGui::Spacing();
+    
+    // Multiline text
+    static char multiline[512] = "Line 1\nLine 2\nLine 3";
+    ImGui::InputTextMultiline("##multiline", multiline, IM_COUNTOF(multiline),
+                              ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 8));
+    
+    ImGui::End();
+}
+```
+
+## Best Practices
+
+<Tip>
+  Use `ImGuiInputTextFlags_EnterReturnsTrue` to detect when the user presses Enter to confirm input.
+</Tip>
+
+<Warning>
+  Always provide a buffer large enough for your expected input plus the null terminator.
+</Warning>
+
+<Note>
+  Check `IsItemDeactivatedAfterEdit()` after an input widget to detect when editing is complete and the value has changed.
+</Note>

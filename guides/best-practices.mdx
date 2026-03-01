@@ -1,0 +1,509 @@
+---
+title: Best Practices
+description: Recommended patterns and practices for building robust Dear ImGui applications
+---
+
+## Overview
+
+This guide covers recommended patterns and practices for building maintainable, performant Dear ImGui applications.
+
+## Core Principles
+
+### Immediate Mode Paradigm
+
+Dear ImGui uses an immediate mode API where UI is rebuilt every frame:
+
+```cpp
+// Good: Emit UI every frame
+while (running) {
+    ImGui::NewFrame();
+    
+    if (ImGui::Button("Click me")) {
+        DoSomething();
+    }
+    
+    ImGui::Render();
+}
+```
+
+<Note>
+  Unlike retained-mode UIs, you don't create widgets once and modify them later. Instead, you emit them fresh each frame.
+</Note>
+
+### Application Owns Data
+
+```cpp
+// Good: Application owns the data
+struct AppData {
+    float slider_value = 0.5f;
+    char text_buffer[256] = "Hello";
+    bool checkbox_state = true;
+};
+
+AppData data;
+
+void RenderUI() {
+    ImGui::SliderFloat("Value", &data.slider_value, 0.0f, 1.0f);
+    ImGui::InputText("Text", data.text_buffer, sizeof(data.text_buffer));
+    ImGui::Checkbox("Enable", &data.checkbox_state);
+}
+```
+
+## ID Management
+
+### Understanding IDs
+
+Every interactive widget needs a unique ID. Most common mistake: using duplicate IDs.
+
+```cpp
+// BAD: Duplicate IDs
+for (int i = 0; i < items.size(); i++) {
+    ImGui::Button("Delete");  // All buttons have same ID!
+}
+
+// GOOD: Use PushID/PopID
+for (int i = 0; i < items.size(); i++) {
+    ImGui::PushID(i);
+    ImGui::Button("Delete");  // Each button has unique ID
+    ImGui::PopID();
+}
+
+// GOOD: Use ## suffix
+for (int i = 0; i < items.size(); i++) {
+    char label[32];
+    sprintf(label, "Delete##%d", i);
+    ImGui::Button(label);  // Label shows "Delete", ID is "Delete##0", etc.
+}
+```
+
+### ID Stack Tool
+
+Use the built-in tool to debug ID issues:
+
+```cpp
+ImGui::ShowIDStackToolWindow();
+// Hover over widgets to see their ID path
+```
+
+## Window Management
+
+### Always Match Begin/End
+
+```cpp
+// ALWAYS call End() even if Begin() returns false
+bool open = true;
+if (ImGui::Begin("My Window", &open)) {
+    // Window is not collapsed, render content
+    ImGui::Text("Content");
+}
+ImGui::End();  // ALWAYS call this
+```
+
+<Warning>
+  Begin/End and BeginChild/EndChild must always be paired, unlike other BeginXXX/EndXXX functions.
+</Warning>
+
+### Window Flags
+
+Use appropriate flags for your use case:
+
+```cpp
+// Tool window without decorations
+ImGui::Begin("Tools", nullptr, 
+    ImGuiWindowFlags_NoTitleBar | 
+    ImGuiWindowFlags_NoResize |
+    ImGuiWindowFlags_NoMove);
+
+// Fixed-size window
+ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_Always);
+ImGui::Begin("Fixed");
+
+// Window with menu bar
+ImGui::Begin("Main", nullptr, ImGuiWindowFlags_MenuBar);
+if (ImGui::BeginMenuBar()) {
+    if (ImGui::BeginMenu("File")) {
+        ImGui::MenuItem("Open");
+        ImGui::EndMenu();
+    }
+    ImGui::EndMenuBar();
+}
+```
+
+## Layout Best Practices
+
+### Use GetContentRegionAvail
+
+```cpp
+// Good: Responsive layout
+ImVec2 avail = ImGui::GetContentRegionAvail();
+ImGui::Button("Full Width", ImVec2(avail.x, 0));
+
+// Good: Split layout
+ImGui::BeginChild("Left", ImVec2(avail.x * 0.3f, 0));
+// Left content
+ImGui::EndChild();
+
+ImGui::SameLine();
+
+ImGui::BeginChild("Right", ImVec2(0, 0));
+// Right content
+ImGui::EndChild();
+```
+
+### Proper Spacing
+
+```cpp
+// Horizontal layout
+ImGui::Button("Button 1");
+ImGui::SameLine();
+ImGui::Button("Button 2");
+
+// Custom spacing
+ImGui::Button("Button 1");
+ImGui::SameLine(0.0f, 20.0f);  // 20px spacing
+ImGui::Button("Button 2");
+
+// Vertical spacing
+ImGui::Spacing();
+ImGui::Separator();
+ImGui::Dummy(ImVec2(0, 20));  // 20px vertical space
+```
+
+### Tables for Complex Layouts
+
+```cpp
+if (ImGui::BeginTable("layout", 2, ImGuiTableFlags_Resizable)) {
+    ImGui::TableSetupColumn("Left", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+    ImGui::TableSetupColumn("Right", ImGuiTableColumnFlags_WidthStretch);
+    
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    // Left content
+    
+    ImGui::TableNextColumn();
+    // Right content
+    
+    ImGui::EndTable();
+}
+```
+
+## Input Handling
+
+### Check WantCapture Flags
+
+```cpp
+void HandleInput() {
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // ALWAYS pass input to ImGui
+    io.AddMouseButtonEvent(button, pressed);
+    io.AddKeyEvent(key, pressed);
+    
+    // Only handle in app if ImGui doesn't want it
+    if (!io.WantCaptureMouse) {
+        // Handle mouse in application
+    }
+    
+    if (!io.WantCaptureKeyboard) {
+        // Handle keyboard in application
+    }
+}
+```
+
+<Warning>
+  Always pass input to ImGui first, then check WantCapture flags before handling in your application.
+</Warning>
+
+## Style Management
+
+### Push/Pop Pattern
+
+```cpp
+// Good: Balanced push/pop
+ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 0, 0, 1));
+ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 10.0f);
+
+ImGui::Button("Styled Button");
+
+ImGui::PopStyleVar();
+ImGui::PopStyleColor();
+
+// Good: Count-based popping
+int style_count = 0;
+if (condition) {
+    ImGui::PushStyleColor(ImGuiCol_Text, color);
+    style_count++;
+}
+if (other_condition) {
+    ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 0.5f);
+    style_count++;
+}
+
+// UI code
+
+if (style_count > 0) {
+    ImGui::PopStyleVar(style_count);
+    ImGui::PopStyleColor(style_count);
+}
+```
+
+### Initialize Style Once
+
+```cpp
+// Good: Set style at startup
+void InitializeImGui() {
+    ImGui::CreateContext();
+    
+    ImGuiStyle& style = ImGui::GetStyle();
+    style.WindowRounding = 5.0f;
+    style.FrameRounding = 3.0f;
+    style.Colors[ImGuiCol_WindowBg] = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
+    
+    // Initialize backends...
+}
+
+// Don't modify ImGuiStyle mid-frame unless using Push/Pop
+```
+
+## Performance
+
+### Minimize Window Count
+
+```cpp
+// Good: Use child windows for sections
+ImGui::Begin("Main Window");
+
+ImGui::BeginChild("Section1", ImVec2(0, 200));
+// Section 1 content
+ImGui::EndChild();
+
+ImGui::BeginChild("Section2");
+// Section 2 content
+ImGui::EndChild();
+
+ImGui::End();
+```
+
+### Early Exit for Collapsed Windows
+
+```cpp
+if (ImGui::Begin("My Window", &open)) {
+    // Only execute this if window is visible
+    ExpensiveRenderCode();
+}
+ImGui::End();
+```
+
+### Use ListClipper for Large Lists
+
+```cpp
+ImGuiListClipper clipper;
+clipper.Begin(items.size());
+
+while (clipper.Step()) {
+    for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++) {
+        ImGui::Text("Item %d: %s", i, items[i].name);
+    }
+}
+
+// Only visible items are processed!
+```
+
+### Reduce Draw Calls
+
+```cpp
+// Good: Minimize style changes
+ImGui::PushStyleColor(ImGuiCol_Button, red_color);
+for (int i = 0; i < 10; i++) {
+    ImGui::Button("Red Button");
+}
+ImGui::PopStyleColor();
+
+// Bad: Changing style every iteration causes more draw calls
+for (int i = 0; i < 10; i++) {
+    ImGui::PushStyleColor(ImGuiCol_Button, red_color);
+    ImGui::Button("Red Button");
+    ImGui::PopStyleColor();
+}
+```
+
+## Error Prevention
+
+### Static Buffers for InputText
+
+```cpp
+// Good: Static or persistent buffer
+static char buffer[256] = "";
+ImGui::InputText("Input", buffer, sizeof(buffer));
+
+// Bad: Local buffer that loses data
+void MyFunction() {
+    char buffer[256] = "";  // Resets every frame!
+    ImGui::InputText("Input", buffer, sizeof(buffer));
+}
+```
+
+### Static Arrays for Persistent Data
+
+```cpp
+// Good: Persistent state
+static bool selected[100] = {};
+for (int i = 0; i < 100; i++) {
+    ImGui::Selectable(items[i].name, &selected[i]);
+}
+```
+
+### RAII Helpers
+
+Create helpers for automatic cleanup:
+
+```cpp
+struct StyleColorGuard {
+    StyleColorGuard(ImGuiCol idx, ImVec4 color) {
+        ImGui::PushStyleColor(idx, color);
+    }
+    ~StyleColorGuard() {
+        ImGui::PopStyleColor();
+    }
+};
+
+// Use it
+void RenderButton() {
+    StyleColorGuard guard(ImGuiCol_Button, red);
+    ImGui::Button("Red Button");
+}  // Automatically pops on scope exit
+```
+
+## Organization
+
+### Modular UI Functions
+
+```cpp
+void RenderMainMenu() {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            if (ImGui::MenuItem("Open", "Ctrl+O")) OpenFile();
+            if (ImGui::MenuItem("Save", "Ctrl+S")) SaveFile();
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+}
+
+void RenderPropertiesPanel(Entity* entity) {
+    ImGui::Begin("Properties");
+    if (entity) {
+        ImGui::InputText("Name", entity->name, sizeof(entity->name));
+        ImGui::DragFloat3("Position", &entity->position.x);
+    }
+    ImGui::End();
+}
+
+void RenderUI() {
+    RenderMainMenu();
+    RenderPropertiesPanel(selected_entity);
+}
+```
+
+### Separate Data from UI
+
+```cpp
+// Good: Clear separation
+struct Settings {
+    float volume = 0.5f;
+    bool fullscreen = false;
+    int quality = 2;
+};
+
+Settings g_settings;
+
+void RenderSettingsUI() {
+    ImGui::SliderFloat("Volume", &g_settings.volume, 0.0f, 1.0f);
+    ImGui::Checkbox("Fullscreen", &g_settings.fullscreen);
+    ImGui::Combo("Quality", &g_settings.quality, "Low\0Medium\0High\0");
+}
+
+void ApplySettings() {
+    SetVolume(g_settings.volume);
+    SetFullscreen(g_settings.fullscreen);
+    SetQuality(g_settings.quality);
+}
+```
+
+## Testing and Debugging
+
+### Use Demo Window
+
+```cpp
+// Always keep demo available during development
+#ifndef NDEBUG
+static bool show_demo = true;
+if (show_demo) {
+    ImGui::ShowDemoWindow(&show_demo);
+}
+#endif
+```
+
+### Metrics Window
+
+```cpp
+// Enable metrics for debugging
+static bool show_metrics = false;
+if (ImGui::IsKeyPressed(ImGuiKey_F12)) {
+    show_metrics = !show_metrics;
+}
+if (show_metrics) {
+    ImGui::ShowMetricsWindow(&show_metrics);
+}
+```
+
+### Assert on Errors
+
+```cpp
+// Use IM_ASSERT for development
+IM_ASSERT(data != nullptr);
+IM_ASSERT(index < items.size());
+```
+
+## Common Pitfalls
+
+<Accordion title="Forgetting to Call End()">
+  Always pair Begin() with End(), even if Begin() returns false.
+  
+  ```cpp
+  // Wrong
+  if (ImGui::Begin("Window")) {
+      ImGui::Text("Content");
+      ImGui::End();  // Only called if Begin returns true!
+  }
+  
+  // Correct
+  if (ImGui::Begin("Window")) {
+      ImGui::Text("Content");
+  }
+  ImGui::End();  // Always called
+  ```
+</Accordion>
+
+<Accordion title="Duplicate IDs">
+  Most common beginner mistake. Use PushID or ## suffix.
+</Accordion>
+
+<Accordion title="Modifying Style Mid-Frame">
+  Use PushStyleVar/PushStyleColor for temporary changes, not direct ImGuiStyle modification.
+</Accordion>
+
+<Accordion title="Not Handling UTF-8 Correctly">
+  Use u8"" prefix for non-ASCII strings and ensure source files are UTF-8.
+</Accordion>
+
+<Accordion title="Assuming Fixed Layout">
+  Dear ImGui layouts are dynamic. Use GetContentRegionAvail() instead of hardcoded sizes.
+</Accordion>
+
+## See Also
+
+- [Examples](/guides/examples) - Example applications
+- [Performance](/guides/performance) - Performance optimization
+- [Troubleshooting](/guides/troubleshooting) - Common issues
+- [FAQ](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md) - Frequently asked questions

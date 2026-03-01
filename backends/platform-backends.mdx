@@ -1,0 +1,544 @@
+---
+title: Platform Backends
+description: Platform backends for windowing, input handling, and OS integration
+---
+
+## Overview
+
+Platform backends handle the interface between Dear ImGui and the operating system. They are responsible for:
+
+- Creating and managing windows
+- Processing mouse, keyboard, and gamepad input
+- Managing clipboard operations
+- Handling timing and frame synchronization
+- Changing mouse cursor shapes
+- Multi-viewport support (docking branch)
+
+<Note>
+  Platform backends must be paired with a [Renderer Backend](/backends/renderer-backends) to display graphics.
+</Note>
+
+## Available Platform Backends
+
+### GLFW Backend
+
+**File**: `imgui_impl_glfw.cpp` / `imgui_impl_glfw.h`
+
+<Card title="Best for cross-platform desktop applications" icon="laptop">
+  GLFW is a modern, lightweight library for window creation and input handling. It's the recommended choice for most desktop applications.
+</Card>
+
+#### Features
+
+- ✅ Clipboard support
+- ✅ Mouse support (can discriminate Mouse/TouchScreen/Pen on Windows)
+- ✅ Keyboard support
+- ✅ Gamepad support
+- ✅ Mouse cursor shapes (requires GLFW 3.4+ for resizing cursors)
+- ✅ Multiple Dear ImGui contexts
+
+#### Supported Platforms
+
+- Windows
+- macOS
+- Linux (X11 and Wayland)
+
+#### Basic Usage
+
+```cpp
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include <GLFW/glfw3.h>
+
+int main() {
+    // Initialize GLFW
+    glfwInit();
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui", NULL, NULL);
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // Enable vsync
+    
+    // Setup Dear ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+    
+    // Initialize backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true); // true = install callbacks
+    ImGui_ImplOpenGL3_Init("#version 330");
+    
+    // Main loop
+    while (!glfwWindowShouldClose(window)) {
+        glfwPollEvents();
+        
+        // Start frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+        
+        // Your UI code here
+        ImGui::ShowDemoWindow();
+        
+        // Render
+        ImGui::Render();
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        glfwSwapBuffers(window);
+    }
+    
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+    glfwDestroyWindow(window);
+    glfwTerminate();
+    return 0;
+}
+```
+
+#### Initialization Functions
+
+```cpp
+// Initialize for OpenGL
+bool ImGui_ImplGlfw_InitForOpenGL(GLFWwindow* window, bool install_callbacks);
+
+// Initialize for Vulkan
+bool ImGui_ImplGlfw_InitForVulkan(GLFWwindow* window, bool install_callbacks);
+
+// Initialize for other renderers
+bool ImGui_ImplGlfw_InitForOther(GLFWwindow* window, bool install_callbacks);
+```
+
+#### Callback Management
+
+If you set `install_callbacks=true`, the backend automatically installs GLFW callbacks. If you need custom callbacks:
+
+```cpp
+// Initialize without auto-installing callbacks
+ImGui_ImplGlfw_InitForOpenGL(window, false);
+
+// Manually install callbacks
+ImGui_ImplGlfw_InstallCallbacks(window);
+
+// Or forward events from your own callbacks
+void MyKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+    // Your code here
+}
+
+glfwSetKeyCallback(window, MyKeyCallback);
+```
+
+#### Helper Functions
+
+```cpp
+// Sleep function for frame rate limiting
+void ImGui_ImplGlfw_Sleep(int milliseconds);
+
+// Get DPI scaling factors
+float ImGui_ImplGlfw_GetContentScaleForWindow(GLFWwindow* window);
+float ImGui_ImplGlfw_GetContentScaleForMonitor(GLFWmonitor* monitor);
+```
+
+---
+
+### SDL2 Backend
+
+**File**: `imgui_impl_sdl2.cpp` / `imgui_impl_sdl2.h`
+
+<Card title="Excellent for cross-platform and mobile" icon="mobile">
+  SDL2 is a mature, battle-tested library with excellent mobile support and a large community.
+</Card>
+
+#### Features
+
+- ✅ Clipboard support
+- ✅ Mouse support (can discriminate Mouse/TouchScreen)
+- ✅ Keyboard support
+- ✅ Gamepad support
+- ✅ Mouse cursor shapes
+- ✅ Basic IME support
+
+#### Supported Platforms
+
+- Windows
+- macOS
+- Linux
+- iOS
+- Android
+
+#### Basic Usage
+
+```cpp
+#include "imgui.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_opengl3.h"
+#include <SDL2/SDL.h>
+
+int main(int argc, char* argv[]) {
+    // Initialize SDL2
+    SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
+    SDL_SetHint(SDL_HINT_IME_SHOW_UI, "1"); // Enable IME
+    
+    SDL_Window* window = SDL_CreateWindow(
+        "Dear ImGui SDL2+OpenGL3",
+        SDL_WINDOWPOS_CENTERED,
+        SDL_WINDOWPOS_CENTERED,
+        1280, 720,
+        SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
+    );
+    SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+    SDL_GL_SetSwapInterval(1); // Enable vsync
+    
+    // Setup Dear ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // Initialize backends
+    ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
+    ImGui_ImplOpenGL3_Init("#version 330");
+    
+    // Main loop
+    bool running = true;
+    while (running) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event)) {
+            ImGui_ImplSDL2_ProcessEvent(&event);
+            if (event.type == SDL_QUIT)
+                running = false;
+        }
+        
+        // Start frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplSDL2_NewFrame();
+        ImGui::NewFrame();
+        
+        // Your UI code
+        ImGui::ShowDemoWindow();
+        
+        // Render
+        ImGui::Render();
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+        SDL_GL_SwapWindow(window);
+    }
+    
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+    ImGui::DestroyContext();
+    SDL_GL_DeleteContext(gl_context);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return 0;
+}
+```
+
+#### Initialization Functions
+
+```cpp
+// Initialize for OpenGL
+bool ImGui_ImplSDL2_InitForOpenGL(SDL_Window* window, void* sdl_gl_context);
+
+// Initialize for Vulkan
+bool ImGui_ImplSDL2_InitForVulkan(SDL_Window* window);
+
+// Initialize for DirectX
+bool ImGui_ImplSDL2_InitForD3D(SDL_Window* window);
+
+// Initialize for Metal
+bool ImGui_ImplSDL2_InitForMetal(SDL_Window* window);
+
+// Initialize for SDL_Renderer
+bool ImGui_ImplSDL2_InitForSDLRenderer(SDL_Window* window, SDL_Renderer* renderer);
+
+// Initialize for other renderers
+bool ImGui_ImplSDL2_InitForOther(SDL_Window* window);
+```
+
+#### Event Processing
+
+<Warning>
+  You must forward SDL events to the backend using `ImGui_ImplSDL2_ProcessEvent()`.
+</Warning>
+
+```cpp
+SDL_Event event;
+while (SDL_PollEvent(&event)) {
+    ImGui_ImplSDL2_ProcessEvent(&event); // Forward to Dear ImGui
+    // Your event handling
+}
+```
+
+---
+
+### SDL3 Backend
+
+**File**: `imgui_impl_sdl3.cpp` / `imgui_impl_sdl3.h`
+
+<Card title="Recommended for new projects" icon="star">
+  SDL3 is the latest version with improved API design and better performance. Use this for new projects.
+</Card>
+
+The SDL3 backend is similar to SDL2 but with updated API calls. See the SDL2 section above for general usage patterns.
+
+```cpp
+// SDL3 initialization is similar
+SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
+SDL_Window* window = SDL_CreateWindow(
+    "Dear ImGui SDL3+OpenGL3",
+    1280, 720,
+    SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
+);
+
+// Initialize backends
+ImGui_ImplSDL3_InitForOpenGL(window, gl_context);
+ImGui_ImplOpenGL3_Init("#version 330");
+```
+
+---
+
+### Win32 Backend
+
+**File**: `imgui_impl_win32.cpp` / `imgui_impl_win32.h`
+
+<Card title="Best for Windows-only applications" icon="windows">
+  The Win32 backend provides the best Windows integration, including proper multi-viewport support.
+</Card>
+
+#### Features
+
+- ✅ Clipboard support (built into Dear ImGui core)
+- ✅ Mouse support (can discriminate Mouse/TouchScreen/Pen)
+- ✅ Keyboard support
+- ✅ Gamepad support (via XInput)
+- ✅ Mouse cursor shapes
+- ✅ Excellent multi-viewport support
+
+#### Basic Usage
+
+```cpp
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx11.h"
+#include <d3d11.h>
+#include <windows.h>
+
+// Forward declare message handler
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(
+    HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+
+// Window procedure
+LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam) {
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+        return true;
+    
+    switch (msg) {
+    case WM_DESTROY:
+        PostQuitMessage(0);
+        return 0;
+    }
+    return DefWindowProc(hWnd, msg, wParam, lParam);
+}
+
+int main() {
+    // Register window class
+    WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L,
+                      GetModuleHandle(NULL), NULL, NULL, NULL, NULL,
+                      L"ImGui Example", NULL };
+    RegisterClassEx(&wc);
+    
+    // Create window
+    HWND hwnd = CreateWindow(wc.lpszClassName, L"Dear ImGui Win32+DX11",
+                            WS_OVERLAPPEDWINDOW, 100, 100, 1280, 720,
+                            NULL, NULL, wc.hInstance, NULL);
+    
+    // Initialize DirectX 11 (device, context, swap chain)
+    // ... DirectX initialization code ...
+    
+    // Setup Dear ImGui
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+    
+    // Initialize backends
+    ImGui_ImplWin32_Init(hwnd);
+    ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
+    
+    // Show window
+    ShowWindow(hwnd, SW_SHOWDEFAULT);
+    UpdateWindow(hwnd);
+    
+    // Main loop
+    MSG msg = {};
+    while (msg.message != WM_QUIT) {
+        if (PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+            continue;
+        }
+        
+        // Start frame
+        ImGui_ImplDX11_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
+        
+        // Your UI code
+        ImGui::ShowDemoWindow();
+        
+        // Render
+        ImGui::Render();
+        g_pd3dDeviceContext->ClearRenderTargetView(g_mainRenderTargetView, clear_color);
+        ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+        g_pSwapChain->Present(1, 0);
+    }
+    
+    // Cleanup
+    ImGui_ImplDX11_Shutdown();
+    ImGui_ImplWin32_Shutdown();
+    ImGui::DestroyContext();
+    
+    return 0;
+}
+```
+
+#### Helper Functions
+
+```cpp
+// Enable DPI awareness
+void ImGui_ImplWin32_EnableDpiAwareness();
+
+// Get DPI scaling
+float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd);
+float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor);
+
+// Enable transparent window (experimental)
+void ImGui_ImplWin32_EnableAlphaCompositing(void* hwnd);
+```
+
+---
+
+### macOS Backend
+
+**File**: `imgui_impl_osx.mm` / `imgui_impl_osx.h`
+
+<Card title="Native macOS integration" icon="apple">
+  Provides native macOS Cocoa integration. Less feature-complete than GLFW/SDL backends.
+</Card>
+
+<Note>
+  For most macOS applications, using GLFW or SDL2/SDL3 backends is recommended as they offer better cross-platform compatibility and more features.
+</Note>
+
+---
+
+### Android Backend
+
+**File**: `imgui_impl_android.cpp` / `imgui_impl_android.h`
+
+Provides integration with Android's native app API. Typically used with OpenGL ES renderer backend.
+
+---
+
+## Platform Backend Lifecycle
+
+All platform backends follow this lifecycle:
+
+<Steps>
+  <Step title="Initialization">
+    Call `ImGui_ImplXXX_Init()` with platform-specific parameters:
+    
+    ```cpp
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ```
+    
+    The backend sets up:
+    - `io.BackendPlatformName`
+    - `io.BackendFlags`
+    - Input handlers
+    - Clipboard handlers
+  </Step>
+  
+  <Step title="Per-Frame Updates">
+    Call `ImGui_ImplXXX_NewFrame()` at the start of each frame:
+    
+    ```cpp
+    ImGui_ImplGlfw_NewFrame();
+    ```
+    
+    The backend updates:
+    - `io.DeltaTime`
+    - `io.DisplaySize`
+    - Mouse cursor shape
+    - Input states
+  </Step>
+  
+  <Step title="Event Processing">
+    Some backends require explicit event forwarding:
+    
+    ```cpp
+    // SDL backends
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+        ImGui_ImplSDL2_ProcessEvent(&event);
+    }
+    
+    // Win32 backend
+    if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
+        return true;
+    ```
+  </Step>
+  
+  <Step title="Shutdown">
+    Call `ImGui_ImplXXX_Shutdown()` before destroying the context:
+    
+    ```cpp
+    ImGui_ImplGlfw_Shutdown();
+    ```
+  </Step>
+</Steps>
+
+## Common Configuration
+
+### Enable Gamepad Support
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;
+```
+
+### Disable Mouse Cursor Changes
+
+```cpp
+io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange;
+```
+
+### Enable DPI Awareness
+
+```cpp
+// GLFW
+float scale = ImGui_ImplGlfw_GetContentScaleForMonitor(glfwGetPrimaryMonitor());
+ImGuiStyle& style = ImGui::GetStyle();
+style.ScaleAllSizes(scale);
+style.FontScaleDpi = scale;
+
+// Win32
+ImGui_ImplWin32_EnableDpiAwareness();
+float scale = ImGui_ImplWin32_GetDpiScaleForHwnd(hwnd);
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Renderer Backends" icon="paintbrush" href="/backends/renderer-backends">
+    Learn about renderer backends for graphics APIs
+  </Card>
+  <Card title="Custom Backend" icon="code" href="/backends/custom-backend">
+    Create your own platform backend
+  </Card>
+</CardGroup>

@@ -1,0 +1,381 @@
+---
+title: Buttons
+description: Interactive button widgets in Dear ImGui
+---
+
+Buttons are fundamental interactive widgets that respond to user clicks. Dear ImGui provides several button types for different use cases.
+
+## Standard Button
+
+### Button()
+
+Create a clickable button that returns `true` when pressed:
+
+```cpp
+IMGUI_API bool Button(const char* label, const ImVec2& size = ImVec2(0, 0));
+```
+
+<ParamField path="label" type="const char*" required>
+  The text displayed on the button
+</ParamField>
+
+<ParamField path="size" type="ImVec2" default="ImVec2(0, 0)">
+  Button size in pixels. Use (0,0) for auto-sizing to fit the label.
+</ParamField>
+
+<CodeGroup>
+```cpp Basic Button
+static int clicked = 0;
+if (ImGui::Button("Click Me")) {
+    clicked++;
+}
+if (clicked & 1) {
+    ImGui::SameLine();
+    ImGui::Text("Thanks for clicking me!");
+}
+```
+
+```cpp Sized Buttons
+// Auto-sized button
+ImGui::Button("Default Size");
+
+// Fixed size button
+ImGui::Button("200x50 Button", ImVec2(200, 50));
+
+// Full width button
+ImGui::Button("Full Width", ImVec2(-FLT_MIN, 0));
+```
+</CodeGroup>
+
+## Button Variants
+
+### SmallButton()
+
+A button with reduced padding, useful for embedding in text:
+
+```cpp
+IMGUI_API bool SmallButton(const char* label);
+```
+
+```cpp
+ImGui::Text("Inline button:"); 
+ImGui::SameLine();
+if (ImGui::SmallButton("small")) {
+    // Button clicked
+}
+```
+
+### InvisibleButton()
+
+A button without visual decoration, useful for custom rendering:
+
+```cpp
+IMGUI_API bool InvisibleButton(const char* str_id, const ImVec2& size, ImGuiButtonFlags flags = 0);
+```
+
+<ParamField path="str_id" type="const char*" required>
+  String identifier (not displayed)
+</ParamField>
+
+<ParamField path="size" type="ImVec2" required>
+  Button size in pixels
+</ParamField>
+
+<ParamField path="flags" type="ImGuiButtonFlags">
+  Optional button flags:
+  - `ImGuiButtonFlags_MouseButtonLeft` (default)
+  - `ImGuiButtonFlags_MouseButtonRight`
+  - `ImGuiButtonFlags_MouseButtonMiddle`
+</ParamField>
+
+```cpp
+if (ImGui::InvisibleButton("##invisible", ImVec2(100, 100))) {
+    // Clicked
+}
+
+// Right-click button
+if (ImGui::InvisibleButton("##context", ImVec2(50, 50), ImGuiButtonFlags_MouseButtonRight)) {
+    ImGui::OpenPopup("context_menu");
+}
+```
+
+### ArrowButton()
+
+A button displaying a directional arrow:
+
+```cpp
+IMGUI_API bool ArrowButton(const char* str_id, ImGuiDir dir);
+```
+
+<ParamField path="dir" type="ImGuiDir" required>
+  Arrow direction:
+  - `ImGuiDir_Left`
+  - `ImGuiDir_Right`
+  - `ImGuiDir_Up`
+  - `ImGuiDir_Down`
+</ParamField>
+
+```cpp
+static int counter = 0;
+float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+
+if (ImGui::ArrowButton("##left", ImGuiDir_Left)) { counter--; }
+ImGui::SameLine(0.0f, spacing);
+if (ImGui::ArrowButton("##right", ImGuiDir_Right)) { counter++; }
+ImGui::SameLine();
+ImGui::Text("%d", counter);
+```
+
+## Button Modifiers
+
+### Repeating Buttons
+
+Make buttons fire continuously while held down:
+
+```cpp
+static int counter = 0;
+float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+
+ImGui::PushItemFlag(ImGuiItemFlags_ButtonRepeat, true);
+if (ImGui::ArrowButton("##left", ImGuiDir_Left)) { counter--; }
+ImGui::SameLine(0.0f, spacing);
+if (ImGui::ArrowButton("##right", ImGuiDir_Right)) { counter++; }
+ImGui::PopItemFlag();
+
+ImGui::SameLine();
+ImGui::Text("%d", counter);
+```
+
+<Note>
+  With `ImGuiItemFlags_ButtonRepeat` enabled, the button returns `true` multiple times while held, not just on initial press.
+</Note>
+
+### Colored Buttons
+
+Customize button colors using style modifiers:
+
+```cpp
+// Single colored button
+ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1.0f, 0.2f, 0.2f, 1.0f));
+ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.8f, 0.0f, 0.0f, 1.0f));
+if (ImGui::Button("Red Button")) {
+    // Clicked
+}
+ImGui::PopStyleColor(3);
+
+// Multiple colored buttons with HSV
+for (int i = 0; i < 7; i++) {
+    if (i > 0) ImGui::SameLine();
+    ImGui::PushID(i);
+    ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(i / 7.0f, 0.6f, 0.6f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(i / 7.0f, 0.7f, 0.7f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, (ImVec4)ImColor::HSV(i / 7.0f, 0.8f, 0.8f));
+    ImGui::Button("Click");
+    ImGui::PopStyleColor(3);
+    ImGui::PopID();
+}
+```
+
+## Checkbox and Radio Buttons
+
+### Checkbox()
+
+Toggle boolean values:
+
+```cpp
+IMGUI_API bool Checkbox(const char* label, bool* v);
+IMGUI_API bool CheckboxFlags(const char* label, int* flags, int flags_value);
+IMGUI_API bool CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value);
+```
+
+<CodeGroup>
+```cpp Basic Checkbox
+static bool check = true;
+ImGui::Checkbox("Enable Feature", &check);
+
+if (check) {
+    ImGui::Text("Feature is enabled");
+}
+```
+
+```cpp Checkbox Flags
+enum MyFlags {
+    Flag_Option1 = 1 << 0,
+    Flag_Option2 = 1 << 1,
+    Flag_Option3 = 1 << 2,
+};
+
+static int flags = Flag_Option1 | Flag_Option2;
+
+ImGui::CheckboxFlags("Option 1", &flags, Flag_Option1);
+ImGui::CheckboxFlags("Option 2", &flags, Flag_Option2);
+ImGui::CheckboxFlags("Option 3", &flags, Flag_Option3);
+```
+</CodeGroup>
+
+### RadioButton()
+
+Select one option from a group:
+
+```cpp
+IMGUI_API bool RadioButton(const char* label, bool active);
+IMGUI_API bool RadioButton(const char* label, int* v, int v_button);
+```
+
+<Tabs>
+  <Tab title="Manual Mode">
+    ```cpp
+    static int selected = 0;
+    if (ImGui::RadioButton("Option A", selected == 0)) selected = 0;
+    if (ImGui::RadioButton("Option B", selected == 1)) selected = 1;
+    if (ImGui::RadioButton("Option C", selected == 2)) selected = 2;
+    ```
+  </Tab>
+  <Tab title="Automatic Mode">
+    ```cpp
+    static int e = 0;
+    ImGui::RadioButton("radio a", &e, 0); ImGui::SameLine();
+    ImGui::RadioButton("radio b", &e, 1); ImGui::SameLine();
+    ImGui::RadioButton("radio c", &e, 2);
+    ```
+  </Tab>
+</Tabs>
+
+## Image Buttons
+
+### ImageButton()
+
+Create a button with an image:
+
+```cpp
+IMGUI_API bool ImageButton(const char* str_id, ImTextureRef tex_ref, const ImVec2& image_size,
+                           const ImVec2& uv0 = ImVec2(0, 0), const ImVec2& uv1 = ImVec2(1, 1),
+                           const ImVec4& bg_col = ImVec4(0, 0, 0, 0), 
+                           const ImVec4& tint_col = ImVec4(1, 1, 1, 1));
+```
+
+<ParamField path="str_id" type="const char*" required>
+  String identifier for the button
+</ParamField>
+
+<ParamField path="tex_ref" type="ImTextureRef" required>
+  Texture reference (your texture ID cast to ImTextureRef)
+</ParamField>
+
+<ParamField path="image_size" type="ImVec2" required>
+  Size of the image to display
+</ParamField>
+
+<ParamField path="uv0, uv1" type="ImVec2" default="(0,0), (1,1)">
+  UV coordinates for the image texture
+</ParamField>
+
+```cpp
+ImTextureRef my_texture = /* your texture */;
+ImVec2 button_size = ImVec2(32.0f, 32.0f);
+
+for (int i = 0; i < 8; i++) {
+    ImGui::PushID(i);
+    if (i > 0) ImGui::SameLine();
+    
+    ImVec4 bg_col = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+    ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
+    
+    if (ImGui::ImageButton("", my_texture, button_size, 
+                           ImVec2(0, 0), ImVec2(1, 1), bg_col, tint_col)) {
+        // Button clicked
+    }
+    ImGui::PopID();
+}
+```
+
+## Button with Tooltip
+
+Add tooltips to buttons for additional information:
+
+```cpp
+ImGui::Button("Hover Me");
+ImGui::SetItemTooltip("This is a tooltip");
+
+// Or using BeginItemTooltip for complex tooltips
+ImGui::Button("Advanced");
+if (ImGui::BeginItemTooltip()) {
+    ImGui::Text("This is a more complex tooltip");
+    ImGui::BulletText("Feature 1");
+    ImGui::BulletText("Feature 2");
+    ImGui::EndTooltip();
+}
+```
+
+## Complete Example
+
+```cpp
+void ShowButtonDemo() {
+    ImGui::Begin("Button Demo");
+    
+    // Standard button
+    static int click_count = 0;
+    if (ImGui::Button("Standard Button")) {
+        click_count++;
+    }
+    ImGui::Text("Clicked %d times", click_count);
+    
+    ImGui::Spacing();
+    
+    // Small button
+    ImGui::Text("Inline:"); ImGui::SameLine();
+    if (ImGui::SmallButton("small")) {
+        // Clicked
+    }
+    
+    ImGui::Spacing();
+    
+    // Arrow buttons with repeat
+    static int counter = 0;
+    ImGui::PushItemFlag(ImGuiItemFlags_ButtonRepeat, true);
+    if (ImGui::ArrowButton("##left", ImGuiDir_Left)) counter--;
+    ImGui::SameLine();
+    if (ImGui::ArrowButton("##right", ImGuiDir_Right)) counter++;
+    ImGui::PopItemFlag();
+    ImGui::SameLine();
+    ImGui::Text("%d", counter);
+    
+    ImGui::Spacing();
+    
+    // Checkbox
+    static bool enabled = true;
+    ImGui::Checkbox("Enable Feature", &enabled);
+    
+    ImGui::Spacing();
+    
+    // Radio buttons
+    static int selection = 0;
+    ImGui::RadioButton("Option A", &selection, 0); ImGui::SameLine();
+    ImGui::RadioButton("Option B", &selection, 1); ImGui::SameLine();
+    ImGui::RadioButton("Option C", &selection, 2);
+    
+    ImGui::Spacing();
+    
+    // Colored button
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.8f, 0.2f, 0.2f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.9f, 0.3f, 0.3f, 1.0f));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.7f, 0.1f, 0.1f, 1.0f));
+    if (ImGui::Button("Danger Button")) {
+        // Perform dangerous action
+    }
+    ImGui::PopStyleColor(3);
+    
+    ImGui::End();
+}
+```
+
+## Best Practices
+
+<Tip>
+  Use `PushID()` / `PopID()` or the `##` label syntax when you need multiple buttons with the same label.
+</Tip>
+
+<Warning>
+  Button size (0,0) means auto-size. Use `(-FLT_MIN, 0)` for full-width buttons.
+</Warning>

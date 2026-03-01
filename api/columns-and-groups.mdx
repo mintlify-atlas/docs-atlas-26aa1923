@@ -1,0 +1,224 @@
+---
+title: 'Columns & Groups'
+description: 'Functions for organizing widgets into columns and groups'
+---
+
+## Groups
+
+Groups allow you to lock horizontal starting position and capture the whole group bounding box into one "item". This lets you use `IsItemHovered()` or layout primitives such as `SameLine()` on the whole group.
+
+### BeginGroup
+
+```cpp
+void BeginGroup();
+```
+
+Lock horizontal starting position. All widgets added after this call will be treated as part of a group.
+
+**Example:**
+```cpp
+ImGui::BeginGroup();
+ImGui::Text("Group Item 1");
+ImGui::Text("Group Item 2");
+ImGui::Text("Group Item 3");
+ImGui::EndGroup();
+if (ImGui::IsItemHovered())
+    ImGui::SetTooltip("This is the whole group!");
+```
+
+### EndGroup
+
+```cpp
+void EndGroup();
+```
+
+Unlock horizontal starting position and capture the whole group bounding box into one "item".
+
+<Warning>
+Always call `EndGroup()` for each `BeginGroup()`, even if the group is empty.
+</Warning>
+
+## Group Usage Patterns
+
+### Horizontal Grouping with SameLine
+
+```cpp
+ImGui::BeginGroup();
+ImGui::Text("Label:");
+ImGui::SameLine();
+ImGui::Button("Button");
+ImGui::EndGroup();
+```
+
+### Creating Compound Widgets
+
+```cpp
+ImGui::BeginGroup();
+ImGui::Image(my_texture, ImVec2(64, 64));
+ImGui::Text("Image Title");
+ImGui::EndGroup();
+
+// Drag and drop the entire group
+if (ImGui::BeginDragDropSource())
+{
+    ImGui::SetDragDropPayload("MY_IMAGE", &my_data, sizeof(my_data));
+    ImGui::EndDragDropSource();
+}
+```
+
+### Capturing Group Dimensions
+
+```cpp
+ImVec2 group_min = ImGui::GetItemRectMin();
+ImVec2 group_max = ImGui::GetItemRectMax();
+ImVec2 group_size = ImGui::GetItemRectSize();
+```
+
+## Legacy Columns API
+
+<Warning>
+The columns API is legacy. Use the [Tables API](/api/tables) instead for better features and performance.
+</Warning>
+
+### Columns
+
+```cpp
+void Columns(int count = 1, const char* id = NULL, bool border = true);
+```
+
+Setup number of columns. Use `Columns(1)` or `Columns()` to disable columns.
+
+<ParamField path="count" type="int">
+  Number of columns (1 to disable)
+</ParamField>
+
+<ParamField path="id" type="const char*">
+  Optional identifier
+</ParamField>
+
+<ParamField path="border" type="bool" default="true">
+  Draw border between columns
+</ParamField>
+
+### NextColumn
+
+```cpp
+void NextColumn();
+```
+
+Move to next column. If currently in the last column, move to the first column of the next row.
+
+### GetColumnIndex
+
+```cpp
+int GetColumnIndex();
+```
+
+Get current column index (0-based).
+
+<ParamField path="Returns" type="int">
+  Current column index
+</ParamField>
+
+### GetColumnWidth
+
+```cpp
+float GetColumnWidth(int column_index = -1);
+```
+
+Get column width in pixels. Use -1 for current column.
+
+<ParamField path="column_index" type="int" default="-1">
+  Column index (-1 for current column)
+</ParamField>
+
+<ParamField path="Returns" type="float">
+  Column width in pixels
+</ParamField>
+
+### SetColumnWidth
+
+```cpp
+void SetColumnWidth(int column_index, float width);
+```
+
+Set column width in pixels.
+
+<ParamField path="column_index" type="int">
+  Column index
+</ParamField>
+
+<ParamField path="width" type="float">
+  New width in pixels
+</ParamField>
+
+### GetColumnOffset
+
+```cpp
+float GetColumnOffset(int column_index = -1);
+```
+
+Get position of column line in pixels from the left side of the contents region. Use -1 for current column.
+
+<ParamField path="column_index" type="int" default="-1">
+  Column index (-1 for current column)
+</ParamField>
+
+<ParamField path="Returns" type="float">
+  Column offset in pixels
+</ParamField>
+
+### SetColumnOffset
+
+```cpp
+void SetColumnOffset(int column_index, float offset_x);
+```
+
+Set position of column line in pixels from the left side of the contents region.
+
+<ParamField path="column_index" type="int">
+  Column index
+</ParamField>
+
+<ParamField path="offset_x" type="float">
+  New offset in pixels
+</ParamField>
+
+### GetColumnsCount
+
+```cpp
+int GetColumnsCount();
+```
+
+Get number of columns (1 when columns are disabled).
+
+<ParamField path="Returns" type="int">
+  Number of active columns
+</ParamField>
+
+## Migration to Tables
+
+Instead of using columns, prefer the Tables API:
+
+```cpp
+// Old columns API
+ImGui::Columns(3, "MyColumns", true);
+ImGui::Text("Col 1");
+ImGui::NextColumn();
+ImGui::Text("Col 2");
+ImGui::NextColumn();
+ImGui::Text("Col 3");
+ImGui::Columns(1);
+
+// New tables API
+if (ImGui::BeginTable("MyTable", 3))
+{
+    ImGui::TableNextColumn();
+    ImGui::Text("Col 1");
+    ImGui::TableNextColumn();
+    ImGui::Text("Col 2");
+    ImGui::TableNextColumn();
+    ImGui::Text("Col 3");
+    ImGui::EndTable();
+}
+```

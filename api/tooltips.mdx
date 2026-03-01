@@ -1,0 +1,308 @@
+---
+title: 'Tooltips'
+description: 'Tooltip widgets for Dear ImGui'
+---
+
+## Tooltip Functions
+
+Tooltips are windows following the mouse. They do not take focus away. A tooltip window can contain items of any types.
+
+### BeginTooltip
+
+```cpp
+bool ImGui::BeginTooltip()
+```
+
+Begin/append a tooltip window.
+
+<ResponseField name="return" type="bool">
+  Always returns true
+</ResponseField>
+
+```cpp
+// Example
+if (ImGui::IsItemHovered()) {
+    ImGui::BeginTooltip();
+    ImGui::Text("This is a tooltip");
+    ImGui::EndTooltip();
+}
+```
+
+### EndTooltip
+
+```cpp
+void ImGui::EndTooltip()
+```
+
+Close tooltip. Only call `EndTooltip()` if `BeginTooltip()` or `BeginItemTooltip()` returns true.
+
+### SetTooltip
+
+```cpp
+void ImGui::SetTooltip(const char* fmt, ...)
+```
+
+Set a text-only tooltip. Often used after an `ImGui::IsItemHovered()` check. Override any previous call to `SetTooltip()`.
+
+<ParamField path="fmt" type="const char*">
+  Format string (printf-style)
+</ParamField>
+
+```cpp
+// Example
+ImGui::Button("Hover me");
+if (ImGui::IsItemHovered()) {
+    ImGui::SetTooltip("This is a button\nClick to activate");
+}
+
+// With formatted text
+static int clicks = 0;
+if (ImGui::Button("Click me")) {
+    clicks++;
+}
+if (ImGui::IsItemHovered()) {
+    ImGui::SetTooltip("Clicked %d times", clicks);
+}
+```
+
+## Item Tooltips
+
+Helpers for showing a tooltip when hovering an item.
+
+### BeginItemTooltip
+
+```cpp
+bool ImGui::BeginItemTooltip()
+```
+
+Begin/append a tooltip window if preceding item was hovered. This is a shortcut for the `if (IsItemHovered(ImGuiHoveredFlags_ForTooltip) && BeginTooltip())` idiom.
+
+<ResponseField name="return" type="bool">
+  True if tooltip should be displayed
+</ResponseField>
+
+```cpp
+// Example
+ImGui::Button("Hover me");
+if (ImGui::BeginItemTooltip()) {
+    ImGui::Text("Button tooltip");
+    ImGui::BulletText("Feature 1");
+    ImGui::BulletText("Feature 2");
+    ImGui::EndTooltip();
+}
+```
+
+### SetItemTooltip
+
+```cpp
+void ImGui::SetItemTooltip(const char* fmt, ...)
+```
+
+Set a text-only tooltip if preceding item was hovered. Override any previous call to `SetTooltip()`. This is a shortcut for the `if (IsItemHovered(ImGuiHoveredFlags_ForTooltip)) { SetTooltip(...); }` idiom.
+
+<ParamField path="fmt" type="const char*">
+  Format string (printf-style)
+</ParamField>
+
+```cpp
+// Example
+ImGui::Button("Simple Tooltip");
+ImGui::SetItemTooltip("This is a simple tooltip");
+
+ImGui::SliderFloat("Value", &value, 0.0f, 1.0f);
+ImGui::SetItemTooltip("Drag to change value\nCurrent: %.2f", value);
+```
+
+## Advanced Tooltip Examples
+
+### Rich Content Tooltip
+
+```cpp
+// Tooltip with multiple types of content
+ImGui::Button("Rich Tooltip");
+if (ImGui::BeginItemTooltip()) {
+    ImGui::Text("This is a rich tooltip");
+    ImGui::Separator();
+    ImGui::BulletText("Feature 1");
+    ImGui::BulletText("Feature 2");
+    ImGui::BulletText("Feature 3");
+    ImGui::Separator();
+    ImGui::TextDisabled("(?) Hover for more info");
+    ImGui::EndTooltip();
+}
+```
+
+### Tooltip with Image
+
+```cpp
+// Tooltip with image preview
+ImGui::Button("Image Preview");
+if (ImGui::BeginItemTooltip()) {
+    ImGui::Text("Image Preview:");
+    ImGui::Image(my_tex_id, ImVec2(256, 256));
+    ImGui::Text("Size: 256x256");
+    ImGui::EndTooltip();
+}
+```
+
+### Conditional Tooltip
+
+```cpp
+// Only show tooltip when conditions are met
+static bool enabled = true;
+ImGui::Checkbox("Enabled", &enabled);
+if (ImGui::IsItemHovered() && !enabled) {
+    ImGui::SetTooltip("This feature is currently disabled");
+}
+```
+
+### Delayed Tooltip
+
+```cpp
+// Tooltip with delay (using ImGuiHoveredFlags_DelayNormal)
+ImGui::Button("Delayed Tooltip");
+if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
+    ImGui::SetTooltip("This tooltip appears after a short delay");
+}
+```
+
+### Stationary Tooltip
+
+```cpp
+// Tooltip that requires mouse to be stationary
+ImGui::Button("Stationary Tooltip");
+if (ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary)) {
+    ImGui::SetTooltip("Mouse must be stationary to see this");
+}
+```
+
+### Multi-line Tooltip
+
+```cpp
+// Tooltip with multiple lines of text
+ImGui::Button("Multi-line");
+if (ImGui::IsItemHovered()) {
+    ImGui::BeginTooltip();
+    ImGui::Text("Line 1: Introduction");
+    ImGui::Text("Line 2: Description");
+    ImGui::Text("Line 3: Additional info");
+    ImGui::Separator();
+    ImGui::TextDisabled("Hint: This is a multi-line tooltip");
+    ImGui::EndTooltip();
+}
+```
+
+### Tooltip with Color
+
+```cpp
+// Colored tooltip text
+ImGui::Button("Colored Text");
+if (ImGui::BeginItemTooltip()) {
+    ImGui::TextColored(ImVec4(1, 0, 0, 1), "Error:");
+    ImGui::SameLine();
+    ImGui::Text("Something went wrong");
+    ImGui::EndTooltip();
+}
+```
+
+### Table in Tooltip
+
+```cpp
+// Tooltip containing a table
+ImGui::Button("Table Tooltip");
+if (ImGui::BeginItemTooltip()) {
+    if (ImGui::BeginTable("tooltip_table", 2)) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::Text("Property");
+        ImGui::TableNextColumn(); ImGui::Text("Value");
+        
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::Text("Name:");
+        ImGui::TableNextColumn(); ImGui::Text("MyObject");
+        
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::Text("Size:");
+        ImGui::TableNextColumn(); ImGui::Text("1024 bytes");
+        
+        ImGui::EndTable();
+    }
+    ImGui::EndTooltip();
+}
+```
+
+### Help Marker
+
+```cpp
+// Reusable help marker function
+void HelpMarker(const char* desc) {
+    ImGui::TextDisabled("(?)");
+    if (ImGui::BeginItemTooltip()) {
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
+// Usage
+ImGui::Text("Some setting");
+ImGui::SameLine();
+HelpMarker("This is a detailed explanation of what this setting does and how to use it properly.");
+```
+
+## Tooltip Behavior
+
+### Default Behavior
+
+- By default, tooltips use `style.HoverFlagsForTooltipMouse` flags when using mouse input
+- For keyboard/gamepad navigation, `style.HoverFlagsForTooltipNav` flags are used
+- The default for mouse is `ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayShort`
+
+### Customizing Tooltip Timing
+
+You can customize when tooltips appear by using different `ImGuiHoveredFlags`:
+
+```cpp
+// Immediate tooltip (no delay)
+if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNone)) {
+    ImGui::SetTooltip("Appears immediately");
+}
+
+// Short delay (default for tooltips)
+if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort)) {
+    ImGui::SetTooltip("Appears after ~0.15 sec");
+}
+
+// Normal delay
+if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayNormal)) {
+    ImGui::SetTooltip("Appears after ~0.40 sec");
+}
+
+// Requires stationary mouse
+if (ImGui::IsItemHovered(ImGuiHoveredFlags_Stationary | ImGuiHoveredFlags_DelayNormal)) {
+    ImGui::SetTooltip("Requires mouse to be still");
+}
+```
+
+### Tooltip on Disabled Items
+
+```cpp
+// Show tooltip even when item is disabled
+ImGui::BeginDisabled();
+ImGui::Button("Disabled Button");
+ImGui::EndDisabled();
+
+if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) {
+    ImGui::SetTooltip("This button is currently disabled");
+}
+```
+
+## Best Practices
+
+1. Use `SetItemTooltip()` for simple text-only tooltips after a widget
+2. Use `BeginItemTooltip()` / `EndTooltip()` for rich content tooltips
+3. Keep tooltip text concise and informative
+4. Use `ImGuiHoveredFlags_ForTooltip` for consistent tooltip behavior
+5. Consider using delays for frequently hovered items to reduce visual noise
+6. Wrap long text in tooltips using `PushTextWrapPos()`
+7. Use help markers `(?)` for additional documentation that doesn't fit in labels

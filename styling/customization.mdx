@@ -1,0 +1,401 @@
+---
+title: Customization
+description: Advanced techniques for customizing Dear ImGui appearance and behavior
+---
+
+## Overview
+
+Beyond basic color and style modifications, Dear ImGui provides powerful customization capabilities including DPI scaling, custom rendering, and advanced theming techniques.
+
+## DPI Scaling
+
+### Font Scaling
+
+Since v1.92 (June 2025), fonts may be dynamically used at any size.
+
+**Select default size:**
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+style.FontSizeBase = 20.0f;
+```
+
+**Scale all fonts:**
+
+```cpp
+style.FontScaleDpi = 2.0f;
+```
+
+**Change font size dynamically:**
+
+```cpp
+// This will be multiplied by style.FontScaleDpi
+ImGui::PushFont(NULL, 42.0f);
+ImGui::Text("Large text");
+ImGui::PopFont();
+```
+
+**Change font and font size:**
+
+```cpp
+ImGui::PushFont(new_font, 42.0f);
+ImGui::Text("Large custom font");
+ImGui::PopFont();
+```
+
+### Style Scaling
+
+<Warning>
+  Style scaling is still work in progress. Expect changes in future releases.
+</Warning>
+
+For single viewport applications, you can scale all sizes once:
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+style.ScaleAllSizes(2.0f); // Call once at initialization!
+```
+
+<Note>
+  If you need to change the scaling factor, reset the style and call `ScaleAllSizes()` again with a new value.
+</Note>
+
+### DPI-Aware Windows Applications
+
+On Windows, you must inform the OS that your application is DPI aware:
+
+<Accordion title="SDL2">
+  Pass `SDL_WINDOW_ALLOW_HIGHDPI` flag to `SDL_CreateWindow()` and call `::SetProcessDPIAware()`.
+  
+  ```cpp
+  SDL_Window* window = SDL_CreateWindow(
+      "My App",
+      SDL_WINDOWPOS_CENTERED,
+      SDL_WINDOWPOS_CENTERED,
+      1280, 720,
+      SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI
+  );
+  ::SetProcessDPIAware();
+  ```
+</Accordion>
+
+<Accordion title="SDL3">
+  Pass `SDL_WINDOW_HIGH_PIXEL_DENSITY` flag to `SDL_CreateWindow()`.
+  
+  ```cpp
+  SDL_Window* window = SDL_CreateWindow(
+      "My App",
+      1280, 720,
+      SDL_WINDOW_OPENGL | SDL_WINDOW_HIGH_PIXEL_DENSITY
+  );
+  ```
+</Accordion>
+
+<Accordion title="GLFW">
+  DPI awareness is handled automatically by GLFW.
+</Accordion>
+
+<Accordion title="Other Windows Projects">
+  Use `ImGui_ImplWin32_EnableDpiAwareness()` helper or an application manifest file.
+  
+  ```cpp
+  #include "imgui_impl_win32.h"
+  ImGui_ImplWin32_EnableDpiAwareness();
+  ```
+</Accordion>
+
+## Conditional Styling
+
+Apply different styles based on widget state:
+
+```cpp
+bool is_error = true;
+
+if (is_error) {
+    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+}
+ImGui::Text("Status: Error");
+if (is_error) {
+    ImGui::PopStyleColor();
+}
+```
+
+### Style Stack Management
+
+Use a counter to manage complex push/pop sequences:
+
+```cpp
+int style_count = 0;
+
+if (condition1) {
+    ImGui::PushStyleColor(ImGuiCol_Button, color1);
+    style_count++;
+}
+if (condition2) {
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, color2);
+    style_count++;
+}
+
+// Your UI code
+
+if (style_count > 0) {
+    ImGui::PopStyleColor(style_count);
+}
+```
+
+## Custom Widget Appearance
+
+### Invisible Buttons
+
+Create clickable areas without visual button appearance:
+
+```cpp
+ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.3f, 0.3f, 0.3f, 0.5f));
+ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(0.5f, 0.5f, 0.5f, 0.5f));
+
+if (ImGui::Button("Invisible Button", ImVec2(200, 50))) {
+    // Handle click
+}
+
+ImGui::PopStyleColor(3);
+```
+
+### Borderless Windows
+
+```cpp
+ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+
+ImGui::Begin("Borderless", nullptr, ImGuiWindowFlags_NoTitleBar);
+// Window content
+ImGui::End();
+
+ImGui::PopStyleVar(2);
+```
+
+## Custom Colors and Themes
+
+### Creating a Custom Theme
+
+```cpp
+void ApplyDarkTheme()
+{
+    ImGuiStyle& style = ImGui::GetStyle();
+    ImVec4* colors = style.Colors;
+    
+    // Base colors
+    const ImVec4 bg_color = ImVec4(0.13f, 0.14f, 0.15f, 1.00f);
+    const ImVec4 bg_color_light = ImVec4(0.20f, 0.22f, 0.24f, 1.00f);
+    const ImVec4 accent = ImVec4(0.40f, 0.60f, 0.90f, 1.00f);
+    const ImVec4 accent_light = ImVec4(0.50f, 0.70f, 1.00f, 1.00f);
+    const ImVec4 accent_dark = ImVec4(0.30f, 0.50f, 0.80f, 1.00f);
+    
+    // Window
+    colors[ImGuiCol_WindowBg] = bg_color;
+    colors[ImGuiCol_ChildBg] = bg_color;
+    colors[ImGuiCol_PopupBg] = bg_color_light;
+    
+    // Text
+    colors[ImGuiCol_Text] = ImVec4(0.95f, 0.96f, 0.98f, 1.00f);
+    colors[ImGuiCol_TextDisabled] = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    
+    // Frames
+    colors[ImGuiCol_FrameBg] = bg_color_light;
+    colors[ImGuiCol_FrameBgHovered] = accent;
+    colors[ImGuiCol_FrameBgActive] = accent_dark;
+    
+    // Buttons
+    colors[ImGuiCol_Button] = accent;
+    colors[ImGuiCol_ButtonHovered] = accent_light;
+    colors[ImGuiCol_ButtonActive] = accent_dark;
+    
+    // Headers
+    colors[ImGuiCol_Header] = accent;
+    colors[ImGuiCol_HeaderHovered] = accent_light;
+    colors[ImGuiCol_HeaderActive] = accent_dark;
+    
+    // Tabs
+    colors[ImGuiCol_Tab] = bg_color_light;
+    colors[ImGuiCol_TabHovered] = accent_light;
+    colors[ImGuiCol_TabSelected] = accent;
+    colors[ImGuiCol_TabSelectedOverline] = accent_light;
+    
+    // Title
+    colors[ImGuiCol_TitleBg] = bg_color;
+    colors[ImGuiCol_TitleBgActive] = bg_color_light;
+    colors[ImGuiCol_TitleBgCollapsed] = bg_color;
+    
+    // Scrollbar
+    colors[ImGuiCol_ScrollbarBg] = bg_color;
+    colors[ImGuiCol_ScrollbarGrab] = bg_color_light;
+    colors[ImGuiCol_ScrollbarGrabHovered] = accent;
+    colors[ImGuiCol_ScrollbarGrabActive] = accent_dark;
+    
+    // Style properties
+    style.WindowRounding = 6.0f;
+    style.FrameRounding = 4.0f;
+    style.ScrollbarRounding = 6.0f;
+    style.GrabRounding = 4.0f;
+    style.TabRounding = 4.0f;
+}
+```
+
+### Theme Selector
+
+```cpp
+const char* themes[] = { "Dark", "Light", "Classic", "Custom" };
+static int current_theme = 0;
+
+if (ImGui::Combo("Theme", &current_theme, themes, IM_COUNTOF(themes))) {
+    switch (current_theme) {
+        case 0: ImGui::StyleColorsDark(); break;
+        case 1: ImGui::StyleColorsLight(); break;
+        case 2: ImGui::StyleColorsClassic(); break;
+        case 3: ApplyDarkTheme(); break;
+    }
+}
+```
+
+## Using Reference Values
+
+Avoid hardcoded sizes by using reference values:
+
+```cpp
+// Use font size as reference
+float button_height = ImGui::GetFontSize() * 2.0f;
+float spacing = ImGui::GetFontSize() * 0.5f;
+
+// Use frame height as reference
+float item_height = ImGui::GetFrameHeight();
+
+// Create proportional UI
+ImVec2 button_size(ImGui::GetFontSize() * 8, ImGui::GetFrameHeight() * 1.5f);
+ImGui::Button("Proportional Button", button_size);
+```
+
+## Custom Rendering
+
+For complete control over appearance, use the low-level ImDrawList API:
+
+```cpp
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+ImVec2 p = ImGui::GetCursorScreenPos();
+
+// Draw custom background
+draw_list->AddRectFilled(
+    p,
+    ImVec2(p.x + 200, p.y + 100),
+    IM_COL32(50, 50, 50, 255),
+    5.0f  // rounding
+);
+
+// Draw custom border
+draw_list->AddRect(
+    p,
+    ImVec2(p.x + 200, p.y + 100),
+    IM_COL32(100, 150, 200, 255),
+    5.0f,  // rounding
+    0,     // flags
+    2.0f   // thickness
+);
+
+// Reserve space
+ImGui::Dummy(ImVec2(200, 100));
+```
+
+## Anti-Aliasing Options
+
+Control rendering quality:
+
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+
+// Enable/disable anti-aliasing
+style.AntiAliasedLines = true;       // Anti-aliased lines/borders
+style.AntiAliasedLinesUseTex = true; // Use textures for better quality
+style.AntiAliasedFill = true;        // Anti-aliased filled shapes
+
+// Adjust tessellation quality
+style.CurveTessellationTol = 1.25f;       // Bezier curve quality
+style.CircleTessellationMaxError = 0.30f; // Circle quality
+```
+
+<Note>
+  Disabling anti-aliasing can improve performance on resource-constrained systems.
+</Note>
+
+## Style Persistence
+
+Save and load custom styles:
+
+```cpp
+// Save style to file
+void SaveStyle(const char* filename)
+{
+    ImGuiStyle& style = ImGui::GetStyle();
+    FILE* f = fopen(filename, "wb");
+    if (f) {
+        fwrite(&style, sizeof(ImGuiStyle), 1, f);
+        fclose(f);
+    }
+}
+
+// Load style from file
+void LoadStyle(const char* filename)
+{
+    ImGuiStyle& style = ImGui::GetStyle();
+    FILE* f = fopen(filename, "rb");
+    if (f) {
+        fread(&style, sizeof(ImGuiStyle), 1, f);
+        fclose(f);
+    }
+}
+```
+
+## Debug and Development
+
+### Style Editor
+
+Use the built-in editor during development:
+
+```cpp
+ImGui::Begin("Style Editor");
+ImGui::ShowStyleEditor();
+ImGui::End();
+```
+
+### Style Selector
+
+Quickly switch between built-in themes:
+
+```cpp
+if (ImGui::ShowStyleSelector("Theme")) {
+    // Style was changed
+}
+```
+
+### Getting Style Colors
+
+Retrieve current color values:
+
+```cpp
+const ImVec4& button_color = ImGui::GetStyleColorVec4(ImGuiCol_Button);
+ImU32 text_color = ImGui::GetColorU32(ImGuiCol_Text);
+```
+
+## Performance Considerations
+
+<Steps>
+  1. **Minimize Push/Pop Operations** - Group style changes when possible
+  2. **Use Direct Style Modification** - For permanent changes, modify `ImGuiStyle` directly instead of pushing/popping every frame
+  3. **Reduce Rounding** - Lower rounding values improve performance
+  4. **Disable Anti-Aliasing** - On low-end hardware, disable anti-aliasing features
+  5. **Optimize Tessellation** - Increase tolerance values to reduce polygon count
+</Steps>
+
+## See Also
+
+- [Colors and Styles](/styling/colors-and-styles) - Complete color and style reference
+- [Performance](/guides/performance) - Performance optimization techniques
+- [Best Practices](/guides/best-practices) - General ImGui best practices

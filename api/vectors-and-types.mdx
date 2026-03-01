@@ -1,0 +1,362 @@
+---
+title: 'Vectors & Data Types'
+description: 'Core data types including ImVec2, ImVec4, ImColor, and scalar types'
+---
+
+## Vector Types
+
+### ImVec2
+
+2D vector used to store positions, sizes, etc.
+
+```cpp
+struct ImVec2
+{
+    float x, y;
+    
+    constexpr ImVec2()                      : x(0.0f), y(0.0f) { }
+    constexpr ImVec2(float _x, float _y)    : x(_x), y(_y) { }
+    
+    float& operator[] (size_t idx);
+    float  operator[] (size_t idx) const;
+};
+```
+
+**Example:**
+```cpp
+ImVec2 pos(100.0f, 200.0f);
+ImVec2 size(300.0f, 400.0f);
+
+// Access components
+float x = pos.x;
+float y = pos.y;
+
+// Or by index
+float x = pos[0];
+float y = pos[1];
+```
+
+<Tip>
+Add `#define IMGUI_DEFINE_MATH_OPERATORS` before including imgui.h to access math operators for ImVec2 and ImVec4.
+</Tip>
+
+**With Math Operators:**
+```cpp
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui.h"
+
+ImVec2 a(10, 20);
+ImVec2 b(5, 15);
+ImVec2 c = a + b;        // (15, 35)
+ImVec2 d = a - b;        // (5, 5)
+ImVec2 e = a * 2.0f;     // (20, 40)
+ImVec2 f = a / 2.0f;     // (5, 10)
+```
+
+### ImVec4
+
+4D vector used to store clipping rectangles, colors, etc.
+
+```cpp
+struct ImVec4
+{
+    float x, y, z, w;
+    
+    constexpr ImVec4()                                        : x(0.0f), y(0.0f), z(0.0f), w(0.0f) { }
+    constexpr ImVec4(float _x, float _y, float _z, float _w)  : x(_x), y(_y), z(_z), w(_w) { }
+};
+```
+
+**Example:**
+```cpp
+// As a color (RGBA)
+ImVec4 red(1.0f, 0.0f, 0.0f, 1.0f);
+ImVec4 semi_transparent_blue(0.0f, 0.0f, 1.0f, 0.5f);
+
+// As a clipping rectangle
+ImVec4 clip_rect(10.0f, 20.0f, 200.0f, 300.0f);
+```
+
+## Scalar Types
+
+### Integer Types
+
+```cpp
+typedef signed char         ImS8;   // 8-bit signed integer
+typedef unsigned char       ImU8;   // 8-bit unsigned integer
+typedef signed short        ImS16;  // 16-bit signed integer
+typedef unsigned short      ImU16;  // 16-bit unsigned integer
+typedef signed int          ImS32;  // 32-bit signed integer == int
+typedef unsigned int        ImU32;  // 32-bit unsigned integer
+typedef signed   long long  ImS64;  // 64-bit signed integer
+typedef unsigned long long  ImU64;  // 64-bit unsigned integer
+```
+
+**Example:**
+```cpp
+ImU32 color = IM_COL32(255, 128, 64, 255);
+ImS32 index = 42;
+ImU64 large_value = 0xFFFFFFFFFFFFFFFF;
+```
+
+### ImGuiID
+
+```cpp
+typedef unsigned int ImGuiID;  // Unique ID used by widgets
+```
+
+A unique ID used by widgets, typically the result of hashing a stack of strings.
+
+**Example:**
+```cpp
+ImGuiID id = ImGui::GetID("MyWidget");
+ImGuiID id2 = ImGui::GetID((void*)&my_object);
+```
+
+### Character Types
+
+```cpp
+typedef unsigned int ImWchar32;     // Decoded U32 character/code point
+typedef unsigned short ImWchar16;   // Decoded U16 character/code point
+
+#ifdef IMGUI_USE_WCHAR32
+typedef ImWchar32 ImWchar;
+#else
+typedef ImWchar16 ImWchar;  // Default
+#endif
+```
+
+## Drawing Types
+
+### ImDrawIdx
+
+```cpp
+#ifndef ImDrawIdx
+typedef unsigned short ImDrawIdx;  // Default: 16-bit (for maximum compatibility)
+#endif
+```
+
+Vertex index. Can be overridden in imconfig.h to use 32-bit indices:
+```cpp
+#define ImDrawIdx unsigned int
+```
+
+<Note>
+To use 16-bit indices with large meshes (64K+ vertices), backend needs to set `io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset`.
+</Note>
+
+### ImDrawVert
+
+```cpp
+struct ImDrawVert
+{
+    ImVec2  pos;    // Position
+    ImVec2  uv;     // Texture coordinates
+    ImU32   col;    // Color (32-bit packed RGBA)
+};
+```
+
+Vertex structure used for rendering. Total size: 20 bytes by default.
+
+**Example:**
+```cpp
+ImDrawVert vert;
+vert.pos = ImVec2(100.0f, 200.0f);
+vert.uv = ImVec2(0.0f, 0.0f);
+vert.col = IM_COL32(255, 255, 255, 255);
+```
+
+<Note>
+You can override the vertex format by defining `IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT` in imconfig.h.
+</Note>
+
+## Texture Types
+
+### ImTextureID
+
+```cpp
+#ifndef ImTextureID
+typedef ImU64 ImTextureID;  // Default: 64-bit
+#endif
+
+#define ImTextureID_Invalid ((ImTextureID)0)
+```
+
+Backend-specific, low-level identifier for a texture. Can be overridden in imconfig.h:
+```cpp
+#define ImTextureID MyTextureType*
+```
+
+**Example:**
+```cpp
+// OpenGL
+ImTextureID my_tex_id = (ImTextureID)(intptr_t)opengl_texture_id;
+
+// DirectX 11
+ImTextureID my_tex_id = (ImTextureID)(intptr_t)srv;
+
+// Vulkan
+ImTextureID my_tex_id = (ImTextureID)(VkDescriptorSet)descriptor_set;
+```
+
+### ImTextureRef
+
+```cpp
+struct ImTextureRef
+{
+    ImTextureRef();
+    ImTextureRef(ImTextureID tex_id);
+    
+    inline ImTextureID GetTexID() const;
+    
+    ImTextureData*  _TexData;  // Texture owned by font atlas
+    ImTextureID     _TexID;    // Low-level backend texture ID
+};
+```
+
+Higher-level texture identifier that can reference either:
+- A texture owned by the font atlas (`_TexData`)
+- A user-provided texture (`_TexID`)
+
+**Example:**
+```cpp
+// From custom texture
+ImTextureRef tex_ref((ImTextureID)(intptr_t)my_texture);
+ImGui::Image(tex_ref, ImVec2(100, 100));
+
+// From font atlas
+ImTextureRef atlas_tex = io.Fonts->TexRef;
+```
+
+## Color Types
+
+### ImColor (Obsolete)
+
+```cpp
+struct ImColor
+{
+    ImVec4 Value;
+    
+    ImColor();
+    ImColor(float r, float g, float b, float a = 1.0f);
+    ImColor(const ImVec4& col);
+    ImColor(ImU32 rgba);
+    
+    operator ImU32() const;
+    operator ImVec4() const;
+};
+```
+
+<Warning>
+ImColor is obsolete. Please avoid using it. Use `ImU32` or `ImVec4` directly instead.
+</Warning>
+
+**Modern alternative:**
+```cpp
+// Instead of ImColor
+ImColor old_way(1.0f, 0.0f, 0.0f, 1.0f);
+
+// Use ImVec4 or ImU32
+ImVec4 new_way(1.0f, 0.0f, 0.0f, 1.0f);
+ImU32 packed = IM_COL32(255, 0, 0, 255);
+```
+
+## Direction Enum
+
+```cpp
+enum ImGuiDir : int
+{
+    ImGuiDir_None    = -1,
+    ImGuiDir_Left    = 0,
+    ImGuiDir_Right   = 1,
+    ImGuiDir_Up      = 2,
+    ImGuiDir_Down    = 3,
+    ImGuiDir_COUNT
+};
+```
+
+Cardinal direction.
+
+**Example:**
+```cpp
+ImGuiStyle& style = ImGui::GetStyle();
+style.WindowMenuButtonPosition = ImGuiDir_Right;
+style.ColorButtonPosition = ImGuiDir_Left;
+```
+
+## Sort Direction
+
+```cpp
+enum ImGuiSortDirection : ImU8
+{
+    ImGuiSortDirection_None         = 0,
+    ImGuiSortDirection_Ascending    = 1,
+    ImGuiSortDirection_Descending   = 2
+};
+```
+
+Sorting direction for tables.
+
+## Common Patterns
+
+### Vector Arithmetic (with IMGUI_DEFINE_MATH_OPERATORS)
+
+```cpp
+#define IMGUI_DEFINE_MATH_OPERATORS
+#include "imgui.h"
+
+// Calculate center point
+ImVec2 min(10, 20);
+ImVec2 max(100, 80);
+ImVec2 center = (min + max) * 0.5f;
+
+// Calculate size
+ImVec2 size = max - min;
+
+// Offset position
+ImVec2 pos(50, 50);
+ImVec2 offset(10, 20);
+ImVec2 new_pos = pos + offset;
+```
+
+### Color Conversions
+
+```cpp
+// ImVec4 to ImU32
+ImVec4 color_vec(1.0f, 0.5f, 0.25f, 1.0f);
+ImU32 color_u32 = ImGui::ColorConvertFloat4ToU32(color_vec);
+
+// ImU32 to ImVec4
+ImU32 packed = IM_COL32(255, 128, 64, 255);
+ImVec4 unpacked = ImGui::ColorConvertU32ToFloat4(packed);
+
+// Direct construction
+ImU32 red = IM_COL32(255, 0, 0, 255);
+ImVec4 red_f(1.0f, 0.0f, 0.0f, 1.0f);
+```
+
+### Rectangle Math
+
+```cpp
+ImVec2 rect_min(10, 20);
+ImVec2 rect_max(100, 80);
+
+// Size
+ImVec2 size = ImVec2(rect_max.x - rect_min.x, rect_max.y - rect_min.y);
+
+// Center
+ImVec2 center = ImVec2((rect_min.x + rect_max.x) * 0.5f,
+                       (rect_min.y + rect_max.y) * 0.5f);
+
+// Check if point is inside
+bool IsPointInRect(ImVec2 point, ImVec2 min, ImVec2 max)
+{
+    return point.x >= min.x && point.x <= max.x &&
+           point.y >= min.y && point.y <= max.y;
+}
+```
+
+## See Also
+
+- [Colors](/api/colors) - Color utilities and conversion
+- [Draw List](/api/draw-list) - Using vectors in drawing commands

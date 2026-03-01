@@ -1,0 +1,327 @@
+---
+title: 'Shortcuts & Input Routing'
+description: 'Keyboard shortcuts with focus routing and key ownership'
+---
+
+## Overview
+
+The shortcut system allows multiple widgets to register interest in a shortcut, but only one owner gets it based on focus routing. This makes shortcuts work correctly in complex hierarchies.
+
+<Tip>
+Use `Shortcut()` instead of `IsKeyPressed()`/`IsKeyChordPressed()` for better features and focus routing support.
+</Tip>
+
+## Key Concepts
+
+The general idea:
+- Several callers may register interest in a shortcut
+- Only one owner gets it based on focus routing
+- The system is order independent
+
+```cpp
+Parent   -> call Shortcut(Ctrl+S)  // When Parent is focused, Parent gets it
+  Child1 -> call Shortcut(Ctrl+S)  // When Child1 is focused, Child1 gets it
+  Child2 -> no call                // When Child2 is focused, Parent gets it
+```
+
+## Shortcut Function
+
+### Shortcut
+
+```cpp
+bool Shortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags = 0);
+```
+
+Test if a keyboard shortcut is pressed and routed to the calling code.
+
+<ParamField path="key_chord" type="ImGuiKeyChord">
+  Key chord (e.g., `ImGuiMod_Ctrl | ImGuiKey_S`)
+</ParamField>
+
+<ParamField path="flags" type="ImGuiInputFlags" default="0">
+  Input flags for routing and repeat behavior
+</ParamField>
+
+<ParamField path="Returns" type="bool">
+  True if shortcut was pressed and routed to this code
+</ParamField>
+
+**Example:**
+```cpp
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S))
+{
+    SaveDocument();
+}
+
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Z))
+{
+    Redo();
+}
+
+// With repeat
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Z, ImGuiInputFlags_Repeat))
+{
+    Undo();
+}
+```
+
+### SetNextItemShortcut
+
+```cpp
+void SetNextItemShortcut(ImGuiKeyChord key_chord, ImGuiInputFlags flags = 0);
+```
+
+Set a keyboard shortcut for the next item. The shortcut will be displayed in tooltips.
+
+<ParamField path="key_chord" type="ImGuiKeyChord">
+  Key chord for the shortcut
+</ParamField>
+
+<ParamField path="flags" type="ImGuiInputFlags" default="0">
+  Input flags
+</ParamField>
+
+**Example:**
+```cpp
+ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_O, ImGuiInputFlags_Tooltip);
+if (ImGui::MenuItem("Open"))
+{
+    OpenFile();
+}
+```
+
+## Key Chords
+
+A key chord is a key optionally combined with modifiers:
+
+```cpp
+// Simple key
+ImGuiKey_C
+
+// Key with single modifier
+ImGuiMod_Ctrl | ImGuiKey_C
+
+// Key with multiple modifiers  
+ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Z
+
+// Alt+F4
+ImGuiMod_Alt | ImGuiKey_F4
+```
+
+<Warning>
+Only `ImGuiMod_XXX` values are legal to combine with an `ImGuiKey`. You CANNOT combine two `ImGuiKey` values.
+</Warning>
+
+## Input Flags
+
+### Repeat Flag
+
+```cpp
+ImGuiInputFlags_Repeat  // Enable repeat (like holding down a key)
+```
+
+**Example:**
+```cpp
+if (ImGui::Shortcut(ImGuiKey_Delete, ImGuiInputFlags_Repeat))
+{
+    DeleteSelectedItems();
+}
+```
+
+### Routing Policies
+
+Default policy is `ImGuiInputFlags_RouteFocused`. Can select only 1 policy:
+
+```cpp
+enum ImGuiInputFlags_
+{
+    ImGuiInputFlags_RouteActive      = 1 << 10,  // Route to active item only
+    ImGuiInputFlags_RouteFocused     = 1 << 11,  // Route to focused window (default)
+    ImGuiInputFlags_RouteGlobal      = 1 << 12,  // Global route
+    ImGuiInputFlags_RouteAlways      = 1 << 13,  // Always poll directly
+};
+```
+
+<ResponseField name="RouteActive" type="ImGuiInputFlags">
+  Route to active item only.
+</ResponseField>
+
+<ResponseField name="RouteFocused" type="ImGuiInputFlags">
+  Route to windows in the focus stack (DEFAULT). Deep-most focused window takes inputs.
+</ResponseField>
+
+<ResponseField name="RouteGlobal" type="ImGuiInputFlags">
+  Global route (unless a focused window or active item registered the route).
+</ResponseField>
+
+<ResponseField name="RouteAlways" type="ImGuiInputFlags">
+  Do not register route, poll keys directly.
+</ResponseField>
+
+### Routing Options
+
+```cpp
+ImGuiInputFlags_RouteOverFocused     // Global route: higher priority than focused
+ImGuiInputFlags_RouteOverActive      // Global route: higher priority than active item
+ImGuiInputFlags_RouteUnlessBgFocused // Global route: not applied if no windows focused
+ImGuiInputFlags_RouteFromRootWindow  // Route from root window rather than current
+```
+
+**Example with routing:**
+```cpp
+// Global shortcut, works even when no window is focused
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Q, ImGuiInputFlags_RouteGlobal))
+{
+    QuitApplication();
+}
+
+// Only works when specific widget is active
+if (ImGui::Shortcut(ImGuiKey_Escape, ImGuiInputFlags_RouteActive))
+{
+    CancelOperation();
+}
+```
+
+### Tooltip Flag
+
+```cpp
+ImGuiInputFlags_Tooltip  // Automatically display tooltip when hovering item
+```
+
+**Example:**
+```cpp
+ImGui::SetNextItemShortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_Tooltip);
+if (ImGui::MenuItem("Save"))
+{
+    SaveDocument();
+}
+// Hovering "Save" will show "Ctrl+S" in tooltip
+```
+
+## Routing Priority
+
+Routing policies are resolved in this order:
+1. RouteGlobal + OverActive
+2. RouteActive or RouteFocused (if owner is active item)
+3. RouteGlobal + OverFocused
+4. RouteFocused (if in focused window stack)
+5. RouteGlobal
+
+## Key Ownership
+
+### SetItemKeyOwner
+
+```cpp
+void SetItemKeyOwner(ImGuiKey key);
+```
+
+Set key owner to last item ID if it is hovered or active. Equivalent to:
+```cpp
+if (IsItemHovered() || IsItemActive())
+    SetKeyOwner(key, GetItemID());
+```
+
+<ParamField path="key" type="ImGuiKey">
+  Key to claim ownership of
+</ParamField>
+
+**Use case:** Disable standard input behaviors like mouse wheel scrolling.
+
+**Example:**
+```cpp
+// Make button disable mouse wheel for scrolling when hovered/active
+ImGui::Button("My Button");
+ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY);
+```
+
+## Difference: IsKeyChordPressed vs Shortcut
+
+### IsKeyChordPressed
+- Compares mods and calls `IsKeyPressed()`
+- No side-effects
+- No routing
+
+### Shortcut
+- Submits a route
+- Routes are resolved
+- Calls `IsKeyChordPressed()` if routed
+- Has side-effects (can prevent another call from getting the route)
+
+## Common Shortcut Patterns
+
+### Standard Editor Shortcuts
+
+```cpp
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Z))
+    Undo();
+    
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_Y) ||
+    ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiMod_Shift | ImGuiKey_Z))
+    Redo();
+    
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_C))
+    Copy();
+    
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_X))
+    Cut();
+    
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_V))
+    Paste();
+    
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_A))
+    SelectAll();
+```
+
+### Application-Wide Shortcuts
+
+```cpp
+// Use RouteGlobal for app-wide shortcuts
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_N, ImGuiInputFlags_RouteGlobal))
+    NewDocument();
+    
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_O, ImGuiInputFlags_RouteGlobal))
+    OpenDocument();
+    
+if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_S, ImGuiInputFlags_RouteGlobal))
+    SaveDocument();
+```
+
+### Context-Sensitive Shortcuts
+
+```cpp
+void DrawTextEditor()
+{
+    ImGui::BeginChild("Editor");
+    
+    // These shortcuts only work when editor is focused
+    if (ImGui::Shortcut(ImGuiKey_F3))
+        FindNext();
+        
+    if (ImGui::Shortcut(ImGuiMod_Ctrl | ImGuiKey_H))
+        ShowFindReplace();
+        
+    // Editor content...
+    
+    ImGui::EndChild();
+}
+```
+
+## Debugging
+
+<Tip>
+Visualize registered routes in **Metrics/Debugger -> Inputs**.
+</Tip>
+
+## Platform Considerations
+
+<Note>
+On macOS, Dear ImGui automatically swaps Cmd(Super) and Ctrl keys:
+- `ImGuiMod_Ctrl` = Cmd on macOS, Ctrl on other platforms
+- `ImGuiMod_Super` = Ctrl on macOS, Windows/Super on other platforms
+</Note>
+
+## See Also
+
+- [Keyboard](/api/keyboard) - Keyboard input functions
+- [Mouse](/api/mouse) - Mouse input functions
+- [Input](/api/input) - General input functions
