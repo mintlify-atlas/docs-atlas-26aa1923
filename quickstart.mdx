@@ -1,0 +1,363 @@
+---
+title: Quickstart
+description: Get up and running with Dear ImGui in minutes with a complete Hello World example
+---
+
+## Overview
+
+This guide will help you create your first Dear ImGui application. We'll build a simple "Hello World" program that displays a window with some basic widgets.
+
+<Note>
+This quickstart uses **GLFW** for windowing and **OpenGL 3** for rendering, which work on Windows, macOS, and Linux. For other platforms or graphics APIs, see the [Integration Guide](/integration).
+</Note>
+
+## Prerequisites
+
+Before you begin, ensure you have:
+
+- A C++ compiler (C++11 or later)
+- GLFW library
+- OpenGL 3.0+ support
+
+## Installation
+
+<Steps>
+  <Step title="Download Dear ImGui">
+    Clone or download Dear ImGui from GitHub:
+
+    ```bash
+    git clone https://github.com/ocornut/imgui.git
+    cd imgui
+    ```
+
+    The core library files are:
+    - `imgui.cpp`, `imgui.h`
+    - `imgui_demo.cpp`
+    - `imgui_draw.cpp`
+    - `imgui_tables.cpp`
+    - `imgui_widgets.cpp`
+    - `imconfig.h` (configuration)
+  </Step>
+
+  <Step title="Get the backends">
+    For this quickstart, you'll need:
+    - `backends/imgui_impl_glfw.cpp` + `imgui_impl_glfw.h` (platform backend)
+    - `backends/imgui_impl_opengl3.cpp` + `imgui_impl_opengl3.h` (renderer backend)
+  </Step>
+
+  <Step title="Install GLFW">
+    <Tabs>
+      <Tab title="Ubuntu/Debian">
+        ```bash
+        sudo apt-get install libglfw3-dev
+        ```
+      </Tab>
+      <Tab title="macOS">
+        ```bash
+        brew install glfw
+        ```
+      </Tab>
+      <Tab title="Windows">
+        Download GLFW from [glfw.org](https://www.glfw.org/download.html) or use vcpkg:
+        ```bash
+        vcpkg install glfw3
+        ```
+      </Tab>
+    </Tabs>
+  </Step>
+</Steps>
+
+## Your First Dear ImGui Program
+
+Create a file called `main.cpp` with the following code:
+
+```cpp main.cpp
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include <GLFW/glfw3.h>
+#include <stdio.h>
+
+int main(int, char**)
+{
+    // Initialize GLFW
+    if (!glfwInit())
+        return 1;
+
+    // GL 3.0 + GLSL 130
+    const char* glsl_version = "#version 130";
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 0);
+
+    // Create window with graphics context
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui - Hello World", nullptr, nullptr);
+    if (window == nullptr)
+        return 1;
+    glfwMakeContextCurrent(window);
+    glfwSwapInterval(1); // Enable vsync
+
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
+
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+
+    // Setup Platform/Renderer backends
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplOpenGL3_Init(glsl_version);
+
+    // Our state
+    bool show_demo_window = true;
+    bool show_another_window = false;
+    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+
+    // Main loop
+    while (!glfwWindowShouldClose(window))
+    {
+        glfwPollEvents();
+
+        // Start the Dear ImGui frame
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
+
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()!)
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
+
+        // 2. Show a simple window that we create ourselves
+        {
+            static float f = 0.0f;
+            static int counter = 0;
+
+            ImGui::Begin("Hello, World!");
+
+            ImGui::Text("This is some useful text.");
+            ImGui::Checkbox("Demo Window", &show_demo_window);
+            ImGui::Checkbox("Another Window", &show_another_window);
+
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+            ImGui::ColorEdit3("clear color", (float*)&clear_color);
+
+            if (ImGui::Button("Button"))
+                counter++;
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
+
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 
+                       1000.0f / io.Framerate, io.Framerate);
+            ImGui::End();
+        }
+
+        // 3. Show another simple window
+        if (show_another_window)
+        {
+            ImGui::Begin("Another Window", &show_another_window);
+            ImGui::Text("Hello from another window!");
+            if (ImGui::Button("Close Me"))
+                show_another_window = false;
+            ImGui::End();
+        }
+
+        // Rendering
+        ImGui::Render();
+        int display_w, display_h;
+        glfwGetFramebufferSize(window, &display_w, &display_h);
+        glViewport(0, 0, display_w, display_h);
+        glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+
+        glfwSwapBuffers(window);
+    }
+
+    // Cleanup
+    ImGui_ImplOpenGL3_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
+    ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
+
+    return 0;
+}
+```
+
+## Building Your Application
+
+<Tabs>
+  <Tab title="g++ / Clang">
+    ```bash
+    g++ -std=c++11 main.cpp \
+        imgui/imgui*.cpp \
+        imgui/backends/imgui_impl_glfw.cpp \
+        imgui/backends/imgui_impl_opengl3.cpp \
+        -I imgui -I imgui/backends \
+        -lglfw -lGL -ldl \
+        -o hello_imgui
+    ```
+  </Tab>
+  
+  <Tab title="CMake">
+    Create a `CMakeLists.txt`:
+    
+    ```cmake
+    cmake_minimum_required(VERSION 3.10)
+    project(HelloImGui)
+
+    set(CMAKE_CXX_STANDARD 11)
+
+    find_package(OpenGL REQUIRED)
+    find_package(glfw3 REQUIRED)
+
+    add_executable(hello_imgui
+        main.cpp
+        imgui/imgui.cpp
+        imgui/imgui_demo.cpp
+        imgui/imgui_draw.cpp
+        imgui/imgui_tables.cpp
+        imgui/imgui_widgets.cpp
+        imgui/backends/imgui_impl_glfw.cpp
+        imgui/backends/imgui_impl_opengl3.cpp
+    )
+
+    target_include_directories(hello_imgui PRIVATE imgui imgui/backends)
+    target_link_libraries(hello_imgui OpenGL::GL glfw)
+    ```
+
+    Build with:
+    ```bash
+    mkdir build && cd build
+    cmake ..
+    make
+    ```
+  </Tab>
+
+  <Tab title="Visual Studio">
+    1. Create a new C++ Console Application
+    2. Add all Dear ImGui source files to your project:
+       - Core: `imgui*.cpp` files
+       - Backends: `imgui_impl_glfw.cpp`, `imgui_impl_opengl3.cpp`
+    3. Add include directories: `imgui/` and `imgui/backends/`
+    4. Link against: `opengl32.lib`, `glfw3.lib`
+    5. Build and run (F5)
+  </Tab>
+</Tabs>
+
+## Run Your Application
+
+Execute your compiled program:
+
+```bash
+./hello_imgui
+```
+
+You should see a window with:
+- A demo window showcasing Dear ImGui features
+- A "Hello, World!" window with a slider, color picker, and button
+- Smooth 60 FPS rendering
+
+<Tip>
+Press Ctrl+Click on any slider to type in a value directly!
+</Tip>
+
+## Understanding the Code
+
+Let's break down the key parts:
+
+### Initialization
+
+```cpp
+// Setup Dear ImGui context
+IMGUI_CHECKVERSION();
+ImGui::CreateContext();
+ImGuiIO& io = ImGui::GetIO();
+```
+
+- `IMGUI_CHECKVERSION()` ensures your headers match the compiled library
+- `CreateContext()` initializes Dear ImGui's internal state
+- `GetIO()` provides access to input/output configuration
+
+### Frame Loop
+
+```cpp
+ImGui_ImplOpenGL3_NewFrame();
+ImGui_ImplGlfw_NewFrame();
+ImGui::NewFrame();
+
+// Your UI code here
+
+ImGui::Render();
+ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+```
+
+Every frame follows this pattern:
+1. Start a new Dear ImGui frame
+2. Create your UI with ImGui calls
+3. Render the draw data
+
+### Creating UI
+
+```cpp
+ImGui::Begin("Hello, World!");
+ImGui::Text("This is some useful text.");
+ImGui::Checkbox("Demo Window", &show_demo_window);
+ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+if (ImGui::Button("Button"))
+    counter++;
+ImGui::End();
+```
+
+Dear ImGui functions return values when interaction happens:
+- `Button()` returns `true` when clicked
+- `Checkbox()` modifies the bool and returns `true` when changed
+- `Begin()` / `End()` define a window scope
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Integration Guide" icon="plug" href="/integration">
+    Learn how to integrate Dear ImGui into your existing project
+  </Card>
+  
+  <Card title="Core Concepts" icon="book" href="/core-concepts/immediate-mode">
+    Understand the immediate mode paradigm
+  </Card>
+  
+  <Card title="Widgets Overview" icon="grid" href="/widgets/overview">
+    Explore all available widgets
+  </Card>
+  
+  <Card title="Examples" icon="code" href="/guides/examples">
+    Browse 30+ complete example applications
+  </Card>
+</CardGroup>
+
+## Common Issues
+
+<AccordionGroup>
+  <Accordion title="Blank window / Nothing renders">
+    Make sure you're calling:
+    1. `ImGui::NewFrame()` at the start of each frame
+    2. `ImGui::Render()` after your UI code
+    3. `ImGui_ImplXXX_RenderDrawData(ImGui::GetDrawData())` to draw
+  </Accordion>
+
+  <Accordion title="Assertion failed: IMGUI_CHECKVERSION()">
+    Your headers don't match the compiled version. Make sure all Dear ImGui files are from the same version.
+  </Accordion>
+
+  <Accordion title="Missing fonts / Square boxes instead of text">
+    The font texture wasn't uploaded. Most backends handle this automatically, but you may need to call `ImGui_ImplXXX_CreateFontsTexture()`.
+  </Accordion>
+
+  <Accordion title="ImGui::Begin() not returning false when collapsed">
+    Always call `ImGui::End()` regardless of the return value from `Begin()`. This is a common beginner mistake.
+  </Accordion>
+</AccordionGroup>
+
+<Info>
+Explore the full **Demo Window** (`ImGui::ShowDemoWindow()`) to see all features in action with interactive examples and code snippets!
+</Info>
