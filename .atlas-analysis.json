@@ -1,0 +1,211 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Dear ImGui",
+  "projectDescription": "Bloat-free immediate mode graphical user interface library for C++ with minimal dependencies",
+  "theme": "aspen",
+  "primaryColor": "#1E90FF",
+  "lightColor": "#4A9EFF",
+  "darkColor": "#0066CC",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "integration"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "core-concepts/immediate-mode",
+              "core-concepts/context-and-lifecycle",
+              "core-concepts/windows-and-layout",
+              "core-concepts/id-stack",
+              "core-concepts/input-handling"
+            ]
+          },
+          {
+            "group": "Widgets",
+            "pages": [
+              "widgets/overview",
+              "widgets/text-and-labels",
+              "widgets/buttons",
+              "widgets/inputs",
+              "widgets/sliders-and-drags",
+              "widgets/color-pickers",
+              "widgets/trees-and-selectables",
+              "widgets/combos-and-lists",
+              "widgets/menus",
+              "widgets/tables"
+            ]
+          },
+          {
+            "group": "Advanced Features",
+            "pages": [
+              "advanced/drawing-api",
+              "advanced/custom-rendering",
+              "advanced/multi-selection",
+              "advanced/drag-and-drop",
+              "advanced/docking-viewports",
+              "advanced/fonts-and-text"
+            ]
+          },
+          {
+            "group": "Backends",
+            "pages": [
+              "backends/overview",
+              "backends/platform-backends",
+              "backends/renderer-backends",
+              "backends/custom-backend"
+            ]
+          },
+          {
+            "group": "Styling",
+            "pages": [
+              "styling/colors-and-styles",
+              "styling/customization"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/examples",
+              "guides/troubleshooting",
+              "guides/fonts",
+              "guides/best-practices",
+              "guides/performance"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core",
+            "pages": [
+              "api/context",
+              "api/main-loop",
+              "api/demo-windows"
+            ]
+          },
+          {
+            "group": "Windows",
+            "pages": [
+              "api/windows",
+              "api/child-windows",
+              "api/window-utilities"
+            ]
+          },
+          {
+            "group": "Widgets",
+            "pages": [
+              "api/text",
+              "api/buttons",
+              "api/input-widgets",
+              "api/sliders",
+              "api/color-widgets",
+              "api/trees",
+              "api/selectables",
+              "api/combos",
+              "api/menus",
+              "api/tables",
+              "api/tabs",
+              "api/tooltips",
+              "api/popups"
+            ]
+          },
+          {
+            "group": "Layout",
+            "pages": [
+              "api/cursor-layout",
+              "api/columns-and-groups",
+              "api/spacing-and-alignment"
+            ]
+          },
+          {
+            "group": "Drawing",
+            "pages": [
+              "api/draw-list",
+              "api/draw-commands"
+            ]
+          },
+          {
+            "group": "Input & Navigation",
+            "pages": [
+              "api/input",
+              "api/keyboard",
+              "api/mouse",
+              "api/shortcuts"
+            ]
+          },
+          {
+            "group": "Styling",
+            "pages": [
+              "api/style",
+              "api/colors",
+              "api/fonts"
+            ]
+          },
+          {
+            "group": "Data Structures",
+            "pages": [
+              "api/imgui-io",
+              "api/imgui-style",
+              "api/vectors-and-types",
+              "api/utilities"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Immediate mode GUI paradigm",
+    "Minimal state synchronization",
+    "Platform and renderer agnostic",
+    "Fast iteration and easy debugging",
+    "Extensive widget library",
+    "Custom drawing API",
+    "Multi-platform backend support",
+    "Tables and advanced layouts",
+    "Docking and multi-viewports",
+    "Dynamic font loading",
+    "Drag and drop support",
+    "Multi-selection support"
+  ],
+  "publicApiSurface": [
+    "ImGui::CreateContext()",
+    "ImGui::NewFrame()",
+    "ImGui::Render()",
+    "ImGui::GetDrawData()",
+    "ImGui::Begin()",
+    "ImGui::End()",
+    "ImGui::Text()",
+    "ImGui::Button()",
+    "ImGui::InputText()",
+    "ImGui::SliderFloat()",
+    "ImGui::ColorEdit4()",
+    "ImGui::BeginTable()",
+    "ImGui::BeginMenu()",
+    "ImGui::TreeNode()",
+    "ImGui::Selectable()",
+    "ImGui::BeginCombo()",
+    "ImGui::Image()",
+    "ImGui::BeginChild()",
+    "ImGui::GetWindowDrawList()",
+    "ImGui::PushStyleColor()",
+    "ImGui::ShowDemoWindow()",
+    "ImDrawList::AddLine()",
+    "ImDrawList::AddRect()",
+    "ImDrawList::AddText()",
+    "ImFontAtlas::AddFont()",
+    "ImGuiIO",
+    "ImGuiStyle"
+  ]
+}
